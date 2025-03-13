@@ -6,7 +6,7 @@ import "@/global.css"
 
  export default function App (){
   return (
-    <View className = " p-4">
+    <View className = " p-1">
       <Header/>
       <Accueill/>
       <Message/>
