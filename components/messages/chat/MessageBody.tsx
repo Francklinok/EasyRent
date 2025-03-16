@@ -5,17 +5,12 @@ import { Audio } from "expo-av";
 import * as Linking from "expo-linking";
 import { MessageType } from "@/types/MessageTypes";
 import { Ionicons } from "@expo/vector-icons"; // Pour les icônes de lecture
-import MessageDelete from "../delete/MessageDeleteFile";
-import MessageEdit from "../edit/MessageEditFiles";
-import MessageReaction from "../reaction/ReactionFile";
-import MessageFooter from "./MessageFooter";
-
 
 interface MessageBodyProps {
     message: MessageType;
 }
 
-const MessageDisplay= ({ message }: MessageBodyProps) => {
+const MessageDisplay= ({ message }: MessageBodyProps) => {    
 
     
     const gradientColors = message.isSent

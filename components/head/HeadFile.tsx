@@ -6,6 +6,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Svg, { Text as SvgText, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
 import NotificationBadge from "@/utils/Notification";
+
+
 const Header = () => {
   return (
     <SafeAreaView style={{ backgroundColor: "white", paddingTop: StatusBar.currentHeight }}>

@@ -35,9 +35,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="message"
+        name="ChatList"
         options={{
-          title: 'message',
+          title: 'ChatList',
           tabBarIcon: ({ color }) => <AntDesign name="message1" size={28} color={color}/>,
         }}
       />
