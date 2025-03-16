@@ -33,7 +33,7 @@ const Header = () => {
             </Defs>
             <SvgText
               x="15"
-              y="38"
+              y="30"
               fontSize="32"
               fontWeight="bold"
               font- 

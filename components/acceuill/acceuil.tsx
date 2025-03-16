@@ -20,7 +20,7 @@ const Accueill = () => {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }: { item: ItemType }) => (
           
-          <View className="bg-white/90 rounded-3xl shadow-2xl mb-6 mt-8 p-1 overflow-hidden">
+          <View className="bg-white/90 rounded-3xl shadow-2xl mb-6 mt-6 p-1 overflow-hidden">
             {/* Image avec Effet Instagram */}
             <View className="relative">
               <Image source={item.avatar} className="w-full h-80 rounded-t-3xl" resizeMode="cover" />
