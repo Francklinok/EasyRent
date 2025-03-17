@@ -6,11 +6,20 @@ import { useState, useRef } from "react";
 
 const { width } = Dimensions.get("window");
 
-const data = [
+interface Item {
+  id: string;
+  avatar: any[]; // Changez cela en `ImageSourcePropType[]` si possible
+  price: string;
+  availibility: boolean;
+  stars: number;
+  location: string;
+}
+
+const data: Item[] = [
   {
     id: "2",
     avatar: [
-      require("@/assets/images/1.jpg"), 
+      require("@/assets/images/1.jpg"),
       require("@/assets/images/2.jpg"),
       require("@/assets/images/3.jpg"),
       require("@/assets/images/4.jpg"),
@@ -40,17 +49,17 @@ const ItemData = () => {
   );
 };
 
-const ItemCard = ({ item }) => {
+const ItemCard = ({ item }: { item: Item }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef(null);
+  const flatListRef = useRef<FlatList<any>>(null);
 
-  const handleScroll = (event) => {
+  const handleScroll = (event: any) => {
     const index = Math.round(event.nativeEvent.contentOffset.x / width);
     setCurrentIndex(index);
   };
 
   return (
-    <View className="bg-white/90 rounded-3xl shadow-2xl mb-6 mt-6 p-1 overflow-hidden">
+    <View className="flex flex-col gap-10 bg-white/90 rounded-3xl shadow-2xl  p-1 overflow-hidden">
       {/* Carrousel d'images */}
       <View className="relative">
         <FlatList
@@ -59,39 +68,40 @@ const ItemCard = ({ item }) => {
           data={item.avatar}
           keyExtractor={(_, index) => index.toString()}
           renderItem={({ item }) => (
-            <Image source={item} className="w-full h-80 rounded-t-3xl" resizeMode="cover" />
+            <Image source={item} style={{ width: width, height: 300 }} resizeMode="cover" />
           )}
           showsHorizontalScrollIndicator={false}
           pagingEnabled
           onScroll={handleScroll}
           scrollEventThrottle={16}
+          snapToAlignment="center"
+          snapToInterval={width} 
+          decelerationRate="fast"
         />
         {/* Indicateur de pagination */}
         <View className="absolute bottom-2 w-full flex-row justify-center">
           {item.avatar.map((_, index) => (
             <View
               key={index}
-              className={`h-2 w-2 mx-1 rounded-full ${currentIndex === index ? "bg-blue-500" : "bg-gray-400"}`}
+              className={`h-2 w-2 mx-1 rounded-full ${
+                currentIndex === index ? "bg-blue-500" : "bg-gray-400"
+              }`}
             />
           ))}
         </View>
       </View>
 
       {/* Contenu */}
-      <View className="p-5">
+      <View className="flex flex-row justify-between p-5 ">
         {/* Localisation & Prix */}
-        <View className="flex-row justify-between items-center mb-2">
           <View className="flex-row items-center">
             <MaterialIcons name="location-on" size={24} color="#374151" />
-            <Text className="text-base font-medium text-gray-800 ml-1">{item.location}</Text>
+            <Text className="text-base font-medium text-gray-800 ml-1">Location</Text>
           </View>
           <View>
             <Feather name="message-circle" size={24} color="black" />
           </View>
-        </View>
 
-        {/* Évaluation & Prix */}
-        <View className="flex-row justify-between items-center">
           <View className="flex-row items-center">
             <FontAwesome name="star" size={20} color="#FFD700" />
             <Text className="text-lg font-semibold text-yellow-500 ml-2">{item.stars}</Text>
@@ -101,7 +111,7 @@ const ItemCard = ({ item }) => {
             <FontAwesome name="dollar" size={16} color="white" />
             <Text className="text-white font-semibold ml-1">{item.price}</Text>
           </View>
-        </View>
+        
       </View>
     </View>
   );

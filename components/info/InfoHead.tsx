@@ -28,10 +28,9 @@ const InfoHead = () => {
         </View>
 
         {/* Partie Nom au centre */}
-        <View className="flex justify-center">
-          <Text className="text-lg font-semibold">jacques</Text> Utilisation du nom passé en prop
-          {/* <Text className="text-sm text-gray-500">{message.isOnline ? "Online" : "Offline"}</Text> */}
-
+        <View className="flex flex-col justify-center">
+          <Text className="text-lg font-semibold">jacques</Text> 
+          <Text className="text-[12px] font-semibold">Taux de response : 100%</Text> 
         </View>
 
         {/* Partie Icônes à droite */}
@@ -40,15 +39,21 @@ const InfoHead = () => {
         <AntDesign name="message1" size={24} color="black" />
         </View>
       </View>
-      <View className = "flex flex-row gap-4">
-        <Text className = "text-[16px]"> Total rent</Text>
-        <AntDesign name="home" size={26} color="black" />
-        <Text>10</Text>
+
+      <View className = "flex flex-row gap-8 p-2">
+    
+      <View className = "flex flex-row gap-4  mb-6 ">
+        <Text className = "text-[14px] rounded-[20px] p-2 bg-blue-200 "> Description </Text>
       </View>
       <View className = "flex flex-row gap-4  mb-6 ">
-        <Text className = "text-[16px]"> Total available</Text>
-        <Text>5</Text>
+        <Text className = "text-[14px] rounded-[20px] p-2 bg-blue-200"> Criter de logement </Text>
       </View>
+      <View className = "flex flex-row gap-4  mb-6 ">
+        <Text className = "text-[14px] rounded-[20px] p-2 bg-blue-200"> Atout du logement </Text>
+      </View>
+  
+      </View>
+
       </View>
 
     </SafeAreaView>
