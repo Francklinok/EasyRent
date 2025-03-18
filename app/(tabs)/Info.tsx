@@ -1,11 +1,10 @@
 import { View, Text, Image} from "react-native"
-import InfoComponent from "@/components/info/Info"
-
+import InfoHead from "../info/infoHead"
 
 export default function Info (){
     return (
         <View>
-          <InfoComponent/>
+          <InfoHead/>
         </View>
     )
 

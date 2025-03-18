@@ -46,6 +46,9 @@ const Accueill = () => {
                   <MaterialIcons name="location-on" size={24} color="#374151" />
                   <Text className="text-base font-medium text-gray-800 ml-1">{item.location}</Text>
                 </View>
+                <View className="flex-row items-center bg-gray-400 px-3 py-1 rounded-full">
+                  <Text className="text-white font-semibold ml-1">Proximity Services</Text>
+                </View>
                 <View>
                 <View className={`mb-1 text-base font-medium ${item.availibility ? "text-green-500" : "text-red-500"}`}>
                  {/* <MaterialIcons name="message-circle" size={24} color="#1E40AF" /> */}
@@ -61,6 +64,7 @@ const Accueill = () => {
                   <FontAwesome name="dollar" size={16} color="white" />
                   <Text className="text-white font-semibold ml-1">{item.price}</Text>
                 </View>
+            
               </View>
            
               <View>                
