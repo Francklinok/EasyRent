@@ -2,9 +2,10 @@ import { View, Text} from "react-native"
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Fontisto from '@expo/vector-icons/Fontisto';
+
 export default function Criteria(){
     return (
-        <View className = "flex">
+        <View className = "flex h-full">
         <View className = " pl-10 ">
         <Text className = "text-[20px] font-bold pb-2">Critere du Loueur </Text>
         <View>
@@ -46,6 +47,30 @@ export default function Criteria(){
             <Text className="text-[16px] w-[22%]  h-10 text-center bg-gray-100 p-1 rounded-lg">Jeune actif</Text>
             <Text className="text-[16px] w-[22%]  h-10 text-center bg-gray-100 p-1 rounded-lg">Stagiaire</Text>
         </View>
+        </View>
+        View 
+        <View>
+        <Text className = "pl-10 text-[20px] font-bold pb-2">Document a Fournir</Text>
+        
+        <View className = "flex flex-row gap-20 pl-10">
+        <View className="flex flex-wrap gap-3 "> 
+            <Text className="text-[16px] bg-gray-100 p-1  rounded-lg">Locataire</Text>
+            <Text>Piece d identiter</Text>
+            <Text>RIB</Text>
+            <Text>Passport</Text>
+            <Text>Attestation de scolariter</Text>
+            
+        </View> 
+        <View className="flex flex-wrap gap-3 "> 
+            
+            <Text className="text-[16px] bg-gray-100 p-1 rounded-lg">Guarant</Text>
+            <Text>Piece d identiter</Text>
+            <Text>RIB</Text>
+            <Text>Passport</Text>
+            <Text>Attestation de scolariter</Text>
+        </View> 
+        </View>
+
         </View>
 
         </View>

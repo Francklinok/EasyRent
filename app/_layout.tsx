@@ -79,12 +79,7 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        {/* <Stack.Screen name="Chat" options={{ title: 'Chat' }} />
-        <Stack.Screen name = "info/index"/> 
-        <Stack.Screen name = "info/atout" />
-        <Stack.Screen name = "info/criteria"  />
-        <Stack.Screen name = "info/equipment" />
-        <Stack.Screen name = "info/services"/>  */}
+         {/* <Stack.Screen name="Chat" options={{ title: 'Chat' }} /> */}
         <Stack.Screen name="+not-found" options={{ title: 'Page Introuvable' }} />
         
       </Stack>
