@@ -1,80 +1,83 @@
-import { View, Text} from "react-native"
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import AntDesign from '@expo/vector-icons/AntDesign';
-import Fontisto from '@expo/vector-icons/Fontisto';
 
-export default function Criteria(){
-    return (
-        <View className = "flex h-full">
-        <View className = " pl-10 ">
-        <Text className = "text-[20px] font-bold pb-2">Critere du Loueur </Text>
-        <View>
-        <View className = "flex flex-row gap-8 p-4">
-            <MaterialIcons name="hourglass-empty" size={34} color="black" className = "mt-2"/>
-            <View className = "flex flex-col gap-2 ">
-                <Text className = "text-[16px]">
-                    Durer de Location minimum
-                </Text>
-                <Text className = "text-[18px] text-green-700 ">3 ans</Text>
+import { View, Text, FlatList } from "react-native";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import AntDesign from "@expo/vector-icons/AntDesign";
+import Fontisto from "@expo/vector-icons/Fontisto";
+
+const criteriaList = [
+  {
+    id: "1",
+    icon: <MaterialIcons name="hourglass-empty" size={34} color="black" />,
+    title: "Durée de Location minimum",
+    value: "3 ans",
+  },
+  {
+    id: "2",
+    icon: <AntDesign name="creditcard" size={28} color="black" />,
+    title: "Solvabilité",
+    value: "3 fois le montant du loyer",
+  },
+  {
+    id: "3",
+    icon: <Fontisto name="world-o" size={28} color="black" />,
+    title: "Garant Résident",
+    value: "Aux USA",
+  },
+];
+
+const situations = ["Étudiant", "Salarié", "Chercheur", "Jeune actif", "Stagiaire"];
+const documents = [
+  {
+    type: "Locataire",
+    docs: ["Pièce d'identité", "RIB", "Passeport", "Attestation de scolarité"],
+  },
+  {
+    type: "Garant",
+    docs: ["Pièce d'identité", "RIB", "Passeport", "Attestation de scolarité"],
+  },
+];
+
+export default function Criteria() {
+  return (
+    <View className="flex h-full px-6 py-4 bg-gray-50">
+      {/* Section Critères */}
+      <Text className="text-xl font-bold mb-4">Critères du Loueur</Text>
+      <View className="bg-white rounded-xl shadow-md p-4">
+        {criteriaList.map((item) => (
+          <View key={item.id} className="flex flex-row items-center gap-4 py-3 border-b border-gray-200">
+            {item.icon}
+            <View>
+              <Text className="text-base">{item.title}</Text>
+              <Text className="text-lg text-green-700 font-semibold">{item.value}</Text>
             </View>
+          </View>
+        ))}
+      </View>
 
-            </View>
-            <View className = "flex flex-row gap-8 p-4">
-            <AntDesign name="creditcard" size={24} color="black" />
-            <View className = "flex flex-col gap-2 ">
-                <Text className = "text-[16px]">Solvabiliter</Text>
-                <Text className = "text-[18px] text-green-700 "> 3 Fois le montant du loyer</Text>
-            </View>
+      {/* Section Situation Demandée */}
+      <Text className="text-xl font-bold mt-6 mb-4">Situation Demandée</Text>
+      <View className="flex flex-row flex-wrap gap-3">
+        {situations.map((situation, index) => (
+          <Text key={index} className="text-base bg-gray-100 p-2 rounded-lg text-center w-[30%] shadow-sm">
+            {situation}
+          </Text>
+        ))}
+      </View>
 
-            </View>
-            <View className = "flex flex-row gap-8 p-4">
-            <Fontisto name="world-o" size={24} color="black" />
-            <View className = "flex flex-col gap-2 ">
-                <Text className = "text-[16px]">Garant Resident</Text>
-                <Text className = "text-[18px] text-green-700 ">Aux USA</Text>
-            </View>
-
-            </View>
-        </View>
-
-        </View>
-        <View className="flex gap-6 mt-2">
-         <Text className="pl-10 text-[20px] font-bold pb-2">Situation Demandée</Text>
-        <View className="flex flex-row flex-wrap gap-3 ">
-            <Text className="text-[16px] w-[22%] h-10 text-center bg-gray-100 p-1 rounded-lg">Étudiant</Text>
-            <Text className="text-[16px] w-[22%]  h-10 text-center bg-gray-100 p-1 rounded-lg">Salarié</Text>
-            <Text className="text-[16px] w-[22%]  h-10 text-center bg-gray-100 p-1 rounded-lg">Chercheur</Text>
-            <Text className="text-[16px] w-[22%]  h-10 text-center bg-gray-100 p-1 rounded-lg">Jeune actif</Text>
-            <Text className="text-[16px] w-[22%]  h-10 text-center bg-gray-100 p-1 rounded-lg">Stagiaire</Text>
-        </View>
-        </View>
-        View 
-        <View>
-        <Text className = "pl-10 text-[20px] font-bold pb-2">Document a Fournir</Text>
-        
-        <View className = "flex flex-row gap-20 pl-10">
-        <View className="flex flex-wrap gap-3 "> 
-            <Text className="text-[16px] bg-gray-100 p-1  rounded-lg">Locataire</Text>
-            <Text>Piece d identiter</Text>
-            <Text>RIB</Text>
-            <Text>Passport</Text>
-            <Text>Attestation de scolariter</Text>
-            
-        </View> 
-        <View className="flex flex-wrap gap-3 "> 
-            
-            <Text className="text-[16px] bg-gray-100 p-1 rounded-lg">Guarant</Text>
-            <Text>Piece d identiter</Text>
-            <Text>RIB</Text>
-            <Text>Passport</Text>
-            <Text>Attestation de scolariter</Text>
-        </View> 
-        </View>
-
-        </View>
-
-        </View>
-
-    )
-
+      {/* Section Documents à Fournir */}
+      <Text className="text-xl font-bold mt-6 mb-4">Documents à Fournir</Text>
+      <View className="bg-white rounded-xl shadow-md p-4">
+        {documents.map((section, index) => (
+          <View key={index} className="mb-4">
+            <Text className="text-lg font-semibold bg-gray-100 px-3 py-1 rounded-md">{section.type}</Text>
+            {section.docs.map((doc, docIndex) => (
+              <Text key={docIndex} className="text-base pl-4 mt-1">
+                - {doc}
+              </Text>
+            ))}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
 }

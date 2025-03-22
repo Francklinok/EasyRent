@@ -46,7 +46,7 @@ const Chat = () => {
         <MessageFooter onSend={handleSend} />
       </View>
     </View>
-  );
+  );  
 };
 
 export default Chat;

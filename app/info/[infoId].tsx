@@ -1,67 +1,78 @@
 
+
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Image, SafeAreaView, StatusBar } from 'react-native';
 import Octicons from '@expo/vector-icons/Octicons';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import ItemData from '@/components/info/index';
 import Atout from '@/components/info/atoutFils';
 import Criteria from '@/components/info/criteriaFile';
 import Services from '@/components/info/servicesFiles';
 import Equipment from '@/components/info/equipmentFiles';
 
+// Définir le type pour les props des composants
+interface ComponentProps {
+  itemId: string | string[];
+}
+
 const Info = () => {
   const router = useRouter();
+  // Récupérer les paramètres de la route
+  const params = useLocalSearchParams();
+  const { id, name } = params;
   
   // Définir un état initial correct
   const [activeComponent, setActiveComponent] = useState<string>('Description');
-
+  
   // Mapper les noms aux composants
-  const componentMap: { [key: string]: React.ElementType } = {
+  const componentMap: { [key: string]: React.ComponentType<ComponentProps> } = {
     Description: ItemData,
     Criteria: Criteria,
     Atout: Atout,
     Equipment: Equipment,
     Services: Services
   };
-
+  
   const ActiveComponent = componentMap[activeComponent];
-  console.log(ActiveComponent)
-  console.log("ActiveComponent à afficher :", ActiveComponent);
-
-
+  
   return (
     <SafeAreaView className="bg-white" style={{ paddingTop: StatusBar.currentHeight }}>
       <StatusBar barStyle="dark-content" backgroundColor="white" />
       <View className="flex flex-col gap-4">
-        
-        {/* En-tête */}
+        {/* En-tête avec bouton retour */}
         <View className="flex-row p-4 justify-between bg-white shadow-md rounded-t-lg">
-          <View className="p-2">
-            <Image 
-              source={{ uri: 'https://via.placeholder.com/150' }}
-              className="w-12 h-12 rounded-full mr-4" 
-            />
-          </View>
-
-          <View className="flex flex-col justify-center">
-            <Text className="text-lg font-semibold">Jacques</Text> 
-            <Text className="text-[12px] font-semibold">
-              Taux de réponse{' '}
-              <Text className="text-green-600 text-[14px] font-bold">100%</Text>
-            </Text> 
-          </View>
-
-          <View className="flex flex-row gap-6 items-center pr-5">
-            <Octicons name="verified" size={24} color="black" />
-            <AntDesign name="message1" size={24} color="black" />
+          <TouchableOpacity onPress={() => router.back()} className="p-2">
+            <AntDesign name="arrowleft" size={24} color="black" />
+          </TouchableOpacity>
+          <View className="flex-row justify-between bg-white">
+            <View className="p-2">
+              <Image
+                source={{ uri: 'https://via.placeholder.com/150' }}
+                className="w-12 h-12 rounded-full mr-4"
+              />
+            </View>
+            <View className="flex flex-col justify-center">
+              <Text className="text-lg font-semibold">{name}</Text>
+              <Text className="text-[12px] font-semibold">
+                Taux de réponse{' '}
+                <Text className="text-green-600 text-[14px] font-bold">100%</Text>
+              </Text>
+            </View>
+            <View className="flex flex-row gap-6 items-center pr-5">
+              <Octicons name="verified" size={24} color="black" />
+              <AntDesign name="message1" size={24} color="black" />
+            </View>
           </View>
         </View>
-
+        
+        {/* ID de l'élément (pour le débogage, à supprimer en production) */}
+        <Text className="px-4 text-gray-500">ID: {id}</Text>
+        
         {/* Boutons de navigation */}
         <View className="flex flex-row flex-wrap gap-2 p-2">
           {Object.keys(componentMap).map((key) => (
-            <TouchableOpacity 
+            <TouchableOpacity
               key={key}
               onPress={() => setActiveComponent(key)}
               style={{
@@ -74,17 +85,16 @@ const Info = () => {
               <Text className="text-[14px]">{key}</Text>
             </TouchableOpacity>
           ))}
-        </View> 
-
+        </View>
+        
         {/* Contenu dynamique */}
         <View className="p-2">
-          {ActiveComponent ?
-          
-           <ActiveComponent />
-            :
-             <Text>Aucune donnée disponible</Text>}
+          {ActiveComponent ? (
+            <ActiveComponent itemId={id} />
+          ) : (
+            <Text>Aucune donnée disponible</Text>
+          )}
         </View>
-
       </View>
     </SafeAreaView>
   );

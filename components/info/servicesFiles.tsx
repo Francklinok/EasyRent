@@ -50,7 +50,7 @@
  
    return (
      <ScrollView className="bg-gray-100 p-4">
-       <Text className="text-center text-2xl font-bold text-blue-600 mb-6">Nos Services</Text>
+       <Text className="text-center text-2xl font-bold text-blue-600 mb-6"></Text>
  
        {services.map((service, index) => (
          <TouchableOpacity
