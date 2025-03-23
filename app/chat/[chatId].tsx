@@ -9,6 +9,7 @@ import MessageFooter from '@/components/messages/chat/MessageFooter';
 import message from '@/components/messages/messagedata';
 import { RootStackParamList } from '../navigator/RouteYpe';
 import { RouteProp } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
 
 const Chat = () => {
   const route = useRoute<RouteProp<RootStackParamList, 'Chat'>>(); 
@@ -29,6 +30,7 @@ const Chat = () => {
       <View className="h-[15%]">
         <MessageHeader name={route.params.name} image={route.params.image} />
       </View>
+      <StatusBar hidden={true}/>
 
       {/* Liste des messages du chat correspondant */}
       <View className="h-[75%]">

@@ -7,6 +7,7 @@ import Header from '@/components/head/HeadFile';
 import message from '@/components/messages/messagedata';
 import { RootStackParamList } from '../navigator/RouteYpe';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'; // Import de la prop
+import { router } from 'expo-router';
 
 
 const ChatList = () => {
@@ -22,10 +23,13 @@ const ChatList = () => {
           renderItem={({ item }) => (
             <TouchableOpacity
               onPress={() =>
-                navigation.navigate('Chat', {
-                  id: item.id,
-                  name: item.sender.name,
-                  image: item.sender.avatar,
+                router.navigate({
+                  pathname:"/chat/[chatId]",
+                  params:{
+                    chatId: item.id,
+                    name: item.sender.name,
+                    image: item.sender.avatar,
+                  }
                 })
               }
             >

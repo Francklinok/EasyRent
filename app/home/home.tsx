@@ -15,12 +15,12 @@ const Home = () => {
   const navigateToInfo = (item: ItemType) => {
     // Naviguer vers le dossier "info" en dehors de "tabs"
     router.push({
-      pathname: "./(info)",  // Utiliser la structure correcte d'Expo Router
+      pathname: "/info/[infoId]",  // Utiliser la structure correcte d'Expo Router
       params: { 
         id: item.id,
         // title: item.title || "" 
       }
-    });
+    }); 
 
     // Alternativement, essayez l'une de ces variantes si la première ne fonctionne pas
     // router.push(`/(info)?id=${item.id}&title=${encodeURIComponent(item.title || "")}`);
