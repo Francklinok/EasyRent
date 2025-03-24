@@ -25,7 +25,7 @@ const Chat = () => {
   }
 
   return (
-    <View className="flex-1">
+    <View className="flex-1 ">
       {/* Header avec les données du chat */}
       <View className="h-[15%]">
         <MessageHeader name={route.params.name} image={route.params.image} />

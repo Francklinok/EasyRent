@@ -18,7 +18,7 @@ type MessageHeaderProps = {
 
 const MessageHeader: React.FC<MessageHeaderProps> = ({ name, image }) => {
   return (
-    <SafeAreaView style={{ backgroundColor: 'white', paddingTop: StatusBar.currentHeight }}>
+    <SafeAreaView style={{ backgroundColor: 'white'}}>
       <StatusBar barStyle="dark-content" backgroundColor="white" />
       <View className="flex-row p-4 justify-between bg-white shadow-md rounded-t-lg">
         {/* Partie Avatar à gauche */}

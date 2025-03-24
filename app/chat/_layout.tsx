@@ -6,6 +6,8 @@
 //   };
 //   return <Stack screenOptions={screenOptions} />;
 // }
+import MessageHeader
+ from "@/components/messages/chat/MessageHeade";
 import { Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { View, StyleSheet } from "react-native";
@@ -27,7 +29,7 @@ export default function ChatLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff", // Adapte selon ton design
+    backgroundColor: "red", // Adapte selon ton design
   },
   content: {
     flex: 1, 

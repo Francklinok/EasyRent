@@ -31,7 +31,7 @@ export default function RootLayout() {
 
   if (!fontsLoaded) {
     return null; // Retourne null tant que les polices ne sont pas chargées
-  }
+  } 
 
   const screenOptions = {
     headerShown: false,
