@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import NotificationBadge from '@/utils/Notification';
 import Header from '@/components/head/HeadFile';
 import message from '@/components/messages/messagedata';
-import { RootStackParamList } from '../navigator/RouteYpe';
+import { RootStackParamList } from '../../components/navigator/RouteType';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'; // Import de la prop
 import { router } from 'expo-router';
 

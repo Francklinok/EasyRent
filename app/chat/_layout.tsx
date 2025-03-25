@@ -1,38 +1,18 @@
-// import { Stack } from "expo-router";
 
-// export default function OnboardingLayout() {
-//   const screenOptions = {
-//     headerShown: false,
-//   };
-//   return <Stack screenOptions={screenOptions} />;
-// }
-import MessageHeader
- from "@/components/messages/chat/MessageHeade";
+import React from 'react';
 import { Stack } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { View, StyleSheet } from "react-native";
+import ChatHeader from '@/components/messages/chat/MessageHeader';
 
 export default function ChatLayout() {
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header personnalisé */}
-      {/* <CustomHeader /> */}
-
-      {/* Stack pour la navigation */}
-      <View style={styles.content}>
-        <Stack screenOptions={{ headerShown: false }} />
-      </View>
-    </SafeAreaView>
+    <Stack
+      screenOptions={{
+        headerShown: true,
+        header: () => <ChatHeader />,
+        headerStyle: {
+          backgroundColor: "white",
+        },
+      }}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "red", // Adapte selon ton design
-  },
-  content: {
-    flex: 1, 
-    marginTop: 0, // Gère bien l'espace sous le header
-  },
-});

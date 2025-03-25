@@ -2,9 +2,9 @@ import {
     ScrollView,
     View,
     type ViewProps,
+    StyleSheet,
     useColorScheme,
   } from "react-native";
-  
   import { SafeAreaView } from "react-native-safe-area-context";
   import { StatusBar, StatusBarProps } from "expo-status-bar";
   
@@ -27,19 +27,28 @@ import {
     children,
     ...rest
   }: ScreenViewProps) {
-    // Détection du thème système
+    // Get system theme
     const _theme = useColorScheme();
     const Container = canScroll ? ScrollView : View;
   
     return (
-      <SafeAreaView 
-       edges={safeAreaEdges}
-        className={`flex-1 w-full h-full ${backgroundColor ? `bg-${backgroundColor}` : ""}`}
+      <SafeAreaView
+        edges={safeAreaEdges}
+        style={[
+          styles.safeArea,
+          {
+            backgroundColor: backgroundColor ? backgroundColor : "",
+          },
+        ]}
       >
-        <StatusBar {...statusBarStyle} />
+        <StatusBar
+          // style={_theme === "dark" ? "light" : "dark"}
+          // backgroundColor={_theme === "dark" ? "#000" : "#FFF"}
+          {...statusBarStyle}
+        />
         <Container
-          className="flex flex-1"
-          contentContainerStyle={style}
+          className="flex flex-1 flex-grow"
+          contentContainerStyle={[styles.container, style]}
           {...rest}
         >
           {children}
@@ -48,3 +57,13 @@ import {
     );
   }
   
+  const styles = StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      width: "100%",
+      height: "100%",
+    },
+    container: {
+      flexGrow: 1,
+    },
+  });

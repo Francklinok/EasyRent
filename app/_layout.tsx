@@ -39,8 +39,8 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      {/* <Stack screenOptions={screenOptions}> */}
-      <Stack>
+      <Stack screenOptions={screenOptions}>
+      {/* <Stack> */}
 
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
