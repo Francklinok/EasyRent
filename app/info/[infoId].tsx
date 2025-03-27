@@ -41,25 +41,27 @@ const Info = () => {
       <StatusBar barStyle="dark-content" backgroundColor="white" />
       <View className="flex flex-col gap-4">
         {/* En-tête avec bouton retour */}
-        <View className="flex-row p-4 justify-between bg-white shadow-md rounded-t-lg">
-          <TouchableOpacity onPress={() => router.back()} className="p-2">
+        <View className="flex-row p-2 justify-between bg-white shadow-md rounded-t-lg">
+         
+          <View className="flex-row gap-2 justify-between bg-white">
+          <TouchableOpacity onPress={() => router.back()} className="p-2 pr-6 ">
             <AntDesign name="arrowleft" size={24} color="black" />
           </TouchableOpacity>
-          <View className="flex-row justify-between bg-white">
+
             <View className="p-2">
               <Image
                 source={{ uri: 'https://via.placeholder.com/150' }}
-                className="w-12 h-12 rounded-full mr-4"
+                className="w-16 h-16 rounded-full mr-6 border"
               />
             </View>
             <View className="flex flex-col justify-center">
               <Text className="text-lg font-semibold">{name}</Text>
-              <Text className="text-[12px] font-semibold">
+              <Text className="text-[12px] font-semibold pr-4">
                 Taux de réponse{' '}
                 <Text className="text-green-600 text-[14px] font-bold">100%</Text>
               </Text>
             </View>
-            <View className="flex flex-row gap-6 items-center pr-5">
+            <View className="flex flex-row gap-6 items-center pr-4">
               <Octicons name="verified" size={24} color="black" />
               <AntDesign name="message1" size={24} color="black" />
             </View>
