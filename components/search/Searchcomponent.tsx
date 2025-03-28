@@ -1,209 +1,157 @@
-import React, { useState, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  ScrollView, 
-  Animated,
-  Image
+
+
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Image,
+  Modal,
+  TextInput,
+  Dimensions
 } from 'react-native';
-// import { styled } from 'nativewind';
-import * as Location from 'expo-location';
 import MapView, { Marker } from 'react-native-maps';
-import Slider from '@react-native-community/slider';
-import { BlurView } from 'expo-blur';
+import * as Location from 'expo-location';
+import {
+  Ionicons,
+  MaterialIcons,
+  MaterialCommunityIcons
+} from '@expo/vector-icons';
+import { Container, SearchBar, FilterButton, HousingCard } from '../ui';
+import HousingMap from '../utils/map';
+import { Housing } from '@/types/HousingType';
+import { SearchFilters } from '@/types/FilterType';
+import renderHousingCard from './renderHousingcard';
+import FilterModal from './renderFilter';
 
-// Types et interfaces
-interface Logement {
-  id: number;
-  titre: string;
-  pays: string;
-  ville: string;
-  prixLocation: number;
-  nombreChambres: number;
-  superficie: number;
-  note: number;
-  coordonnees: {
-    latitude: number;
-    longitude: number;
-  };
-  images: string[];
-  equipements: string[];
-  proximiteInfrastructures: {
-    ecoles: number;
-    hopitaux: number;
-    transports: number;
-    commerces: number;
-  };
-}
+// Advanced Housing Search Component
+const AdvancedHousingSearch = () => {
 
-// Composant principal
-const SearchComponent = () => {
-  // États de recherche
-  const [recherche, setRecherche] = useState('');
-  const [filtres, setFiltres] = useState({
-    prixMin: 0,
-    prixMax: 5000,
-    chambres: 1,
-    superficie: 0,
+  const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
+  const [housings, setHousings] = useState<Housing[]>([]);
+  const [filteredHousings, setFilteredHousings] = useState<Housing[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+  const [filters, setFilters] = useState<SearchFilters>({
+    minPrice: 0,
+    maxPrice: 10000,
+    minSurface: 20,
+    rooms: 1,
+    type: null,
+    country: null
   });
-  const [localisationActuelle, setLocalisationActuelle] = useState(null);
-  const [logementsFiltres, setLogementsFiltres] = useState<Logement[]>([]);
-  
-  // Animation
-  const animationRecherche = useRef(new Animated.Value(0)).current;
 
-  // Fonction de recherche avancée avec IA
-  const rechercherLogements = async () => {
-    // Simulation de recherche avec intelligence artificielle
-    Animated.spring(animationRecherche, {
-      toValue: 1,
-      friction: 2,
-      useNativeDriver: true
-    }).start();
+  // Location and Initial Data Fetch
+  useEffect(() => {
+    const initializeLocationAndData = async () => {
+      // Request location permissions
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({});
+        setCurrentLocation(location);
+        
+        // Mock data fetch - replace with actual API call
+        const mockHousings: Housing[] = [
+          {
+            id: '1',
+            title: 'Modern Apartment in Paris',
+            description: 'Spacious apartment in the heart of Paris',
+            price: 2500,
+            surface: 85,
+            rooms: 3,
+            bathrooms: 2,
+            country: 'France',
+            city: 'Paris',
+            type: 'apartment',
+            amenities: ['Balcony', 'Gym', 'Parking'],
+            location: { 
+              latitude: 48.8566, 
+              longitude: 2.3522 
+            },
+            proximityScore: {
+              transport: 4.5,
+              schools: 4.2,
+              healthcare: 4.7,
+              shopping: 4.8
+            },
+            images: ['https://example.com/apartment1.jpg']
+          },
+          // Add more mock housing data
+        ];
 
-    // Logique de recherche avancée
-    // 1. Analyse sémantique de la recherche
-    // 2. Recommandation personnalisée
-    // 3. Scoring multi-critères
-  };
+        setHousings(mockHousings);
+        setFilteredHousings(mockHousings);
+      }
+    };
 
-  // Demande de localisation
-  const obtenirLocalisationActuelle = async () => {
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Permission de localisation refusée');
-      return;
-    }
+    initializeLocationAndData();
+  }, []);
 
-    let location = await Location.getCurrentPositionAsync({});
-    setLocalisationActuelle(location.coords);
-  };
+  // Advanced Search and Filter Logic
+  const applyFilters = useCallback(() => {
+    const results = housings.filter(housing => {
+      const matchesPrice = 
+        housing.price >= filters.minPrice && 
+        housing.price <= filters.maxPrice;
+      
+      const matchesSurface = housing.surface >= filters.minSurface;
+      const matchesRooms = housing.rooms >= filters.rooms;
+      const matchesType = !filters.type || housing.type === filters.type;
+      const matchesCountry = !filters.country || housing.country === filters.country;
+      const matchesQuery = housing.title.toLowerCase().includes(searchQuery.toLowerCase());
 
-  // Composant de carte interactive
-  const CarteLogements = () => (
-    <View className="h-60 w-full rounded-2xl overflow-hidden">
-      <MapView
-        className="flex-1"
-        initialRegion={{
-          latitude: localisationActuelle?.latitude || 48.8566,
-          longitude: localisationActuelle?.longitude || 2.3522,
-          latitudeDelta: 0.1,
-          longitudeDelta: 0.1,
-        }}
-      >
-        {/* Markers de logements */}
-      </MapView>
-    </View>
-  );
+      return matchesPrice && 
+             matchesSurface && 
+             matchesRooms && 
+             matchesType && 
+             matchesCountry && 
+             matchesQuery;
+    });
 
-  // Carte de logement détaillée
-  const CarteLogement = ({ logement }: { logement: Logement }) => (
-    <BlurView 
-      intensity={50} 
-      className="rounded-2xl p-4 mb-4 flex-row items-center"
-    >
-      <Image 
-        source={{ uri: logement.images[0] }} 
-        className="w-24 h-24 rounded-xl mr-4"
-      />
-      <View className="flex-1">
-        <Text className="text-lg font-bold">{logement.titre}</Text>
-        <Text className="text-gray-600">{logement.ville}</Text>
-        <View className="flex-row items-center mt-2">
-          <Text className="font-bold text-blue-600">
-            {logement.prixLocation}€/mois
-          </Text>
-          <View className="ml-4 flex-row items-center">
-            <Text>⭐ {logement.note}/5</Text>
-          </View>
-        </View>
-      </View>
-    </BlurView>
-  );
+    setFilteredHousings(results);
+    setIsFilterModalVisible(false);
+  }, [housings, filters, searchQuery]);
 
-  // Filtres avancés avec sliders
-  const FiltresAvances = () => (
-    <View className="space-y-4">
-      <View>
-        <Text>Prix: {filtres.prixMin}€ - {filtres.prixMax}€</Text>
-        <Slider
-          minimumValue={0}
-          maximumValue={5000}
-          step={100}
-          value={filtres.prixMax}
-          onValueChange={(val) => setFiltres(prev => ({...prev, prixMax: val}))}
-        />
-      </View>
-      <View>
-        <Text>Nombre de chambres: {filtres.chambres}</Text>
-        <Slider
-          minimumValue={1}
-          maximumValue={5}
-          step={1}
-          value={filtres.chambres}
-          onValueChange={(val) => setFiltres(prev => ({...prev, chambres: val}))}
-        />
-      </View>
-    </View>
-  );
-
-  // Interface principale
   return (
-    <ScrollView 
-      className="flex bg-white p-4"
-      showsVerticalScrollIndicator={false}
-    >
-      <Text className="text-3xl font-bold mb-6 text-center">
-        Trouvez Votre Refuge Idéal
-      </Text>
-
-      {/* Barre de recherche intelligente */}
-      <Animated.View 
-        style={{
-          transform: [{
-            scale: animationRecherche.interpolate({
-              inputRange: [0, 1],
-              outputRange: [1, 1.05]
-            })
-          }]
-        }}
-      >
-        <View className="flex-row mb-4">
+    <Container>
+      {/* Search Bar */}
+      <SearchBar>
+        <View className="flex-1 flex-row items-center bg-gray-100 rounded-xl px-3 py-2">
+          <Ionicons name="search" size={20} color="#4B5563" className="mr-2" />
           <TextInput
-            placeholder="Recherche intelligente..."
-            className="flex-1 bg-gray-100 p-3 rounded-l-xl"
-            value={recherche}
-            onChangeText={setRecherche}
+            placeholder="Search housing"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            className="flex-1"
           />
-          <TouchableOpacity 
-            className="bg-blue-500 p-3 rounded-r-xl"
-            onPress={rechercherLogements}
-          >
-            <Text className="text-white">🔍</Text>
-          </TouchableOpacity>
         </View>
-      </Animated.View>
+        <FilterButton onPress={() => setIsFilterModalVisible(true)}>
+          <Ionicons name="filter" size={24} color="white" />
+        </FilterButton>
+      </SearchBar>
 
-      {/* Carte interactive */}
-      <CarteLogements />
+      {/* Housing Map */}
+      <HousingMap 
+        housings={filteredHousings} 
+        currentLocation={currentLocation} 
+      />
 
-      {/* Filtres avancés */}
-      <FiltresAvances />
+      {/* Housing List */}
+      <ScrollView className="p-8">
+        {filteredHousings.map(housing => renderHousingCard(housing))}
+      </ScrollView>
 
-      {/* Section de recommandations personnalisées */}
-      <View className="mt-6">
-        <Text className="text-xl font-bold mb-4">
-          🌟 Recommandations Personnalisées
-        </Text>
-        {/* Liste de logements recommandés */}
-        {logementsFiltres.map(logement => (
-          <CarteLogement key={logement.id} logement={logement} />
-        ))}
-      </View>
-    </ScrollView>
+      {/* Filter Modal */}
+      <FilterModal 
+        isVisible={isFilterModalVisible}
+        filters={filters}
+        setFilters={setFilters}
+        applyFilters={applyFilters}
+        onClose={() => setIsFilterModalVisible(false)}
+      />
+    </Container>
   );
 };
 
-export default SearchComponent;
+export default AdvancedHousingSearch;

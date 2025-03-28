@@ -5,7 +5,7 @@ import EvilIcons from "@expo/vector-icons/EvilIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Svg, { Text as SvgText, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
-import NotificationBadge from "@/utils/Notification";
+import NotificationBadge from "@/components/utils/Notification";
 
 
 const Header = () => {
