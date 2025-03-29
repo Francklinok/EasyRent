@@ -10,7 +10,7 @@ export default function ChatLayout() {
         headerShown: true,
         header: () => <ChatHeader />,
         headerStyle: {
-          backgroundColor: "white",
+          backgroundColor: "red",
         },
       }}
     />

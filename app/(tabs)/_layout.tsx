@@ -43,6 +43,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <EvilIcons name="search" size={38} color={color}/>,
         }}
       />
+
       <Tabs.Screen
         name="ChatList"
         options={{

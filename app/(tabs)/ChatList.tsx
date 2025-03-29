@@ -11,7 +11,7 @@ import { router } from 'expo-router';
 
 
 const ChatList = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ChatList'>>();
+  // const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'ChatList'>>();
 
   return (
     <View>
