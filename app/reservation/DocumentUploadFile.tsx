@@ -1,18 +1,14 @@
-
-// Fichier: screens/DocumentUploadScreen.tsx
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { Ionicons } from '@expo/vector-icons';
-import { storage, firestore } from '../services/firebase';
-import { AuthContext } from '../contexts/AuthContext';
-import { CustomButton } from '../components';
-import { Property } from '../types';
+import { useRouter } from 'expo-router';
 
+import { CustomButton } from '@/components/ui';
+import { Property } from '@/types/property';
+
+// Liste des documents requis
 const requiredDocuments = [
   { id: 'idCard', name: 'Pièce d\'identité', required: true },
   { id: 'proofOfIncome', name: 'Justificatif de revenus', required: true },
@@ -24,30 +20,10 @@ const requiredDocuments = [
 
 export default function DocumentUploadScreen({ route }) {
   const { reservationId, property } = route.params as { reservationId: string, property: Property };
-  const { user } = useContext(AuthContext);
-  const navigation = useNavigation();
+  const router = useRouter();
   const [documents, setDocuments] = useState<Record<string, string | null>>({});
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
-  const [reservation, setReservation] = useState<any>(null);
-
-  useEffect(() => {
-    const fetchReservation = async () => {
-      try {
-        const reservationDoc = await getDoc(doc(firestore, 'reservations', reservationId));
-        if (reservationDoc.exists()) {
-          setReservation(reservationDoc.data());
-          if (reservationDoc.data().documents) {
-            setDocuments(reservationDoc.data().documents);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching reservation:', error);
-      }
-    };
-
-    fetchReservation();
-  }, [reservationId]);
 
   const pickDocument = async (docId: string) => {
     try {
@@ -63,17 +39,11 @@ export default function DocumentUploadScreen({ route }) {
       }
       
       const file = result.assets[0];
-      const response = await fetch(file.uri);
-      const blob = await response.blob();
       
-      const storageRef = ref(storage, `documents/${user.uid}/${reservationId}/${docId}_${Date.now()}`);
-      await uploadBytes(storageRef, blob);
-      
-      const downloadURL = await getDownloadURL(storageRef);
-      
+      // Simuler l'upload réussi avec l'URI du fichier local
       setDocuments(prev => ({
         ...prev,
-        [docId]: downloadURL,
+        [docId]: file.uri,
       }));
       
       setUploading(null);
@@ -102,25 +72,21 @@ export default function DocumentUploadScreen({ route }) {
         return;
       }
       
-      // Mettre à jour la réservation avec les documents
-      await updateDoc(doc(firestore, 'reservations', reservationId), {
-        documents,
-        documentsSubmitted: true,
-        documentSubmissionDate: new Date().toISOString(),
-        status: 'documents_submitted',
-      });
+      // Simuler l'envoi au backend
+      setTimeout(() => {
+        Alert.alert(
+          'Documents soumis',
+          'Vos documents ont été soumis avec succès. Vous serez notifié lorsque le propriétaire aura examiné votre dossier.',
+          [
+            { text: 'OK', onPress: () => router.push('/reservation-status') }
+          ]
+        );
+        setLoading(false);
+      }, 1000);
       
-      Alert.alert(
-        'Documents soumis',
-        'Vos documents ont été soumis avec succès. Vous serez notifié lorsque le propriétaire aura examiné votre dossier.',
-        [
-          { text: 'OK', onPress: () => navigation.navigate('ReservationStatus') }
-        ]
-      );
     } catch (error) {
       console.error('Document submission error:', error);
       Alert.alert('Erreur', 'Une erreur est survenue lors de la soumission de vos documents.');
-    } finally {
       setLoading(false);
     }
   };
@@ -177,7 +143,7 @@ export default function DocumentUploadScreen({ route }) {
         
         <TouchableOpacity 
           className="mt-4 items-center"
-          onPress={() => navigation.navigate('ReservationStatus')}
+          onPress={() => router.push('/reservation-status')}
         >
           <Text className="text-blue-500">Enregistrer et continuer plus tard</Text>
         </TouchableOpacity>

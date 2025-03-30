@@ -6,7 +6,7 @@
     import { doc, getDoc, updateDoc } from 'firebase/firestore';
     import { firestore } from '../services/firebase';
     import { AuthContext } from '../contexts/AuthContext';
-    import { CustomButton } from '../components';
+    import { CustomButton } from '../ui';
     import * as Print from 'expo-print';
     import * as FileSystem from 'expo-file-system';
     import * as Sharing from 'expo-sharing';

@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { CustomButton, CustomInput, DatePicker, PropertyCard } from '../../../components/ui';
+import { CustomButton, CustomInput, DatePicker, PropertyCard } from '../../components/ui';
 import { Property } from '@/types/property';
 import { useRoute } from '@react-navigation/native';
 
