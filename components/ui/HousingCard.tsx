@@ -22,3 +22,4 @@ export const HousingCard: React.FC<HousingCardProps> = ({ title, price, onPress,
     </View>
   </TouchableOpacity>
 );
+export default HousingCard;

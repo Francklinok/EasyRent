@@ -7,7 +7,7 @@ interface SearchBarProps {
   children?: React.ReactNode;
 }
 
-export const SearchBar: React.FC<SearchBarProps> = ({ children }) => {
+ const SearchBar: React.FC<SearchBarProps> = ({ children }) => {
 
   return (
     <View style={styles.searchBar}>
@@ -35,3 +35,5 @@ const styles = StyleSheet.create({
     fontSize: 16
   }
 });
+
+export default SearchBar

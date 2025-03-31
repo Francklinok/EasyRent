@@ -3,30 +3,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
-  Text,
-  TouchableOpacity,
   ScrollView,
-  Image,
-  Modal,
   TextInput,
-  Dimensions
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import {
   Ionicons,
-  MaterialIcons,
-  MaterialCommunityIcons
 } from '@expo/vector-icons';
-import { Container, SearchBar, FilterButton, HousingCard } from '../ui';
-import HousingMap from '../utils/map';
+import { Container,SearchBar,FilterButton } from '@/components/ui';
+import HousingMap from '@/components/utils/map';
 import { Housing } from '@/types/HousingType';
 import { SearchFilters } from '@/types/FilterType';
-import renderHousingCard from './renderHousingcard';
-import FilterModal from './renderFilter';
+import renderHousingCard from '@/components/search/renderHousingcard';
+import FilterModal from '@/components/search/renderFilter';
 
-// Advanced Housing Search Component
-const AdvancedHousingSearch = () => {
+
+const AdvancedHousingSearch = ()=>{
 
   const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
   const [housings, setHousings] = useState<Housing[]>([]);
@@ -115,7 +107,6 @@ const AdvancedHousingSearch = () => {
 
   return (
     <Container>
-      {/* Search Bar */}
       <SearchBar>
         <View className="flex-1 flex-row items-center bg-gray-100 rounded-xl px-3 py-2">
           <Ionicons name="search" size={20} color="#4B5563" className="mr-2" />
@@ -131,18 +122,15 @@ const AdvancedHousingSearch = () => {
         </FilterButton>
       </SearchBar>
 
-      {/* Housing Map */}
       <HousingMap 
         housings={filteredHousings} 
         currentLocation={currentLocation} 
       />
 
-      {/* Housing List */}
       <ScrollView className="p-8">
         {filteredHousings.map(housing => renderHousingCard(housing))}
       </ScrollView>
 
-      {/* Filter Modal */}
       <FilterModal 
         isVisible={isFilterModalVisible}
         filters={filters}
@@ -155,3 +143,4 @@ const AdvancedHousingSearch = () => {
 };
 
 export default AdvancedHousingSearch;
+

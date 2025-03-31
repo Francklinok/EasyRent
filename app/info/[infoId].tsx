@@ -16,7 +16,7 @@ interface ComponentProps {
   itemId: string | string[];
 }
 
-const Info = () => {
+export default function Info (){
   const router = useRouter();
   // Récupérer les paramètres de la route
   const params = useLocalSearchParams();
@@ -102,4 +102,3 @@ const Info = () => {
   );
 };
 
-export default Info;

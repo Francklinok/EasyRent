@@ -98,7 +98,7 @@ const ItemCard = ({ item }:{ item: Item }) => {
       {/* Réservation Bouton */}
       <TouchableOpacity
         onPress={() => router.navigate({
-          pathname:""
+          pathname:"/reservation/ReservationFile"
         })}
         className="bg-blue-500 p-4 rounded-full absolute top-5 left-5 z-10"
       >

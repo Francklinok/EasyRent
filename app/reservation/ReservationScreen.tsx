@@ -12,13 +12,13 @@ import { useRoute } from '@react-navigation/native';
 const MOCK_USER = {
   uid: 'user123',
   fullName: 'Jean Dupont'
-};
+};  
 
 const ReservationScreen = () => {
   const route = useRoute();
 
   const { property } = route.params as { property: Property };
-  const navigation = useNavigation();
+  // const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
 
   const validationSchema = Yup.object().shape({
@@ -108,7 +108,9 @@ const ReservationScreen = () => {
               minimumDate={new Date()}
             />
             {formik.errors.startDate && formik.touched.startDate && (
-              <Text className="text-red-500">{formik.errors.startDate}</Text>
+              // <Text className="text-red-500">{formik.errors.startDate}</Text>
+              <Text className="text-red-500">8h20min</Text>
+
             )}
           </View>
           
@@ -120,7 +122,9 @@ const ReservationScreen = () => {
               minimumDate={formik.values.startDate}
             />
             {formik.errors.endDate && formik.touched.endDate && (
-              <Text className="text-red-500">{formik.errors.endDate}</Text>
+              // <Text className="text-red-500">{formik.errors.endDate}</Text>
+              <Text className="text-red-500">10h:32min</Text>
+
             )}
           </View>
           

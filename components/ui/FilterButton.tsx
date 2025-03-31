@@ -7,7 +7,7 @@ interface FilterButtonProps {
 
 }
 
-export const FilterButton: React.FC<FilterButtonProps> = ({ onPress }) => (
+ const FilterButton: React.FC<FilterButtonProps> = ({ onPress }) => (
   <TouchableOpacity style={styles.filterButton} onPress={onPress}>
     <Text style={styles.text}>Filtrer</Text>
   </TouchableOpacity>
@@ -26,3 +26,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold'
   }
 });
+
+export default FilterButton

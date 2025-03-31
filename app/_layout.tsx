@@ -1,6 +1,3 @@
-
-
-
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -8,7 +5,6 @@ import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import 'react-native-reanimated';
-import ItemData from '../components/info';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 // Empêche l'écran de démarrage de se cacher automatiquement avant le chargement des ressources.
@@ -40,7 +36,6 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={screenOptions}>
-      {/* <Stack> */}
 
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" options={{ title: 'Page Introuvable' }} />

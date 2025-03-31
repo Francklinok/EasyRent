@@ -1,8 +1,8 @@
 import { View } from "react-native"
-import AdvancedHousingSearch from "@/components/search/Searchcomponent"
+import AdvancedHousingSearch from "../searchScreen/Searchcomponent"
 import Header from "@/components/head/HeadFile"
 
-const Search = () => {
+export default function Search(){
   return (
     <View>
         <Header/>
@@ -10,4 +10,3 @@ const Search = () => {
     </View>
   )
 }
-export default Search;

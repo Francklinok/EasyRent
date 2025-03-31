@@ -5,7 +5,7 @@ interface CustomViewProps extends ViewProps {
   children?: ReactNode;
 }
 
-export const Container: React.FC<CustomViewProps> = ({ children, style, ...props }) => (
+const Container: React.FC<CustomViewProps> = ({ children, style, ...props }) => (
   <View style={[styles.container, style]} {...props}>
     {children}
   </View>
@@ -17,3 +17,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb'
   }
 });
+
+export default Container;

@@ -219,10 +219,13 @@ const  ReservationStatusScreen = () => {
                 ? 'Vous n\'avez pas encore effectué de demande de réservation.'
                 : 'Vous n\'avez pas encore reçu de demande de réservation.'}
             </Text>
+
+            {/* modify the route after  */}
+
             {userType === 'tenant' && (
               <TouchableOpacity
                 className="bg-blue-600 py-3 px-4 rounded-lg"
-                onPress={() => router.push('/home')}
+                onPress={() => router.push("/home/home")}
               >
                 <Text className="text-white font-medium">Chercher un logement</Text>
               </TouchableOpacity>

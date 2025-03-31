@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-
+import { useRoute } from '@react-navigation/native';
 import { CustomButton } from '@/components/ui';
 import { Property } from '@/types/property';
 
@@ -18,7 +18,8 @@ const requiredDocuments = [
   { id: 'guarantorDocuments', name: 'Documents du garant', required: false },
 ];
 
-export default function DocumentUploadScreen({ route }) {
+const DocumentUploadScreen = () => {
+  const route = useRoute()
   const { reservationId, property } = route.params as { reservationId: string, property: Property };
   const router = useRouter();
   const [documents, setDocuments] = useState<Record<string, string | null>>({});
@@ -78,7 +79,7 @@ export default function DocumentUploadScreen({ route }) {
           'Documents soumis',
           'Vos documents ont été soumis avec succès. Vous serez notifié lorsque le propriétaire aura examiné votre dossier.',
           [
-            { text: 'OK', onPress: () => router.push('/reservation-status') }
+            // { text: 'OK', onPress: () => router.push('/reservation-status') }
           ]
         );
         setLoading(false);
@@ -143,7 +144,7 @@ export default function DocumentUploadScreen({ route }) {
         
         <TouchableOpacity 
           className="mt-4 items-center"
-          onPress={() => router.push('/reservation-status')}
+          // onPress={() => router.push('/reservation-status')}
         >
           <Text className="text-blue-500">Enregistrer et continuer plus tard</Text>
         </TouchableOpacity>
@@ -151,3 +152,4 @@ export default function DocumentUploadScreen({ route }) {
     </SafeAreaView>
   );
 }
+export default  DocumentUploadScreen;
