@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { CustomButton } from '../ui';
+import { CustomButton } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function PaymentScreen({ route }) {

@@ -144,6 +144,9 @@ const DocumentUploadScreen = () => {
         
         <TouchableOpacity 
           className="mt-4 items-center"
+          onPress={() => router.navigate({
+                                pathname:"/finalBooking/bookingstatus"
+                              })}
           // onPress={() => router.push('/reservation-status')}
         >
           <Text className="text-blue-500">Enregistrer et continuer plus tard</Text>

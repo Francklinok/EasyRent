@@ -34,7 +34,6 @@ const  ReservationStatusScreen = () => {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   
-  // On va utiliser une valeur statique pour userType pour la démo
   const userType = 'tenant'; // Ou 'landlord' pour tester l'autre rôle
 
   useEffect(() => {

@@ -2,11 +2,21 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { CustomButton, CustomInput, DatePicker, PropertyCard } from '../../components/ui';
+import { useRoute, RouteProp } from '@react-navigation/native';
 import { Property } from '@/types/property';
-import { useRoute } from '@react-navigation/native';
+import { router } from 'expo-router';
+type RootStackParamList = {
+
+  Reservation: { property: Property };
+  DocumentUpload: { reservationId: string; property: Property };
+};
+
+type ReservationScreenRouteProp = RouteProp<RootStackParamList, 'Reservation'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Reservation'>;
 
 // Données d'essai pour remplacer les données du backend
 const MOCK_USER = {
@@ -15,10 +25,9 @@ const MOCK_USER = {
 };  
 
 const ReservationScreen = () => {
-  const route = useRoute();
-
-  const { property } = route.params as { property: Property };
-  // const navigation = useNavigation();
+  const route = useRoute<ReservationScreenRouteProp>();
+  const navigation = useNavigation<NavigationProp>();
+  const { property } = route.params;
   const [loading, setLoading] = useState(false);
 
   const validationSchema = Yup.object().shape({
@@ -29,11 +38,11 @@ const ReservationScreen = () => {
     ).required('Date de fin requise'),
     numberOfOccupants: Yup.number()
       .min(1, 'Au moins 1 occupant requis')
-      .max(property.maxOccupants, `Maximum ${property.maxOccupants} occupants`)
+      .max(property?.maxOccupants, `Maximum ${property?.maxOccupants} occupants`)
       .required('Nombre d\'occupants requis'),
     hasGuarantor: Yup.boolean(),
     monthlyIncome: Yup.number()
-      .min(property.monthlyRent * 2, 'Le revenu doit être au moins le double du loyer')
+      .min(property?.monthlyRent * 2, 'Le revenu doit être au moins le double du loyer')
       .required('Revenu mensuel requis'),
   });
 
@@ -64,17 +73,17 @@ const ReservationScreen = () => {
             numberOfOccupants: values.numberOfOccupants,
             hasGuarantor: values.hasGuarantor,
             monthlyIncome: values.monthlyIncome,
-            monthlyRent: property.monthlyRent,
+            monthlyRent: property?.monthlyRent,
             status: 'pending',
             createdAt: new Date(),
             documentsSubmitted: false,
           });
           
-          // Simuler la redirection vers l'écran de téléchargement de documents
-          // navigation.navigate('DocumentUpload', { 
-          //   reservationId: 'mock-reservation-id-123',
-          //   property
-          // });
+          // Redirection vers l'écran de téléchargement de documents
+          navigation.navigate('DocumentUpload', { 
+            reservationId: 'mock-reservation-id-123',
+            property
+          });
           
           setLoading(false);
         }, 1500); // Simuler un délai réseau de 1,5 seconde
@@ -88,11 +97,11 @@ const ReservationScreen = () => {
   });
 
   const calculateTotalAmount = () => {
-    return property.monthlyRent + property.depositAmount;
+    return property?.monthlyRent + property?.depositAmount;
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white p-2">
       <ScrollView className="flex-1 p-4">
         <Text className="text-2xl font-bold mb-4">Réserver un logement</Text>
         <PropertyCard property={property} />
@@ -108,9 +117,7 @@ const ReservationScreen = () => {
               minimumDate={new Date()}
             />
             {formik.errors.startDate && formik.touched.startDate && (
-              // <Text className="text-red-500">{formik.errors.startDate}</Text>
-              <Text className="text-red-500">8h20min</Text>
-
+              <Text className="text-red-500">{formik.errors.startDate}</Text>
             )}
           </View>
           
@@ -122,9 +129,7 @@ const ReservationScreen = () => {
               minimumDate={formik.values.startDate}
             />
             {formik.errors.endDate && formik.touched.endDate && (
-              // <Text className="text-red-500">{formik.errors.endDate}</Text>
-              <Text className="text-red-500">10h:32min</Text>
-
+              <Text className="text-red-500">{formik.errors.endDate}</Text>
             )}
           </View>
           
@@ -160,11 +165,11 @@ const ReservationScreen = () => {
             <Text className="text-lg font-semibold mb-2">Résumé des coûts</Text>
             <View className="flex-row justify-between mb-2">
               <Text>Loyer mensuel</Text>
-              <Text>{property.monthlyRent} €</Text>
+              <Text>{property?.monthlyRent} €</Text>
             </View>
             <View className="flex-row justify-between mb-2">
               <Text>Dépôt de garantie</Text>
-              <Text>{property.depositAmount} €</Text>
+              <Text>{property?.depositAmount} €</Text>
             </View>
             <View className="flex-row justify-between pt-2 border-t border-gray-200 mt-2">
               <Text className="font-bold">Total à payer</Text>
@@ -179,7 +184,10 @@ const ReservationScreen = () => {
           
           <CustomButton
             title="Continuer vers les documents"
-            onPress={formik.handleSubmit}
+            // onPress={() => formik.handleSubmit()}
+            onPress={() => router.navigate({
+                      pathname:"/documentsubmit/DocumentUploadFile"
+                    })}
             loading={loading}
             disabled={!formik.isValid || loading}
           />
@@ -189,6 +197,6 @@ const ReservationScreen = () => {
   );
 };
 
-export default ReservationScreen;
 
+export default ReservationScreen;
 
