@@ -5,8 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { CustomButton } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { useRoute } from '@react-navigation/native';
 
-export default function PaymentScreen({ route }) {
+
+export default function PaymentScreen() {
+ const  route = useRoute()
   const { reservationId } = route.params;
   const navigation = useNavigation();
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' | 'crypto' | null>(null);

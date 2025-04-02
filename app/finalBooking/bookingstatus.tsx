@@ -73,6 +73,17 @@ const  ReservationStatusScreen = () => {
           monthlyRent: 1200,
           landlordId: 'landlord789',
           propertyId: 'property789'
+        },
+        {
+          id: '3',
+          propertyTitle: 'Maison avec jardin',
+          status: 'contract_generated',
+          createdAt: new Date(2025, 2, 5).toISOString(),
+          startDate: new Date(2025, 4, 15).toISOString(),
+          endDate: new Date(2026, 4, 15).toISOString(),
+          monthlyRent: 1200,
+          landlordId: 'landlord789',
+          propertyId: 'property789'
         }
       ];
       
@@ -100,14 +111,14 @@ const  ReservationStatusScreen = () => {
         break;
       case 'approved':
         router.push({
-          pathname: '/payment',
+          pathname: "/payement/PayementScreen",
           params: { reservationId: reservation.id }
         });
         break;
       case 'payment_completed':
       case 'contract_generated':
         router.push({
-          pathname: '/contract',
+          pathname: '/contrat/ContratScreen',
           params: { reservationId: reservation.id }
         });
         break;

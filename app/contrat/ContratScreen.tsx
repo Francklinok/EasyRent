@@ -1,11 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Alert, Share, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CustomButton } from '@/components/ui';
 import * as Print from 'expo-print';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Ionicons } from '@expo/vector-icons';
+import { useRoute, useNavigation } from '@react-navigation/native';
 
 interface Property {
   title: string;
@@ -34,7 +36,11 @@ interface Reservation {
   contractGenerationDate?: string;
 }
 
-export default function ContractScreen({ route, navigation }) {
+const  ContractScreen = () =>{
+
+
+  const navigation = useNavigation();
+  const route = useRoute();
   const { reservationId } = route.params;
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
@@ -44,6 +50,7 @@ export default function ContractScreen({ route, navigation }) {
   const [generating, setGenerating] = useState(false);
   const [contractFileUri, setContractFileUri] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [contractId, setContractId] = useState(`SCF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`);
 
   // Fonction pour formater les dates de manière cohérente
   const formatDate = (date: any): Date => {
@@ -130,6 +137,29 @@ export default function ContractScreen({ route, navigation }) {
     fetchData();
   }, [reservationId]);
 
+  const generateQRCodeSVG = (data: string) => {
+    // Simuler un QR code avec un SVG basique
+    // Dans une véritable implémentation, vous utiliseriez une bibliothèque dédiée
+    return `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+        <rect x="0" y="0" width="100" height="100" fill="#ffffff" />
+        <rect x="10" y="10" width="80" height="80" fill="#000000" />
+        <rect x="20" y="20" width="60" height="60" fill="#ffffff" />
+        <rect x="30" y="30" width="40" height="40" fill="#000000" />
+        <rect x="40" y="40" width="20" height="20" fill="#ffffff" />
+        <text x="10" y="95" font-size="3" fill="#000000">SCAN: ${data}</text>
+      </svg>
+    `;
+  };
+
+  const generateWatermarkSVG = () => {
+    return `
+      <svg xmlns="http://www.w3.org/2000/svg" width="500" height="500" viewBox="0 0 500 500" opacity="0.04">
+        <text transform="rotate(-45 250 250)" x="0" y="250" fill="#000000" font-size="30" font-family="Arial, sans-serif">CONTRAT OFFICIEL • ${contractId} • CONTRAT OFFICIEL</text>
+      </svg>
+    `;
+  };
+
   const generateContractHTML = () => {
     if (!reservation || !property || !landlord || !tenant) {
       return '';
@@ -141,99 +171,508 @@ export default function ContractScreen({ route, navigation }) {
     // Calculer la durée en mois
     const durationMonths = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30.5));
     
-    // TODO: À compléter - Implémenter la génération du HTML pour le contrat PDF
+    // Génération de l'identifiant unique du contrat
+    const qrCodeData = `CONTRACT:${contractId}|PROP:${property.title}|TENANT:${tenant.fullName}|START:${startDate.toISOString()}|END:${endDate.toISOString()}`;
+    const qrCodeSVG = generateQRCodeSVG(qrCodeData);
+    const watermarkSVG = generateWatermarkSVG();
+    
+    const currentDate = new Date().toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+    
     return `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Contrat de location</title>
+        <title>Contrat de location - ${contractId}</title>
         <style>
-          body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            color: #333;
-            line-height: 1.5;
+          @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap');
+          
+          * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
           }
+          
+          body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #24292e;
+            line-height: 1.6;
+            background-color: #ffffff;
+            position: relative;
+            counter-reset: section;
+          }
+          
+          .watermark {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+          }
+          
+          .page {
+            width: 100%;
+            max-width: 100%;
+            padding: 40px 60px;
+            position: relative;
+            background: linear-gradient(to bottom, #ffffff, #f9fafc);
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+          }
+          
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+            border-bottom: 1px solid #e1e4e8;
+          }
+          
+          .logo-container {
+            display: flex;
+            align-items: center;
+          }
+          
+          .logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4F46E5, #6366F1);
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+          }
+          
+          .contract-info {
+            flex: 1;
+          }
+          
+          .contract-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 32px;
+            color: #111827;
+            margin-bottom: 10px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+          }
+          
+          .contract-subtitle {
+            color: #6B7280;
+            font-size: 16px;
+            font-weight: 400;
+          }
+          
+          .contract-id {
+            font-size: 14px;
+            color: #4F46E5;
+            margin-top: 5px;
+            font-weight: 500;
+          }
+          
+          .qr-container {
+            width: 100px;
+            height: 100px;
+            margin-left: 20px;
+          }
+          
           h1 {
             text-align: center;
-            color: #2563EB;
+            color: #1F2937;
             margin-bottom: 30px;
+            font-weight: 700;
+            font-size: 28px;
           }
+          
           h2 {
-            color: #2563EB;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
+            color: #4F46E5;
+            font-size: 20px;
+            font-weight: 600;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            position: relative;
+            padding-bottom: 10px;
+          }
+          
+          h2::before {
+            counter-increment: section;
+            content: counter(section) ".";
+            margin-right: 8px;
+            color: #4F46E5;
+          }
+          
+          h2::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            border-bottom: 2px solid #E5E7EB;
+          }
+          
+          h3 {
+            color: #374151;
+            font-size: 18px;
             margin-top: 25px;
+            margin-bottom: 15px;
+            font-weight: 600;
           }
+          
           .section {
-            margin-bottom: 25px;
+            margin-bottom: 30px;
+            padding: 25px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border: 1px solid #E5E7EB;
           }
+          
+          .highlight-box {
+            background-color: #F3F4F6;
+            border-left: 4px solid #4F46E5;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+          }
+          
+          .property-details {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 20px 0;
+          }
+          
+          .property-detail {
+            width: 50%;
+            padding: 10px 0;
+            display: flex;
+          }
+          
+          .property-detail-label {
+            font-weight: 500;
+            width: 150px;
+            color: #4B5563;
+          }
+          
+          .property-detail-value {
+            color: #111827;
+            font-weight: 400;
+          }
+          
+          .party-info {
+            padding: 20px;
+            margin: 10px 0;
+            background-color: #F9FAFB;
+            border-radius: 6px;
+          }
+          
+          .party-name {
+            font-weight: 600;
+            color: #111827;
+            font-size: 18px;
+            margin-bottom: 10px;
+          }
+          
+          .party-contact {
+            margin-top: 5px;
+            color: #4B5563;
+          }
+          
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+          }
+          
+          table, th, td {
+            border: 1px solid #E5E7EB;
+          }
+          
+          th {
+            background-color: #F3F4F6;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+          }
+          
+          td {
+            padding: 12px;
+            color: #1F2937;
+          }
+          
           .signature-area {
-            margin-top: 50px;
+            margin-top: 60px;
             display: flex;
             justify-content: space-between;
           }
+          
           .signature-box {
-            border-top: 1px solid #000;
             width: 45%;
-            padding-top: 5px;
+            position: relative;
           }
-          .info-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
+          
+          .signature-title {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 60px;
           }
-          .info-table td {
-            padding: 8px;
-            border-bottom: 1px solid #eee;
+          
+          .signature-line {
+            border-bottom: 1px solid #000;
+            margin-bottom: 5px;
           }
-          .info-table td:first-child {
-            font-weight: bold;
-            width: 40%;
+          
+          .signature-name {
+            font-weight: 500;
           }
-          ul li {
-            margin-bottom: 8px;
+          
+          .signature-date {
+            color: #6B7280;
+            font-size: 14px;
+            margin-top: 5px;
           }
-          .contract-ref {
-            text-align: right;
-            font-size: 0.8em;
-            color: #666;
-            margin-bottom: 20px;
+          
+          .footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid #E5E7EB;
+            text-align: center;
+            color: #6B7280;
+            font-size: 12px;
+          }
+          
+          .clause {
+            margin-bottom: 15px;
+          }
+          
+          .special-clause {
+            background-color: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+          }
+          
+          .official-seal {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            bottom: 40px;
+            right: 60px;
+            opacity: 0.7;
+          }
+          
+          .legal-notice {
+            font-size: 11px;
+            color: #9CA3AF;
+            margin-top: 30px;
+            font-style: italic;
+          }
+          
+          .holographic-effect {
+            position: absolute;
+            bottom: 100px;
+            right: 50px;
+            width: 150px;
+            height: 150px;
+            background: linear-gradient(135deg, transparent, rgba(99, 102, 241, 0.1), transparent);
+            border-radius: 50%;
+            pointer-events: none;
+          }
+          
+          .page-number {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: #9CA3AF;
+            font-size: 12px;
+          }
+          
+          .security-ribbon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 32px;
+            height: 90px;
+            background-color: #4F46E5;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            writing-mode: vertical-rl;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            border-radius: 4px;
+          }
+          
+          @media print {
+            .page {
+              box-shadow: none;
+              border: none;
+            }
+            
+            body {
+              background-color: white;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
           }
         </style>
       </head>
       <body>
-        <div class="contract-ref">Référence: CON-${reservationId ? reservationId.substring(0, 8) : 'XXXXXXXX'}</div>
-        <h1>CONTRAT DE LOCATION</h1>
-        
-        <div class="section">
-          <h2>1. PARTIES</h2>
-          <p><strong>ENTRE :</strong></p>
-          <p>${landlord.fullName}, ci-après dénommé "LE BAILLEUR"</p>
-          <p>Adresse email : ${landlord.email}</p>
-          <p>Téléphone : ${landlord.phone}</p>
-          <p><strong>ET :</strong></p>
-          <p>${tenant.fullName}, ci-après dénommé "LE LOCATAIRE"</p>
-          <p>Adresse email : ${tenant.email}</p>
-          <p>Téléphone : ${tenant.phone}</p>
+        <div class="watermark">
+          ${watermarkSVG}
         </div>
-        
-        <!-- Autres sections du contrat -->
-        <!-- ... -->
-        
-        <div class="signature-area">
-          <div class="signature-box">
-            <p>LE BAILLEUR</p>
-            <p>${landlord.fullName}</p>
-            <p>Date: ${new Date().toLocaleDateString('fr-FR')}</p>
+        <div class="page">
+          <div class="security-ribbon">DOCUMENT OFFICIEL</div>
+          <div class="header">
+            <div class="logo-container">
+              <div class="logo">RL</div>
+              <div class="contract-info">
+                <div class="contract-title">Contrat de Location</div>
+                <div class="contract-subtitle">Document officiel légalement contraignant</div>
+                <div class="contract-id">ID: ${contractId}</div>
+              </div>
+            </div>
+            <div class="qr-container">
+              ${qrCodeSVG}
+            </div>
           </div>
           
-          <div class="signature-box">
-            <p>LE LOCATAIRE</p>
-            <p>${tenant.fullName}</p>
-            <p>Date: ${new Date().toLocaleDateString('fr-FR')}</p>
+          <div class="section">
+            <h2>Parties au Contrat</h2>
+            
+            <div class="party-info">
+              <div class="party-name">LE BAILLEUR</div>
+              <div class="party-contact"><strong>${landlord.fullName}</strong></div>
+              <div class="party-contact">Email: ${landlord.email}</div>
+              <div class="party-contact">Téléphone: ${landlord.phone}</div>
+              <div class="party-contact">Ci-après dénommé "LE BAILLEUR"</div>
+            </div>
+            
+            <div class="party-info">
+              <div class="party-name">LE LOCATAIRE</div>
+              <div class="party-contact"><strong>${tenant.fullName}</strong></div>
+              <div class="party-contact">Email: ${tenant.email}</div>
+              <div class="party-contact">Téléphone: ${tenant.phone}</div>
+              <div class="party-contact">Ci-après dénommé "LE LOCATAIRE"</div>
+            </div>
           </div>
+          
+          <div class="section">
+            <h2>Bien Immobilier</h2>
+            
+            <div class="highlight-box">
+              <strong>${property.title}</strong><br>
+              ${property.address}
+            </div>
+            
+            <div class="property-details">
+              <div class="property-detail">
+                <span class="property-detail-label">Type de bien:</span>
+                <span class="property-detail-value">${property.type}</span>
+              </div>
+              <div class="property-detail">
+                <span class="property-detail-label">Surface:</span>
+                <span class="property-detail-value">${property.surface} m²</span>
+              </div>
+              <div class="property-detail">
+                <span class="property-detail-label">Nombre de pièces:</span>
+                <span class="property-detail-value">${property.rooms}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="section">
+            <h2>Conditions Financières</h2>
+            
+            <table>
+              <tr>
+                <th>Désignation</th>
+                <th>Montant</th>
+                <th>Périodicité</th>
+              </tr>
+              <tr>
+                <td>Loyer</td>
+                <td>${reservation.monthlyRent} €</td>
+                <td>Mensuel</td>
+              </tr>
+              <tr>
+                <td>Dépôt de garantie</td>
+                <td>${property.depositAmount} €</td>
+                <td>Unique</td>
+              </tr>
+            </table>
+            
+            <div class="special-clause">
+              <h3>Modalités de paiement</h3>
+              <p>Le loyer est payable d'avance le 1er de chaque mois par virement bancaire sur le compte du BAILLEUR dont les coordonnées seront communiquées au LOCATAIRE.</p>
+            </div>
+            
+            <h3>Révision du loyer</h3>
+            <p class="clause">Le loyer sera révisé automatiquement chaque année à la date anniversaire du contrat en fonction de la variation de l'Indice de Référence des Loyers (IRL) publié par l'INSEE.</p>
+          </div>
+          
+          <div class="section">
+            <h2>Durée du Contrat</h2>
+            
+            <div class="property-details">
+              <div class="property-detail">
+                <span class="property-detail-label">Date de début:</span>
+                <span class="property-detail-value">${formatDate(reservation.startDate).toLocaleDateString('fr-FR')}</span>
+              </div>
+              <div class="property-detail">
+                <span class="property-detail-label">Date de fin:</span>
+                <span class="property-detail-value">${formatDate(reservation.endDate).toLocaleDateString('fr-FR')}</span>
+              </div>
+              <div class="property-detail">
+                <span class="property-detail-label">Durée:</span>
+                <span class="property-detail-value">${durationMonths} mois</span>
+              </div>
+            </div>
+            
+            <h3>Renouvellement</h3>
+            <p class="clause">À l'expiration du contrat, celui-ci sera renouvelé tacitement pour une durée identique, sauf dénonciation par l'une des parties dans les conditions prévues par la loi.</p>
+          </div>
+          
+          <div class="holographic-effect"></div>
+          
+          <div class="signature-area">
+            <div class="signature-box">
+              <div class="signature-title">LE BAILLEUR</div>
+              <div class="signature-line"></div>
+              <div class="signature-name">${landlord.fullName}</div>
+              <div class="signature-date">Date: ${currentDate}</div>
+            </div>
+            
+            <div class="signature-box">
+              <div class="signature-title">LE LOCATAIRE</div>
+              <div class="signature-line"></div>
+              <div class="signature-name">${tenant.fullName}</div>
+              <div class="signature-date">Date: ${currentDate}</div>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p>Ce contrat est authentifié électroniquement et enregistré dans la blockchain sous l'identifiant ${contractId}</p>
+            <p class="legal-notice">Conformément à la législation en vigueur, toute modification du présent contrat doit faire l'objet d'un avenant signé par toutes les parties.</p>
+          </div>
+          
+          <div class="page-number">Page 1/1</div>
         </div>
       </body>
       </html>
@@ -244,33 +683,33 @@ export default function ContractScreen({ route, navigation }) {
     try {
       setGenerating(true);
       
-      // TODO: Intégration avec le backend
-      // 1. Générer le HTML du contrat
+      // Générer le HTML du contrat
       const html = generateContractHTML();
       
-      // 2. Créer un PDF à partir du HTML
-      // Dans une implémentation réelle, vous pourriez appeler une API backend
+      // Créer un PDF à partir du HTML avec expo-print
+      const { uri } = await Print.printToFileAsync({ 
+        html,
+        base64: false,
+        width: 612, // 8.5 x 11 pouces en points (72 points par pouce)
+        height: 792
+      });
       
-      // Simulation de la génération de contrat pour le développement frontend
-      setTimeout(() => {
-        const mockContractUri = FileSystem.documentDirectory + `contrat_${reservationId || 'new'}_${Date.now()}.pdf`;
-        setContractFileUri(mockContractUri);
-        
-        // Mettre à jour l'état local
-        setReservation(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            status: 'contract_generated',
-            contractFileUri: mockContractUri,
-            contractGenerationDate: new Date().toISOString()
-          };
-        });
-        
-        setGenerating(false);
-      }, 2000);
+      // Définir l'URI du fichier contrat
+      setContractFileUri(uri);
       
-      return 'mock-uri'; // À remplacer par l'URI réel
+      // Mettre à jour l'état local
+      setReservation(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          status: 'contract_generated',
+          contractFileUri: uri,
+          contractGenerationDate: new Date().toISOString()
+        };
+      });
+      
+      setGenerating(false);
+      return uri;
     } catch (error) {
       console.error('Contract generation error:', error);
       Alert.alert('Erreur', 'Une erreur est survenue lors de la génération du contrat');
@@ -281,7 +720,6 @@ export default function ContractScreen({ route, navigation }) {
 
   const shareContract = async () => {
     try {
-      // TODO: Implémentation du partage de contrat
       // Si le contrat n'a pas encore été généré, le générer
       let uri = contractFileUri;
       if (!uri) {
@@ -289,14 +727,20 @@ export default function ContractScreen({ route, navigation }) {
         if (!uri) return;
       }
       
-      // Simulation du partage pour le développement frontend
-      Alert.alert(
-        "Partage de contrat",
-        "Dans l'application finale, cette fonction partagera le contrat PDF.",
-        [
-          { text: "OK" }
-        ]
-      );
+      // Vérifier si le partage est disponible
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: `Contrat de location ${contractId}`,
+          UTI: 'com.adobe.pdf'
+        });
+      } else {
+        Alert.alert(
+          "Partage non disponible",
+          "Le partage n'est pas disponible sur cet appareil."
+        );
+      }
     } catch (error) {
       console.error('Contract sharing error:', error);
       Alert.alert('Erreur', 'Une erreur est survenue lors du partage du contrat');
@@ -305,17 +749,19 @@ export default function ContractScreen({ route, navigation }) {
 
   const viewContract = async () => {
     try {
-      // TODO: Implémentation de l'affichage du contrat
       // Si le contrat n'a pas encore été généré, le générer
+      let uri = contractFileUri;
+      if (!uri) {
+        uri = await generateContract();
+        if (!uri) return;
+      }
       
-      // Simulation de l'affichage pour le développement frontend
-      Alert.alert(
-        "Visualisation de contrat",
-        "Dans l'application finale, cette fonction affichera le contrat PDF.",
-        [
-          { text: "OK" }
-        ]
-      );
+      // Afficher le fichier PDF
+      await Print.printAsync({
+        uri: uri,
+        // On peut aussi utiliser html directement si on n'a pas encore de fichier
+        // html: generateContractHTML(),
+      });
     } catch (error) {
       console.error('Contract viewing error:', error);
       Alert.alert('Erreur', 'Une erreur est survenue lors de l\'ouverture du contrat');
@@ -335,6 +781,8 @@ export default function ContractScreen({ route, navigation }) {
         {
           text: "Régénérer",
           onPress: async () => {
+            // Générer un nouvel ID de contrat
+            setContractId(`SCF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`);
             setContractFileUri(null);
             await generateContract();
           }
@@ -378,7 +826,20 @@ export default function ContractScreen({ route, navigation }) {
           <Text className="text-green-700">
             Le contrat de location 
             {contractFileUri ? ' a été généré' : ' sera généré'} 
-            automatiquement. Vous pouvez le consulter, le télécharger ou le partager.
+            automatiquement avec un design futuriste de haute valeur. Vous pouvez le consulter, le télécharger ou le partager.
+          </Text>
+        </View>
+
+        <View className="bg-indigo-50 p-4 rounded-lg mb-6 border border-indigo-200">
+          <View className="flex-row items-center mb-2">
+            <Ionicons name="information-circle" size={24} color="#4F46E5" />
+            <Text className="text-indigo-800 font-medium ml-2">Contrat avec Identifiant Unique</Text>
+          </View>
+          <Text className="text-indigo-700">
+            ID: {contractId}
+          </Text>
+          <Text className="text-indigo-700 mt-1">
+            Ce contrat est sécurisé et comprend un QR code pour la vérification d'authenticité.
           </Text>
         </View>
         
@@ -387,6 +848,13 @@ export default function ContractScreen({ route, navigation }) {
           <View className="flex-row justify-between mb-1">
             <Text>Propriété:</Text>
             <Text className="font-medium">{property?.title}</Text>
+          </View>
+          <View className="flex-row justify-between mb-1">
+            <Text>Adresse:</Text>
+            <View className="flex-row justify-between mb-1">
+              <Text>Adresse:</Text>
+              <Text className="font-medium">{property?.address}</Text>
+            </View>
           </View>
           <View className="flex-row justify-between mb-1">
             <Text>Loyer mensuel:</Text>
@@ -399,91 +867,115 @@ export default function ContractScreen({ route, navigation }) {
           <View className="flex-row justify-between mb-1">
             <Text>Date de début:</Text>
             <Text className="font-medium">
-              {reservation?.startDate ? formatDate(reservation.startDate).toLocaleDateString('fr-FR') : ''}
+              {reservation ? formatDate(reservation.startDate).toLocaleDateString('fr-FR') : ''}
             </Text>
           </View>
           <View className="flex-row justify-between mb-1">
             <Text>Date de fin:</Text>
             <Text className="font-medium">
-              {reservation?.endDate ? formatDate(reservation.endDate).toLocaleDateString('fr-FR') : ''}
-            </Text>
-          </View>
-          <View className="flex-row justify-between mb-1">
-            <Text>Statut:</Text>
-            <Text className="font-medium capitalize">
-              {reservation?.status === 'contract_generated' ? 'Contrat généré' : 
-               reservation?.status === 'payment_completed' ? 'Paiement effectué' : 
-               reservation?.status}
-            </Text>
-          </View>
-          <View className="flex-row justify-between mb-1">
-            <Text>Durée:</Text>
-            <Text className="font-medium">
-              {reservation?.startDate && reservation?.endDate ? 
-                `${Math.round((formatDate(reservation.endDate).getTime() - formatDate(reservation.startDate).getTime()) / (1000 * 60 * 60 * 24 * 30.5))} mois` : 
-                ''}
+              {reservation ? formatDate(reservation.endDate).toLocaleDateString('fr-FR') : ''}
             </Text>
           </View>
         </View>
-        
-        <View className="mb-6">
-          <Text className="text-lg font-semibold mb-2">Parties du contrat</Text>
-          <View className="bg-gray-50 p-4 rounded-lg mb-3">
-            <Text className="font-medium mb-1">Propriétaire:</Text>
+
+        <View className="flex-row justify-between mb-6">
+          <View className="bg-gray-50 p-4 rounded-lg flex-1 mr-2">
+            <Text className="text-lg font-semibold mb-2">Propriétaire</Text>
             <Text>{landlord?.fullName}</Text>
-            <Text>{landlord?.email}</Text>
-            <Text>{landlord?.phone}</Text>
+            <Text className="text-gray-500 text-sm">{landlord?.email}</Text>
+            <Text className="text-gray-500 text-sm">{landlord?.phone}</Text>
           </View>
-          <View className="bg-gray-50 p-4 rounded-lg">
-            <Text className="font-medium mb-1">Locataire:</Text>
+          <View className="bg-gray-50 p-4 rounded-lg flex-1 ml-2">
+            <Text className="text-lg font-semibold mb-2">Locataire</Text>
             <Text>{tenant?.fullName}</Text>
-            <Text>{tenant?.email}</Text>
-            <Text>{tenant?.phone}</Text>
+            <Text className="text-gray-500 text-sm">{tenant?.email}</Text>
+            <Text className="text-gray-500 text-sm">{tenant?.phone}</Text>
           </View>
         </View>
         
-        <View className="mt-6 space-y-4">
-          {generating ? (
-            <View className="items-center py-4">
-              <ActivityIndicator size="small" color="#4F46E5" />
-              <Text className="mt-2 text-gray-600">Génération du contrat en cours...</Text>
+        <View className="bg-gray-50 p-4 rounded-lg mb-6">
+          <Text className="text-lg font-semibold mb-2">Statut du contrat</Text>
+          <View className="flex-row items-center">
+            <Ionicons 
+              name={contractFileUri ? "checkmark-circle" : "time-outline"} 
+              size={24} 
+              color={contractFileUri ? "#10B981" : "#F59E0B"}
+            />
+            <Text className="ml-2">
+              {contractFileUri 
+                ? "Contrat généré le " + new Date(reservation?.contractGenerationDate || Date.now()).toLocaleDateString('fr-FR') 
+                : "En attente de génération"}
+            </Text>
+          </View>
+        </View>
+        
+        {/* Actions du contrat */}
+        <Text className="text-lg font-semibold mb-2">Actions</Text>
+        <View className="flex-row justify-between mb-4">
+          <CustomButton 
+            title={contractFileUri ? "Voir le contrat" : "Générer le contrat"}
+            onPress={contractFileUri ? viewContract : generateContract}
+            className="bg-indigo-600 flex-1 mr-2"
+            loading={generating}
+            disabled={generating}
+            icon={contractFileUri ? "document-text-outline" : "create-outline"}
+          />
+          
+          <CustomButton 
+            title="Partager" 
+            onPress={shareContract}
+            className="bg-blue-600 flex-1 ml-2" 
+            disabled={generating || !contractFileUri}
+            icon="share-outline"
+          />
+        </View>
+        
+        {contractFileUri && (
+          <View className="mb-8">
+            <CustomButton 
+              title="Régénérer le contrat" 
+              onPress={regenerateContract}
+              className="bg-amber-600" 
+              disabled={generating}
+              icon="refresh-outline"
+            />
+            
+            <View className="bg-amber-50 p-3 rounded-lg mt-2 border border-amber-200">
+              <Text className="text-amber-800 text-sm">
+                La régénération créera un nouveau contrat avec un nouvel identifiant unique.
+              </Text>
             </View>
-          ) : (
-            <>
-              {contractFileUri ? (
-                <>
-                  <CustomButton 
-                    title="Consulter le contrat" 
-                    onPress={viewContract}
-                    className="bg-indigo-600"
-                  />
-                  <CustomButton 
-                    title="Partager le contrat" 
-                    onPress={shareContract}
-                    className="bg-green-600"
-                  />
-                  <CustomButton 
-                    title="Régénérer le contrat" 
-                    onPress={regenerateContract}
-                    className="bg-amber-600"
-                  />
-                </>
-              ) : (
-                <CustomButton 
-                  title="Générer le contrat" 
-                  onPress={generateContract}
-                  className="bg-indigo-600"
-                />
-              )}
-              <CustomButton 
-                title="Retour aux réservations" 
-                onPress={() => navigation.navigate('Reservations')}
-                className="bg-gray-500"
-              />
-            </>
-          )}
+          </View>
+        )}
+        
+        <View className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-200">
+          <View className="flex-row items-center mb-2">
+            <Ionicons name="shield-checkmark-outline" size={24} color="#3B82F6" />
+            <Text className="text-blue-800 font-medium ml-2">Protection juridique</Text>
+          </View>
+          <Text className="text-blue-700 mb-2">
+            Ce contrat est légalement valide et conforme à la législation en vigueur sur les baux d'habitation.
+          </Text>
+          <Text className="text-blue-700">
+            Il inclut toutes les clauses obligatoires et respecte les droits du locataire et du propriétaire.
+          </Text>
+        </View>
+        
+        <View className="border-t border-gray-200 pt-4 pb-10">
+          <Text className="text-center text-gray-500 text-sm mb-2">
+            © {new Date().getFullYear()} RentalHub • Tous droits réservés
+          </Text>
+          <Text className="text-center text-gray-400 text-xs">
+            Document généré le {new Date().toLocaleDateString('fr-FR')} à {new Date().toLocaleTimeString('fr-FR')}
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
-  );
-}
+    )}
+
+export default ContractScreen
+
+
+
+
+

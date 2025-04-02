@@ -15,4 +15,7 @@ export interface Property {
     amenities?: string[];
     availableFrom: Date;
     createdAt: Date;
+    type: string;
+    surface: number;
+    rooms: number;
   }
