@@ -1,6 +1,7 @@
-// Fichier: components/CustomButton.tsx
+
 import React from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ReactNode } from 'react';
 
 type ButtonType = 'primary' | 'secondary' | 'outline' | 'danger';
 
@@ -11,6 +12,7 @@ interface CustomButtonProps {
   loading?: boolean;
   disabled?: boolean;
   className?: string;
+  icon?: ReactNode; // Icône optionnelle
 }
 
 const CustomButton: React.FC<CustomButtonProps> = ({
@@ -20,6 +22,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
   loading = false,
   disabled = false,
   className = '',
+  icon,
 }) => {
   // Détermine les styles en fonction du type de bouton
   const getButtonStyle = () => {
@@ -51,14 +54,17 @@ const CustomButton: React.FC<CustomButtonProps> = ({
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled || loading}
-      className={`py-3 px-4 rounded-lg items-center justify-center ${getButtonStyle()} ${
+      className={`py-3 px-4 rounded-lg flex-row items-center justify-center ${getButtonStyle()} ${
         disabled ? 'opacity-50' : 'opacity-100'
       } ${className}`}
     >
       {loading ? (
         <ActivityIndicator size="small" color={type === 'outline' ? '#3B82F6' : '#FFFFFF'} />
       ) : (
-        <Text className={`font-medium ${getTextStyle()}`}>{title}</Text>
+        <View className="flex-row items-center">
+          {icon && <View className="mr-2">{icon}</View>}
+          <Text className={`font-medium ${getTextStyle()}`}>{title}</Text>
+        </View>
       )}
     </TouchableOpacity>
   );
