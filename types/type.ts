@@ -12,6 +12,8 @@ export interface Property {
     amenities?: string[];
     energyRating?: string;
     yearBuilt?: number;
+    rentalPrice?:number;
+    securityDeposit?:number;
   }
   
   // Type pour un utilisateur (propriétaire ou locataire)
@@ -72,16 +74,16 @@ export interface Property {
   }
   
   // Type pour les paramètres de génération du contrat HTML
-  export interface ContractHTMLParams {
-    contractId: string;
-    reservation: Reservation;
-    property: Property;
-    landlord: User;
-    tenant: User;
-    qrCodeSVG: string;
-    watermarkSVG: string;
-    formatDate: (date: any) => Date;
-  }
+  // export interface ContractHTMLParams {
+  //   contractId: string;
+  //   reservation: Reservation;
+  //   property: Property;
+  //   landlord: User;
+  //   tenant: User;
+  //   qrCodeSVG: string;
+  //   watermarkSVG: string;
+  //   formatDate: (date: any) => Date;
+  // }
   
   // Type pour les paramètres des composants d'action
   export interface ContractActionProps {
@@ -92,3 +94,22 @@ export interface Property {
     contractFileUri: string | null;
     generating: boolean;
   }
+  export interface ContractHTMLParams {
+    contractId: string;
+    reservation: Reservation;
+    property: Property;
+    landlord: User;
+    tenant: User;
+    qrCodeSVG: string;
+    watermarkSVG: string;
+    formatDate: (date: any) => string;
+    additionalClauses?: string[];
+    includeDigitalSignature?: boolean;
+    includeBlockchainVerification?: boolean;
+    includeSmartContractTerms?: boolean;
+    includeAIAssistance?: boolean;
+    includeVirtualTour?: boolean;
+    includeSustainabilityReport?: boolean;
+    includeEnergyEfficiencyRating?: boolean;
+  }
+  

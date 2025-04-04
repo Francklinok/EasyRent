@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Reservation } from '../types';
+import { Reservation } from '@/types/type'
 
 interface ContractStatusSectionProps {
   contractFileUri: string | null;

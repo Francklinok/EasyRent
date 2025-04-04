@@ -1,26 +1,26 @@
 import { QRCodeGenerator } from '@/components/utils/qrCodeGenerator';
 import { Property,Reservation, User } from '@/types/type';
-
+import { ContractHTMLParams } from '@/types/type';
 /**
  * Génère un contrat de location HTML avancé avec des innovations technologiques du 21e siècle
  * @param params Les paramètres nécessaires à la génération du contrat
  * @returns Le contenu HTML du contrat
  */
-const generateContractHTML = (params: {
-  contractId: string;
-  reservation: Reservation;
-  property: Property;
-  landlord: User;
-  tenant: User;
-  additionalClauses?: string[];
-  includeDigitalSignature?: boolean;
-  includeBlockchainVerification?: boolean;
-  includeSmartContractTerms?: boolean;
-  includeAIAssistance?: boolean;
-  includeVirtualTour?: boolean;
-  includeSustainabilityReport?: boolean;
-  includeEnergyEfficiencyRating?: boolean;
-}): string => {
+const generateContractHTML = (params:ContractHTMLParams):string => {
+  // contractId: string;
+  // reservation: Reservation;
+  // property: Property;
+  // landlord: User;
+  // tenant: User;
+  // additionalClauses?: string[];
+  // includeDigitalSignature?: boolean;
+  // includeBlockchainVerification?: boolean;
+  // includeSmartContractTerms?: boolean;
+  // includeAIAssistance?: boolean;
+  // includeVirtualTour?: boolean;
+  // includeSustainabilityReport?: boolean;
+  // includeEnergyEfficiencyRating?: boolean;
+ 
   const {
     contractId,
     reservation,
@@ -939,11 +939,11 @@ const generateContractHTML = (params: {
               </div>
               <div class="property-detail">
                 <span class="property-detail-label">Loyer mensuel:</span>
-                <span class="property-detail-value">${property.rentalPrice.toLocaleString('fr-FR')} €</span>
+                <span class="property-detail-value">${property?.rentalPrice?.toLocaleString('fr-FR')} €</span>
               </div>
               <div class="property-detail">
                 <span class="property-detail-label">Dépôt de garantie:</span>
-                <span class="property-detail-value">${property.securityDeposit.toLocaleString('fr-FR')} €</span>
+                <span class="property-detail-value">${property?.securityDeposit?.toLocaleString('fr-FR')} €</span>
               </div>
             </div>
             
@@ -959,17 +959,17 @@ const generateContractHTML = (params: {
               <tbody>
                 <tr>
                   <td>Premier loyer</td>
-                  <td>${property.rentalPrice.toLocaleString('fr-FR')} €</td>
+                  <td>${property?.rentalPrice?.toLocaleString('fr-FR')} €</td>
                   <td>À la signature</td>
                 </tr>
                 <tr>
                   <td>Dépôt de garantie</td>
-                  <td>${property.securityDeposit.toLocaleString('fr-FR')} €</td>
+                  <td>${property?.securityDeposit?.toLocaleString('fr-FR')} €</td>
                   <td>À la signature</td>
                 </tr>
                 <tr>
                   <td>Loyers suivants</td>
-                  <td>${property.rentalPrice.toLocaleString('fr-FR')} €</td>
+                  <td>${property?.rentalPrice?.toLocaleString('fr-FR')} €</td>
                   <td>1er du mois</td>
                 </tr>
               </tbody>
