@@ -14,6 +14,7 @@ export interface Property {
     yearBuilt?: number;
     rentalPrice?:number;
     securityDeposit?:number;
+    estimatedValue?:number;
   }
   
   // Type pour un utilisateur (propriétaire ou locataire)

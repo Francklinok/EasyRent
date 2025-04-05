@@ -9,7 +9,7 @@ interface ContractSummaryProps {
   formatDate: (date: any) => Date;
 }
 
-export const ContractSummary: React.FC<ContractSummaryProps> = ({ property, reservation, formatDate }) => {
+const ContractSummary: React.FC<ContractSummaryProps> = ({ property, reservation, formatDate }) => {
   if (!property || !reservation) return null;
   
   // Calculer la durée du contrat en mois
@@ -85,3 +85,5 @@ export const ContractSummary: React.FC<ContractSummaryProps> = ({ property, rese
     </View>
   );
 };
+
+export default ContractSummary;

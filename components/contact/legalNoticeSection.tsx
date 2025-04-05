@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-export const LegalNoticeSection: React.FC = () => {
+const LegalNoticeSection: React.FC = () => {
   return (
     <View className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-200">
       <View className="flex-row items-center mb-2">
@@ -27,3 +27,5 @@ export const LegalNoticeSection: React.FC = () => {
     </View>
   );
 };
+
+export default LegalNoticeSection;

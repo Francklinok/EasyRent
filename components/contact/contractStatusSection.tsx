@@ -8,7 +8,7 @@ interface ContractStatusSectionProps {
   reservation: Reservation | null;
 }
 
-export const ContractStatusSection: React.FC<ContractStatusSectionProps> = ({ 
+const ContractStatusSection: React.FC<ContractStatusSectionProps> = ({ 
   contractFileUri, 
   reservation 
 }) => {
@@ -65,3 +65,5 @@ export const ContractStatusSection: React.FC<ContractStatusSectionProps> = ({
     </View>
   );
 };
+
+export default ContractStatusSection;

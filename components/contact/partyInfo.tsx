@@ -8,7 +8,7 @@ interface PartyInfoSectionProps {
   tenant: User | null;
 }
 
-export const PartyInfoSection: React.FC<PartyInfoSectionProps> = ({ landlord, tenant }) => {
+ const PartyInfoSection: React.FC<PartyInfoSectionProps> = ({ landlord, tenant }) => {
   if (!landlord || !tenant) return null;
 
   return (
@@ -45,3 +45,5 @@ export const PartyInfoSection: React.FC<PartyInfoSectionProps> = ({ landlord, te
     </View>
   );
 };
+
+export default PartyInfoSection;

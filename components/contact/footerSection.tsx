@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 
-export const FooterSection: React.FC = () => {
+ const FooterSection: React.FC = () => {
   const currentDate = new Date();
   
   return (
@@ -18,3 +18,5 @@ export const FooterSection: React.FC = () => {
     </View>
   );
 };
+
+export default FooterSection; 

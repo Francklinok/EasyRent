@@ -3,6 +3,90 @@
 import { QRCodeParams } from '@/types/type';
 import CryptoJS from 'crypto-js';
 
+
+/**
+ * Génère un motif de QR Code simulé basé sur les données
+ * Dans un système réel, vous utiliseriez une bibliothèque QR
+ */
+const generateQRPattern = (data: string, signature: string): boolean[][] => {
+  // Créer un pseudo-pattern basé sur le hash des données
+  const combinedData = data + signature;
+  const hash = CryptoJS.SHA256(combinedData).toString();
+  
+  // Créer une matrice 25x25 qui semble être un QR code
+  const size = 25;
+  const pattern: boolean[][] = Array(size).fill(0).map(() => Array(size).fill(false));
+  
+  // Réserver les coins pour les motifs de positionnement
+  const reservedAreas = [
+    { x: 0, y: 0, size: 7 },  // Coin supérieur gauche
+    { x: size - 7, y: 0, size: 7 },  // Coin supérieur droit
+    { x: 0, y: size - 7, size: 7 }   // Coin inférieur gauche
+  ];
+  
+  // Remplir la matrice avec un motif basé sur le hash
+  for (let i = 0; i < hash.length; i++) {
+    const value = parseInt(hash[i], 16);
+    const x = (i * 3) % size;
+    const y = Math.floor((i * 3) / size) % size;
+    
+    // Vérifier si ce n'est pas dans une zone réservée
+    if (!isInReservedArea(x, y, reservedAreas)) {
+      pattern[y][x] = (value % 2 === 1);
+      
+      // Ajouter quelques cellules adjacentes pour un aspect plus réaliste
+      if (x + 1 < size && !isInReservedArea(x + 1, y, reservedAreas)) {
+        pattern[y][x + 1] = (value % 3 === 1);
+      }
+      if (y + 1 < size && !isInReservedArea(x, y + 1, reservedAreas)) {
+        pattern[y + 1][x] = (value % 4 === 1);
+      }
+    }
+  }
+  
+  return pattern;
+};
+
+/**
+ * Vérifie si une coordonnée est dans une zone réservée
+ */
+const isInReservedArea = (x: number, y: number, areas: {x: number, y: number, size: number}[]): boolean => {
+  return areas.some(area => 
+    x >= area.x && x < area.x + area.size && 
+    y >= area.y && y < area.y + area.size
+  );
+};
+
+/**
+ * Génère les motifs de positionnement SVG pour les coins du QR code
+ */
+const generatePositionPatterns = (margin: number, cellSize: number): string => {
+  const size = 7 * cellSize;
+  
+  // Créer les motifs aux trois coins
+  const topLeft = createPositionPattern(margin, margin, cellSize);
+  const topRight = createPositionPattern(margin + 18 * cellSize, margin, cellSize);
+  const bottomLeft = createPositionPattern(margin, margin + 18 * cellSize, cellSize);
+  
+  return topLeft + topRight + bottomLeft;
+};
+
+/**
+ * Crée un motif de positionnement dans un coin
+ */
+const createPositionPattern = (x: number, y: number, cellSize: number): string => {
+  return `
+    <!-- Carré externe -->
+    <rect x="${x}" y="${y}" width="${7 * cellSize}" height="${7 * cellSize}" fill="#000" />
+    
+    <!-- Carré blanc intermédiaire -->
+    <rect x="${x + cellSize}" y="${y + cellSize}" width="${5 * cellSize}" height="${5 * cellSize}" fill="#fff" />
+    
+    <!-- Carré noir central -->
+    <rect x="${x + 2 * cellSize}" y="${y + 2 * cellSize}" width="${3 * cellSize}" height="${3 * cellSize}" fill="#000" />
+  `;
+};
+
 /**
  * Génère un code QR avancé avec des fonctionnalités de sécurité.
  * Cette implémentation est simulée avec un SVG - dans une application réelle, 
@@ -11,7 +95,7 @@ import CryptoJS from 'crypto-js';
  * @param params - Paramètres du contrat pour générer le QR code
  * @returns Une chaîne SVG représentant un QR code simulé
  */
-export const generateAdvancedQRCode = (params: QRCodeParams): string => {
+const generateAdvancedQRCode = (params: QRCodeParams): string => {
   const { contractId, propertyTitle, tenantName, startDate, endDate } = params;
   
   // Création d'une chaîne de données structurée au format JSON
@@ -106,85 +190,4 @@ const generateQRCodeSVG = (data: string, signature: string, contractId: string):
   `;
 };
 
-/**
- * Génère un motif de QR Code simulé basé sur les données
- * Dans un système réel, vous utiliseriez une bibliothèque QR
- */
-const generateQRPattern = (data: string, signature: string): boolean[][] => {
-  // Créer un pseudo-pattern basé sur le hash des données
-  const combinedData = data + signature;
-  const hash = CryptoJS.SHA256(combinedData).toString();
-  
-  // Créer une matrice 25x25 qui semble être un QR code
-  const size = 25;
-  const pattern: boolean[][] = Array(size).fill(0).map(() => Array(size).fill(false));
-  
-  // Réserver les coins pour les motifs de positionnement
-  const reservedAreas = [
-    { x: 0, y: 0, size: 7 },  // Coin supérieur gauche
-    { x: size - 7, y: 0, size: 7 },  // Coin supérieur droit
-    { x: 0, y: size - 7, size: 7 }   // Coin inférieur gauche
-  ];
-  
-  // Remplir la matrice avec un motif basé sur le hash
-  for (let i = 0; i < hash.length; i++) {
-    const value = parseInt(hash[i], 16);
-    const x = (i * 3) % size;
-    const y = Math.floor((i * 3) / size) % size;
-    
-    // Vérifier si ce n'est pas dans une zone réservée
-    if (!isInReservedArea(x, y, reservedAreas)) {
-      pattern[y][x] = (value % 2 === 1);
-      
-      // Ajouter quelques cellules adjacentes pour un aspect plus réaliste
-      if (x + 1 < size && !isInReservedArea(x + 1, y, reservedAreas)) {
-        pattern[y][x + 1] = (value % 3 === 1);
-      }
-      if (y + 1 < size && !isInReservedArea(x, y + 1, reservedAreas)) {
-        pattern[y + 1][x] = (value % 4 === 1);
-      }
-    }
-  }
-  
-  return pattern;
-};
-
-/**
- * Vérifie si une coordonnée est dans une zone réservée
- */
-const isInReservedArea = (x: number, y: number, areas: {x: number, y: number, size: number}[]): boolean => {
-  return areas.some(area => 
-    x >= area.x && x < area.x + area.size && 
-    y >= area.y && y < area.y + area.size
-  );
-};
-
-/**
- * Génère les motifs de positionnement SVG pour les coins du QR code
- */
-const generatePositionPatterns = (margin: number, cellSize: number): string => {
-  const size = 7 * cellSize;
-  
-  // Créer les motifs aux trois coins
-  const topLeft = createPositionPattern(margin, margin, cellSize);
-  const topRight = createPositionPattern(margin + 18 * cellSize, margin, cellSize);
-  const bottomLeft = createPositionPattern(margin, margin + 18 * cellSize, cellSize);
-  
-  return topLeft + topRight + bottomLeft;
-};
-
-/**
- * Crée un motif de positionnement dans un coin
- */
-const createPositionPattern = (x: number, y: number, cellSize: number): string => {
-  return `
-    <!-- Carré externe -->
-    <rect x="${x}" y="${y}" width="${7 * cellSize}" height="${7 * cellSize}" fill="#000" />
-    
-    <!-- Carré blanc intermédiaire -->
-    <rect x="${x + cellSize}" y="${y + cellSize}" width="${5 * cellSize}" height="${5 * cellSize}" fill="#fff" />
-    
-    <!-- Carré noir central -->
-    <rect x="${x + 2 * cellSize}" y="${y + 2 * cellSize}" width="${3 * cellSize}" height="${3 * cellSize}" fill="#000" />
-  `;
-};
+export default generateAdvancedQRCode;

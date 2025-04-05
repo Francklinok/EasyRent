@@ -6,19 +6,16 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Ionicons } from '@expo/vector-icons';
 
-import { ContractSummary } from '../../components/contact/contratSummary';
-import { PartyInfoSection } from '../../components/contact/partyInfo';
-import { ContractStatusSection } from '../../components/contact/contractStatusSection';
-import { ContractActionButtons } from '../../components/ui/contractActionButton';
-import { LegalNoticeSection } from '../../components/contact/legalNoticeSection';
-import { FooterSection } from '../../components/contact/footerSection';
-
-
-
+import ContractSummary from '@/components/contact/contratSummary';
+import PartyInfoSection from '@/components/contact/partyInfo';
+import  ContractStatusSection from '@/components/contact/contractStatusSection';
+import { ContractActionButtons } from '@/components/ui/contractActionButton';
+import LegalNoticeSection from '@/components/contact/legalNoticeSection';
+import FooterSection from '@/components/contact/footerSection';
 import { CustomButton } from '@/components/ui';
 import generateContractHTML from '@/components/utils/generateContractHTML';
-import { generateAdvancedQRCode } from '../../components/contact/utilsgeneratecodeQr';
-import { generateWatermark } from '../../components/utils/generateWatermark';
+import generateAdvancedQRCode from '@/components/contact/utilsgeneratecodeQr';
+import generateWatermark from '@/components/utils/generateWatermark';
 import { Property,Reservation, User } from '@/types/type';
 
 const ContractScreen = () => {
@@ -82,6 +79,7 @@ const ContractScreen = () => {
           };
           
           const mockProperty: Property = {
+            id:"section10",
             title: 'Appartement moderne au centre-ville',
             address: '123 Rue de la Paix, 75001 Paris',
             type: 'Appartement',

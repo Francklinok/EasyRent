@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
+import { Image } from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -41,7 +42,7 @@ export default function TabLayout() {
         name="Search"
         options={{
           title: 'Search',
-          tabBarIcon: ({ color }) => <EvilIcons name="search" size={38} color={color}/>,
+          tabBarIcon: ({ color }) => <AntDesign name="search1" size={28} color="black" />,
         }}
       />
 
@@ -50,6 +51,24 @@ export default function TabLayout() {
         options={{
           title: 'ChatList',
           tabBarIcon: ({ color }) => <AntDesign name="message1" size={28} color={color}/>,
+        }}
+      />
+      <Tabs.Screen
+        name="Profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ focused }) => (
+            <Image
+              source={{ uri: 'https://example.com/profile.jpg' }} // 👉 URL de la photo
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 14, // cercle
+                borderWidth: focused ? 2 : 0, // effet story Insta
+                borderColor: focused ? '#FF4081' : 'transparent',
+              }}
+            />
+          ),
         }}
       />
 
