@@ -59,7 +59,7 @@ export default function TabLayout() {
           title: 'Profile',
           tabBarIcon: ({ focused }) => (
             <Image
-              source={{ uri: 'https://example.com/profile.jpg' }} // 👉 URL de la photo
+              source={{ uri:'https://randomuser.me/api/portraits/men/32.jpg' }} // 👉 URL de la photo
               style={{
                 width: 28,
                 height: 28,
