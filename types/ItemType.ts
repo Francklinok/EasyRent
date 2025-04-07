@@ -8,4 +8,13 @@ export interface ItemType {
   availibility: string;
   stars: number;
   review: string;
+  features?: FeatureIcon[]; // Ajout de la propriété optionnelle features
+
+  // features:string;
 }
+
+export interface FeatureIcon {
+  icon: string;
+  name: string;
+}
+

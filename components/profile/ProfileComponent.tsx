@@ -7,7 +7,6 @@ import { ChevronRight, Calendar as CalendarIcon, CreditCard, Package, Bell, Shie
 import Services from '../info/servicesFiles';
 import Header from '../head/HeadFile';
 
-// Define proper TypeScript interfaces
 interface PaymentHistory {
   date: string;
   amount: number;

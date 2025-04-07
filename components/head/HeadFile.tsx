@@ -14,12 +14,6 @@ const Header = () => {
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
       <View className="w-full h-20 px-4 rounded-[14px] overflow-hidden relative">
-        {/* <LinearGradient
-          colors={["rgba(255, 255, 255, 0.9)", "rgba(8, 121, 250, 0.9)"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          className="absolute inset-0 rounded-[14px]"
-        /> */}
 
         {/* Contenu du header */}
         <View className="flex-row items-center justify-between z-10">
