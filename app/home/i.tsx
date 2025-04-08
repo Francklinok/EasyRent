@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { View, Text, FlatList, Image, TouchableOpacity, Dimensions, Animated, ScrollView, StatusBar } from "react-native";
+import { View, Text, FlatList, Image, TouchableOpacity, Dimensions, Animated } from "react-native";
 import { FontAwesome5, MaterialIcons, Ionicons, Entypo, Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -58,42 +57,66 @@ const extendedData: ExtendedItemType[] = data.map(item => ({
 
 const { width, height } = Dimensions.get('window');
 
-// Définition des thèmes
-const themes = {
-  dark: {
-    background: ["#0f172a", "#1e293b"],
-    cardGradient: ["rgba(18,18,25,0.9)", "rgba(30,30,45,0.95)"],
-    text: "#ffffff",
-    subtext: "#a5b4fc",
-    cardBorder: "border-gray-700/30",
-    buttonGradient: ['#3b82f6', '#8b5cf6', '#d946ef'],
-    priceGradient: ['#3b82f6', '#6366f1'],
-    statusBar: "light-content",
-    tagBg: "bg-gray-800/40",
-    reviewBg: "bg-gray-800/40"
-  },
-  light: {
-    background: ["#ffffff", "#f8fafc"],
-    cardGradient: ["rgba(255,255,255,0.7)", "rgba(248,250,252,0.8)"],
-    text: "#0f172a",
-    subtext: "#3b82f6",
-    cardBorder: "border-gray-200/60",
-    buttonGradient: ['#60a5fa', '#818cf8', '#c084fc'],
-    priceGradient: ['#60a5fa', '#818cf8'],
-    statusBar: "dark-content",
-    tagBg: "bg-white/70",
-    reviewBg: "bg-white/60"
-  }
+// Composant pour gérer le thème
+const ThemeContext = React.createContext({
+  currentTheme: "dark",
+  toggleTheme: () => {},
+  theme: {}
+});
+
+const ThemeProvider = ({ children }) => {
+  const [currentTheme, setCurrentTheme] = useState<"dark" | "light">("dark");
+  
+  // Définition des thèmes
+  const themes = {
+    dark: {
+      background: ["#0f172a", "#1e293b"],
+      cardGradient: ["rgba(18,18,25,0.9)", "rgba(30,30,45,0.95)"],
+      text: "#ffffff",
+      subtext: "#a5b4fc",
+      cardBorder: "border-gray-700/30",
+      buttonGradient: ['#3b82f6', '#8b5cf6', '#d946ef'],
+      priceGradient: ['#3b82f6', '#6366f1'],
+      statusBar: "light-content",
+      tagBg: "bg-gray-800/40",
+      reviewBg: "bg-gray-800/40"
+    },
+    light: {
+      background: ["#ffffff", "#f8fafc"],
+      cardGradient: ["rgba(255,255,255,0.7)", "rgba(248,250,252,0.8)"],
+      text: "#0f172a",
+      subtext: "#3b82f6",
+      cardBorder: "border-gray-200/60",
+      buttonGradient: ['#60a5fa', '#818cf8', '#c084fc'],
+      priceGradient: ['#60a5fa', '#818cf8'],
+      statusBar: "dark-content",
+      tagBg: "bg-white/70",
+      reviewBg: "bg-white/60"
+    }
+  };
+  
+  const theme = themes[currentTheme];
+  
+  const toggleTheme = () => {
+    setCurrentTheme(prev => prev === "dark" ? "light" : "dark");
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  };
+  
+  return (
+    <ThemeContext.Provider value={{ currentTheme, toggleTheme, theme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
 };
+
+const useTheme = () => React.useContext(ThemeContext);
 
 const RenHouseAcceuil = () => {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [scrollY] = useState(new Animated.Value(0));
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [currentTheme, setCurrentTheme] = useState<"dark" | "light">("dark");
-  
-  const theme = themes[currentTheme];
+  const { currentTheme, toggleTheme, theme } = useTheme();
   
   // Animation pour l'effet de pulsation
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -140,11 +163,6 @@ const RenHouseAcceuil = () => {
     );
   };
 
-  const toggleTheme = () => {
-    setCurrentTheme(prev => prev === "dark" ? "light" : "dark");
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  };
-
   const categories = ["All", "Luxury", "Smart Home", "Eco-Friendly", "Space View"];
 
   const renderItem = ({ item, index }: { item: ExtendedItemType, index: number }) => (
@@ -160,18 +178,19 @@ const RenHouseAcceuil = () => {
             colors={theme.cardGradient}
             className="overflow-hidden"
           >
-            {/* Image Section with Overlay */}
+            {/* Image Section with Overlay - Image améliorée pour plus de clarté */}
             <View className="relative">
               <Image 
                 source={item.avatar} 
                 className="w-full h-80" 
-                resizeMode="cover" 
+                resizeMode="cover"
+                style={{ opacity: 0.9, brightness: currentTheme === "light" ? 1.1 : 1.05 }}
               />
               <LinearGradient
                 colors={currentTheme === "light" 
-                  ? ["transparent", "rgba(255,255,255,0.7)", "rgba(255,255,255,0.9)"] 
-                  : ["transparent", "rgba(20,20,40,0.7)", "rgba(10,10,30,0.9)"]}
-                className="absolute bottom-0 left-0 right-0 h-3/4"
+                  ? ["transparent", "rgba(255,255,255,0.5)", "rgba(255,255,255,0.7)"] 
+                  : ["transparent", "rgba(20,20,40,0.5)", "rgba(10,10,30,0.7)"]}
+                className="absolute bottom-0 left-0 right-0 h-2/3"
               />
               
               {/* Status Indicators */}
@@ -288,77 +307,31 @@ const RenHouseAcceuil = () => {
     </MotiView>
   );
 
-  const renderHeader = () => (
-    <View className="mb-6 px-4">
-      {/* Theme Toggle Button */}
-      <View className="flex-row justify-end mb-2">
-        <TouchableOpacity 
-          onPress={toggleTheme}
-          className={`p-3 rounded-full ${currentTheme === "light" ? "bg-white/70" : "bg-gray-800/70"} border ${currentTheme === "light" ? "border-gray-200" : "border-gray-700"}`}
-        >
-          {currentTheme === "light" ? (
-            <Feather name="moon" size={20} color="#3b82f6" />
-          ) : (
-            <Feather name="sun" size={20} color="#f59e0b" />
-          )}
-        </TouchableOpacity>
-      </View>
-      
-      <LinearGradient
-        colors={theme.background}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        className={`p-5 rounded-3xl border ${currentTheme === "light" ? "border-gray-200/60" : "border-gray-700/30"}`}
-      >
-        <Text className={`${currentTheme === "light" ? "text-gray-800" : "text-white"} text-2xl font-bold mb-2`}>Neo Residences</Text>
-        <Text className={`${currentTheme === "light" ? "text-gray-600" : "text-gray-200"} mb-4`}>Discover futuristic living spaces</Text>
-        
-        <View className="flex-row">
-          <View className={`flex-row items-center space-x-2 ${currentTheme === "light" ? "bg-gray-100/70" : "bg-white/10"} px-4 py-2 rounded-full`}>
-            <MaterialIcons name="search" size={20} color={currentTheme === "light" ? "#6b7280" : "#e2e8f0"} />
-            <Text className={`${currentTheme === "light" ? "text-gray-600" : "text-gray-200"}`}>Search future homes...</Text>
-          </View>
-        </View>
-      </LinearGradient>
-
-      {/* Category Filters */}
-      <View className="mt-6">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-2">
-          {categories.map((category, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => setSelectedCategory(category)}
-              className={`mr-3 px-4 py-2 rounded-full border 
-                ${selectedCategory === category 
-                  ? currentTheme === "light" ? 'bg-blue-500 border-blue-400' : 'bg-indigo-600 border-indigo-400' 
-                  : currentTheme === "light" ? 'bg-white/70 border-gray-200' : 'bg-gray-800/40 border-gray-700'}`}
-            >
-              <Text className={`font-medium ${selectedCategory === category 
-                ? 'text-white' 
-                : currentTheme === "light" ? 'text-gray-700' : 'text-gray-300'}`}>
-                {category}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-    </View>
-  );
-
   return (
     <View className="flex">
-      <StatusBar barStyle={theme.statusBar as any} />
       <LinearGradient
         colors={theme.background}
         className="flex"
       >
+        <View className="mb-2 px-4 pt-4 flex-row justify-end">
+          <TouchableOpacity 
+            onPress={toggleTheme}
+            className={`p-3 rounded-full ${currentTheme === "light" ? "bg-white/70" : "bg-gray-800/70"} border ${currentTheme === "light" ? "border-gray-200" : "border-gray-700"}`}
+          >
+            {currentTheme === "light" ? (
+              <Feather name="moon" size={20} color="#3b82f6" />
+            ) : (
+              <Feather name="sun" size={20} color="#f59e0b" />
+            )}
+          </TouchableOpacity>
+        </View>
+        
         <Animated.FlatList
           data={extendedData}
           keyExtractor={(item, index) => index.toString()}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingVertical: 20 }}
-          ListHeaderComponent={renderHeader}
+          contentContainerStyle={{ paddingVertical: 10 }}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],
             { useNativeDriver: true }
@@ -369,4 +342,12 @@ const RenHouseAcceuil = () => {
   );
 };
 
-export default RenHouseAcceuil;
+const AppWithTheme = () => {
+  return (
+    <ThemeProvider>
+      <RenHouseAcceuil />
+    </ThemeProvider>
+  );
+};
+
+export default AppWithTheme;
