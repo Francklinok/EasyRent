@@ -34,7 +34,7 @@
     "babel.config.js",
     "metro.config.js",
     "nativewind-env.d.ts"
-  ],
+, "../autre/index.ts"  ],
 }
 
 

@@ -5,7 +5,7 @@ import { Calendar } from 'react-native-calendars';
 // Import Lucide React Native icons properly
 import { ChevronRight, Calendar as CalendarIcon, CreditCard, Package, Bell, Shield, Video, Home } from 'lucide-react-native';
 import Services from '../info/servicesFiles';
-import Header from '../head/HeadFile';
+import Header from '../../../autre/info/head/HeadFile';
 
 interface PaymentHistory {
   date: string;

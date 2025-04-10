@@ -17,9 +17,9 @@ import {
   Heart,
   DollarSign
 } from 'lucide-react-native';
-import Header from '../head/HeadFile';
 
-// Interfaces
+import Header from '../ui/header';
+
 interface PropertyListing {
   id: string;
   title: string;

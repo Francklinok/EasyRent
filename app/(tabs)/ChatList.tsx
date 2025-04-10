@@ -3,7 +3,7 @@ import React from 'react';
 import { View, Text, FlatList, Image, TouchableOpacity } from 'react-native';
 // import { useNavigation } from '@react-navigation/native';
 // import NotificationBadge from '@/components/utils/Notification';
-import Header from '@/components/head/HeadFile';
+import Header from '@/components/ui/header';
 import message from '@/components/messages/messagedata';
 // import { RootStackParamList } from '../../components/navigator/RouteType';
 // import { NativeStackNavigationProp } from '@react-navigation/native-stack'; // Import de la prop

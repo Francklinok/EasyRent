@@ -58,6 +58,8 @@ const extendedData: ExtendedItemType[] = data.map(item => ({
 const { width, height } = Dimensions.get('window');
 
 // Composant pour gérer le thème
+
+
 const ThemeContext = React.createContext({
   currentTheme: "dark",
   toggleTheme: () => {},
@@ -108,6 +110,8 @@ const ThemeProvider = ({ children }) => {
     </ThemeContext.Provider>
   );
 };
+
+
 
 const useTheme = () => React.useContext(ThemeContext);
 
@@ -351,3 +355,32 @@ const AppWithTheme = () => {
 };
 
 export default AppWithTheme;
+
+
+///////////////////////////////////////////
+
+  // const renderHeader = () => (
+  //   <View className="mb-6 px-4">   
+  //     {/* Category Filters */}
+  //     <View className="mt-6">
+  //       <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-2">
+  //         {categories.map((category, index) => (
+  //           <TouchableOpacity
+  //             key={index}
+  //             onPress={() => setSelectedCategory(category)}
+  //             className={`mr-3 px-4 py-2 rounded-full border 
+  //               ${selectedCategory === category 
+  //                 ? currentTheme === "light" ? 'bg-blue-500 border-blue-400' : 'bg-indigo-600 border-indigo-400' 
+  //                 : currentTheme === "light" ? 'bg-white/70 border-gray-200' : 'bg-gray-800/40 border-gray-700'}`}
+  //           >
+  //             <Text className={`font-medium ${selectedCategory === category 
+  //               ? 'text-white' 
+  //               : currentTheme === "light" ? 'text-gray-700' : 'text-gray-300'}`}>
+  //               {category}
+  //             </Text>
+  //           </TouchableOpacity>
+  //         ))}
+  //       </ScrollView>
+  //     </View>
+  //   </View>
+  // );

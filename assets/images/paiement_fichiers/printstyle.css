@@ -1,0 +1,29 @@
+@media all 
+{
+	
+	body {}
+	
+}
+@media screen
+{
+	
+	body {}
+	
+}
+@media print 
+{
+	*{font-size : 14pt ; color : black ; }
+		p {widows :3 ; orphans : 3 ; }
+		@page {margin : 3cm 2cm 3cm 2cm ;}
+		h1 {margin : 0.5cm auto 0.5cm auto ; }
+		h2 {margin : 0.2cm auto 0.2cm auto ; }
+		img,a {display : none ; }
+		
+			/* numérotation automatique des titres h1 et h2 */
+		body {counter-reset : niveau1 ; background: green; }
+		h1 {counter-reset : niveau2 ; }
+		h1 {counter-increment: niveau1; }
+		h2 {counter-increment: niveau2 ; }
+		h1:before {content: counter(niveau1) ".";}
+		h2:before {content: counter(niveau1) "." counter(niveau2 ) ". "; }
+}

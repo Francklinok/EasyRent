@@ -355,7 +355,7 @@ const RenHouseAcceuil = () => {
         <Animated.FlatList
           data={extendedData}
           keyExtractor={(item, index) => index.toString()}
-          renderItem={renderItem}
+          // renderItem={renderItem}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingVertical: 20 }}
           ListHeaderComponent={renderHeader}

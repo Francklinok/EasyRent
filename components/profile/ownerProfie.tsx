@@ -13,7 +13,7 @@ import {
   Wrench , 
   MessageCircle 
 } from 'lucide-react-native';
-import Header from '../head/HeadFile';
+import Header from '../../../autre/info/head/HeadFile';
 
 // Interfaces
 interface Property {

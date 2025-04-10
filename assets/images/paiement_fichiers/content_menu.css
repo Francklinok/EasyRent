@@ -1,0 +1,24 @@
+/* 
+    Created on : 06 juin 2019, 10:45:50
+    Author     : hakakpo
+*/
+/*menu dans le contenu*/
+.panneau i {
+    font-size: 9em;
+}
+.panneau{
+    color: #2bb605;
+}
+.card-box.panneau:hover{
+    background: #f9f9f9;
+    box-shadow: 7px 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+}
+
+.panneau p{
+    font-size: 20px; 
+    font-weight: bold; 
+    color: #2bb605;
+}
+.card-box.panneau{
+    background: #FFF;
+}
