@@ -302,7 +302,7 @@ const houseSelleAcceuil = () => {
           keyExtractor={(item, index) => index.toString()}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingVertical: 20 }}
+          contentContainerStyle={{ paddingVertical: 8 }}
           // ListHeaderComponent={renderHeader}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],

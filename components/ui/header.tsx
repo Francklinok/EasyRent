@@ -6,6 +6,9 @@ import Svg, { Text as SvgText, Defs, LinearGradient as SvgLinearGradient, Stop }
 import NotificationBadge from "@/components/utils/Notification";
 import ThemeToggle from "../ui/ThemeToggle";
 import { ReactNode } from "react";
+import { ThemedText } from "./ThemedText";
+import { ThemedView } from "./ThemedView";
+
 
 export type HeaderProps = {
   leftElement?: ReactNode;
@@ -53,14 +56,14 @@ const Header = ({
     // Default left element with theme toggle
 
   const defaultRightElement = (
-    <View className="flex">
+    <ThemedView  className="flex">
       <TouchableOpacity>
         <Ionicons name="notifications-outline" size={32} color="black" />
       </TouchableOpacity>
-      <View className="absolute top-3 right-3">
+      <ThemedView className="absolute top-3 right-3">
         <NotificationBadge count={1} />
-      </View>
-    </View>
+      </ThemedView>
+    </ThemedView>
   );
 
  

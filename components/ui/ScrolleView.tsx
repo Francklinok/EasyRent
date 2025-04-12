@@ -1,7 +1,7 @@
-import { ScrollViewProps } from "react-native";
-import { useTheme } from "../../../autre/info/Theme";
+import React from "react";
+import { ScrollView, ScrollViewProps } from "react-native";
+import { useTheme } from "../contexts/theme/themehook";
 import { useThemeTransition } from "../contexts/theme/themehook";
-import { ScrollView } from "react-native-reanimated/lib/typescript/Animated";
 
 // Scrollview thématique
 type ThemedScrollViewProps = ScrollViewProps & {
@@ -17,14 +17,10 @@ export const ThemedScrollView: React.FC<ThemedScrollViewProps> = ({
 }) => {
   const { theme } = useTheme();
   const { getTransitionStyle } = useThemeTransition();
-  
+
   return (
     <ScrollView
-      style={[
-        { backgroundColor: theme.background[0] },
-        getTransitionStyle(),
-        style,
-      ]}
+      style={[style, getTransitionStyle(theme)]}
       contentContainerStyle={[
         { padding: contentPadding },
         contentContainerStyle,
@@ -35,3 +31,4 @@ export const ThemedScrollView: React.FC<ThemedScrollViewProps> = ({
     </ScrollView>
   );
 };
+
