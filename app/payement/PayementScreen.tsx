@@ -6,7 +6,8 @@ import { useNavigation } from '@react-navigation/native';
 import { CustomButton } from '@/components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
-
+import { ThemedView } from '@/components/ui/ThemedView';
+import { ThemedText } from '@/components/ui/ThemedText';
 
 export default function PaymentScreen() {
  const  route = useRoute()
@@ -29,9 +30,9 @@ export default function PaymentScreen() {
   return (
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView className="flex-1 p-4">
-        <Text className="text-2xl font-bold mb-4">Paiement</Text>
+        <ThemedText className="text-2xl font-bold mb-4">Paiement</ThemedText>
         
-        <Text className="text-lg font-semibold mb-4">Méthode de paiement</Text>
+        <ThemedText className="text-lg font-semibold mb-4">Méthode de paiement</ThemedText>
         
         <TouchableOpacity
           className={`flex-row items-center p-4 border rounded-lg mb-3 ${
@@ -40,9 +41,9 @@ export default function PaymentScreen() {
           onPress={() => setPaymentMethod('card')}
         >
           <Ionicons name="card-outline" size={24} color={paymentMethod === 'card' ? '#3B82F6' : '#6B7280'} />
-          <View className="ml-3 flex-1">
-            <Text className="font-medium">Carte bancaire</Text>
-          </View>
+          <ThemedText className="ml-3 flex-1">
+            <ThemedText className="font-medium">Carte bancaire</ThemedText>
+          </ThemedText>
           {paymentMethod === 'card' && <Ionicons name="checkmark-circle" size={24} color="#3B82F6" />}
         </TouchableOpacity>
         
@@ -53,9 +54,9 @@ export default function PaymentScreen() {
           onPress={() => setPaymentMethod('paypal')}
         >
           <Ionicons name="logo-paypal" size={24} color={paymentMethod === 'paypal' ? '#3B82F6' : '#6B7280'} />
-          <View className="ml-3 flex-1">
-            <Text className="font-medium">PayPal</Text>
-          </View>
+          <ThemedView className="ml-3 flex-1">
+            <ThemedText className="font-medium">PayPal</ThemedText>
+          </ThemedView>
           {paymentMethod === 'paypal' && <Ionicons name="checkmark-circle" size={24} color="#3B82F6" />}
         </TouchableOpacity>
         
@@ -66,9 +67,9 @@ export default function PaymentScreen() {
           onPress={() => setPaymentMethod('crypto')}
         >
           <Ionicons name="logo-bitcoin" size={24} color={paymentMethod === 'crypto' ? '#3B82F6' : '#6B7280'} />
-          <View className="ml-3 flex-1">
-            <Text className="font-medium">Cryptomonnaie</Text>
-          </View>
+          <ThemedView className="ml-3 flex-1">
+            <ThemedText className="font-medium">Cryptomonnaie</ThemedText>
+          </ThemedView>
           {paymentMethod === 'crypto' && <Ionicons name="checkmark-circle" size={24} color="#3B82F6" />}
         </TouchableOpacity>
         

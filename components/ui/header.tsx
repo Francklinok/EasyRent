@@ -6,7 +6,6 @@ import Svg, { Text as SvgText, Defs, LinearGradient as SvgLinearGradient, Stop }
 import NotificationBadge from "@/components/utils/Notification";
 import ThemeToggle from "../ui/ThemeToggle";
 import { ReactNode } from "react";
-import { ThemedText } from "./ThemedText";
 import { ThemedView } from "./ThemedView";
 
 
@@ -45,11 +44,11 @@ const Header = ({
       </SvgText>
     </Svg>
   );
-
+ 
   const  defaultMainElement = (
-    <View>
+    <ThemedView>
       <ThemeToggle />
-    </View>
+    </ThemedView>
   );
 
   // Default right element with notification icon
@@ -71,16 +70,16 @@ const Header = ({
   return (
     <SafeAreaView style={{ backgroundColor: "white", paddingTop: StatusBar.currentHeight }}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      <View 
-        className="w-full h-20 px-4 rounded-[14px] overflow-hidden relative" 
+      <ThemedView 
+        className="w-full h-20 px-4 overflow-hidden relative" 
         style={style}
       >
-        <View className="flex-row items-center justify-between z-10">
+        <ThemedView className="flex-row items-center justify-between z-10">
           {leftElement || defaultLeftElement}
           {mainElement || defaultMainElement}
           {rightElement || defaultRightElement}
-        </View>
-      </View>
+        </ThemedView>
+      </ThemedView>
     </SafeAreaView>
   );
 };

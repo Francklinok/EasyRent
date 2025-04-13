@@ -10,7 +10,8 @@ import Atout from '@/components/info/atoutFils';
 import Criteria from '@/components/info/criteriaFile';
 import Services from '@/components/info/servicesFiles';
 import Equipment from '@/components/info/equipmentFiles';
-
+import { ThemedView } from '@/components/ui/ThemedView';
+import { ThemedText } from '@/components/ui/ThemedText';
 // Définir le type pour les props des composants
 interface ComponentProps {
   itemId: string | string[];
@@ -39,40 +40,40 @@ export default function Info (){
   return (
     <SafeAreaView className="bg-white" style={{ paddingTop: StatusBar.currentHeight }}>
       <StatusBar barStyle="dark-content" backgroundColor="white" />
-      <View className="flex flex-col gap-4">
+      <ThemedView className="flex flex-col gap-4">
         {/* En-tête avec bouton retour */}
-        <View className="flex-row p-2 justify-between bg-white shadow-md rounded-t-lg">
+        <ThemedView className="flex-row p-2 justify-between bg-white shadow-md rounded-t-lg">
          
-          <View className="flex-row gap-2 justify-between bg-white">
+          <ThemedView className="flex-row gap-2 justify-between bg-white">
           <TouchableOpacity onPress={() => router.back()} className="p-2 pr-6 ">
             <AntDesign name="arrowleft" size={24} color="black" />
           </TouchableOpacity>
 
-            <View className="p-2">
+            <ThemedView className="p-2">
               <Image
                 source={{ uri: 'https://via.placeholder.com/150' }}
                 className="w-16 h-16 rounded-full mr-6 border"
               />
-            </View>
-            <View className="flex flex-col justify-center">
-              <Text className="text-lg font-semibold">{name}</Text>
-              <Text className="text-[12px] font-semibold pr-4">
+            </ThemedView>
+            <ThemedView className="flex flex-col justify-center">
+              <ThemedText className="text-lg font-semibold">{name}</ThemedText>
+              <ThemedText className="text-[12px] font-semibold pr-4">
                 Taux de réponse{' '}
                 <Text className="text-green-600 text-[14px] font-bold">100%</Text>
-              </Text>
-            </View>
-            <View className="flex flex-row gap-6 items-center pr-4">
+              </ThemedText>
+            </ThemedView>
+            <ThemedView className="flex flex-row gap-6 items-center pr-4">
               <Octicons name="verified" size={24} color="black" />
               <AntDesign name="message1" size={24} color="black" />
-            </View>
-          </View>
-        </View>
+            </ThemedView>
+          </ThemedView>
+        </ThemedView>
         
         {/* ID de l'élément (pour le débogage, à supprimer en production) */}
-        <Text className="px-4 text-gray-500">ID: {id}</Text>
+        <ThemedText className="px-4 text-gray-500">ID: {id}</ThemedText>
         
         {/* Boutons de navigation */}
-        <View className="flex flex-row flex-wrap gap-2 p-2">
+        <ThemedView className="flex flex-row flex-wrap gap-2 p-2">
           {Object.keys(componentMap).map((key) => (
             <TouchableOpacity
               key={key}
@@ -84,20 +85,20 @@ export default function Info (){
                 borderRadius: 20,
               }}
             >
-              <Text className="text-[14px]">{key}</Text>
+              <ThemedText className="text-[14px]">{key}</ThemedText>
             </TouchableOpacity>
           ))}
-        </View>
+        </ThemedView>
         
         {/* Contenu dynamique */}
-        <View className="p-2">
+        <ThemedView className="p-2">
           {ActiveComponent ? (
             <ActiveComponent itemId={id} />
           ) : (
             <Text>Aucune donnée disponible</Text>
           )}
-        </View>
-      </View>
+        </ThemedView>
+      </ThemedView>
     </SafeAreaView>
   );
 };

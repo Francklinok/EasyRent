@@ -12,6 +12,8 @@ import Header from '@/components/ui/header';
 import RenHouseAcceuil from '@/components/acceuill/RenHouseAcceuil';
 import houseSelleAcceuil from '@/components/acceuill/houseSelleAcceuil';
 import landSelleAcceuill from '@/components/acceuill/landSelleAcceuill';
+import { ThemedView } from '@/components/ui/ThemedView';
+import { ThemedText } from '@/components/ui/ThemedText';
 
 interface ComponentProps {
   itemId: string | string[];
@@ -75,14 +77,14 @@ const Home = () => {
       transition={{ type: 'timing', duration: 800 }}
       className="flex bg-gray-50"
     >
-      <View className="mb-0">
+      <ThemedView className="mb-0">
         {/* Header avec effet subtil */}
         <MotiView
           from={{ translateY: -20, opacity: 0 }}
           animate={{ translateY: 0, opacity: 1 }}
           transition={{ delay: 200, type: 'spring', stiffness: 100 }}
         >
-          <Header />
+          {/* <Header /> */}
         </MotiView>
         
         {/* Section compacte combinée */}
@@ -114,8 +116,8 @@ const Home = () => {
             </View> */}
             
             {/* Catégories à l'intérieur du dégradé */}
-            <View className="mx-1 bg-white rounded-xl p-1 ">
-              <View className="flex-row justify-between">
+            <ThemedView className="mx-1 bg-white rounded-xl p-1 ">
+              <ThemedView className="flex-row justify-between">
                 {categories.map((category) => (
                   <TouchableOpacity
                     key={category.key}
@@ -132,17 +134,17 @@ const Home = () => {
                       size={18} 
                       color={selectedCategory === category.key ? "green" : "blue"} 
                     />
-                    <Text className={`text-10 ${
+                    <ThemedText className={`text-10 ${
                       selectedCategory === category.key
                         ? 'text-indigo-400 font-medium'
                         : 'text-blue-600'
                     }`}>
                       {category.label}
-                    </Text>
+                    </ThemedText>
                   </TouchableOpacity>
                 ))}
-              </View>
-            </View>
+              </ThemedView>
+            </ThemedView>
             
             {/* Actions secondaires */}
             {/* <View className="flex-row justify-between px-4 pb-2">
@@ -176,26 +178,26 @@ const Home = () => {
           {ActiveComponent ? (
             <ActiveComponent itemId={id} />
           ) : (
-            <View className="p-12 items-center justify-center">
-              <View className="bg-indigo-100 p-4 rounded-full mb-3">
+            <ThemedView className="p-12 items-center justify-center">
+              <ThemedView className="bg-indigo-100 p-4 rounded-full mb-3">
                 <Ionicons name="alert-circle-outline" size={36} color="#6366f1" />
-              </View>
-              <Text className="text-gray-700 font-medium text-base mb-2 text-center">
+              </ThemedView>
+              <ThemedText className="text-gray-700 font-medium text-base mb-2 text-center">
                 Aucun résultat trouvé
-              </Text>
-              <Text className="text-gray-500 text-sm text-center">
+              </ThemedText>
+              <ThemedText className="text-gray-500 text-sm text-center">
                 Aucune donnée disponible pour cette catégorie
-              </Text>
+              </ThemedText>
               <TouchableOpacity 
                 className="mt-4 bg-indigo-500 py-2 px-4 rounded-full"
                 onPress={() => handleSetActiveComponent("RentHouse")}
               >
                 <Text className="text-white text-sm font-medium">Retour</Text>
               </TouchableOpacity>
-            </View>
+            </ThemedView>
           )}
         </MotiView>
-      </View>
+      </ThemedView>
     </MotiView>
   );
 };

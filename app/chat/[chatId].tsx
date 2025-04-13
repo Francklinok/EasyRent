@@ -7,7 +7,7 @@ import message from '@/components/messages/messagedata';
 import { RootStackParamList } from '@/components/navigator/RouteType';
 import { RouteProp } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-
+import { ThemedView } from '@/components/ui/ThemedView';
 export default function ChatComponent() {
   const route = useRoute<RouteProp<RootStackParamList, 'Chat'>>();
   const { id } = route.params;
@@ -21,9 +21,9 @@ export default function ChatComponent() {
   }
 
   return (
-    <View className="flex-1">
+    <ThemedView className="flex-1">
       <StatusBar hidden={true} />
-      <View className="h-[85%]">
+      <ThemedView className="h-[85%]">
         <FlatList
           data={chatMessages}
           keyExtractor={(item) => item.id}
@@ -31,10 +31,10 @@ export default function ChatComponent() {
           inverted
           showsVerticalScrollIndicator={false}
         />
-      </View>
-      <View className="h-[25%] p-5">
+      </ThemedView>
+      <ThemedView className="h-[25%] p-5">
         <MessageFooter onSend={handleSend} />
-      </View>
-    </View>
+      </ThemedView>
+    </ThemedView>
   );
 }

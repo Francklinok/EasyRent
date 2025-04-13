@@ -9,6 +9,9 @@ import { CustomButton, CustomInput, DatePicker, PropertyCard } from '../../compo
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { Property } from '@/types/property';
 import { router } from 'expo-router';
+import { ThemedView } from '@/components/ui/ThemedView';
+import { ThemedText } from '@/components/ui/ThemedText';
+
 type RootStackParamList = {
 
   Reservation: { property: Property };
@@ -103,35 +106,35 @@ const ReservationScreen = () => {
   return (
     <SafeAreaView className="flex-1 bg-white p-2">
       <ScrollView className="flex-1 p-4">
-        <Text className="text-2xl font-bold mb-4">Réserver un logement</Text>
+        <ThemedText className="text-2xl font-bold mb-4">Réserver un logement</ThemedText>
         <PropertyCard property={property} />
         
-        <View className="mt-6">
-          <Text className="text-lg font-semibold mb-4">Détails de la réservation</Text>
+        <ThemedView className="mt-6">
+          <ThemedText className="text-lg font-semibold mb-4">Détails de la réservation</ThemedText>
           
-          <View className="mb-4">
-            <Text className="mb-2 font-medium">Date de début</Text>
+          <ThemedView className="mb-4">
+            <ThemedText className="mb-2 font-medium">Date de début</ThemedText>
             <DatePicker
               date={formik.values.startDate}
               onDateChange={(date) => formik.setFieldValue('startDate', date)}
               minimumDate={new Date()}
             />
             {formik.errors.startDate && formik.touched.startDate && (
-              <Text className="text-red-500">{formik.errors.startDate}</Text>
+              <ThemedText className="text-red-500">{formik.errors.startDate}</ThemedText>
             )}
-          </View>
+          </ThemedView>
           
-          <View className="mb-4">
-            <Text className="mb-2 font-medium">Date de fin</Text>
+          <ThemedView className="mb-4">
+            <ThemedText className="mb-2 font-medium">Date de fin</ThemedText>
             <DatePicker
               date={formik.values.endDate}
               onDateChange={(date) => formik.setFieldValue('endDate', date)}
               minimumDate={formik.values.startDate}
             />
             {formik.errors.endDate && formik.touched.endDate && (
-              <Text className="text-red-500">{formik.errors.endDate}</Text>
+              <ThemedText className="text-red-500">{formik.errors.endDate}</ThemedText>
             )}
-          </View>
+          </ThemedView>
           
           <CustomInput
             label="Nombre d'occupants"
@@ -151,36 +154,36 @@ const ReservationScreen = () => {
             error={formik.touched.monthlyIncome ? formik.errors.monthlyIncome : undefined}
           />
           
-          <View className="flex-row items-center mb-4">
-            <Text className="font-medium flex-1">Avez-vous un garant?</Text>
+          <ThemedView className="flex-row items-center mb-4">
+            <ThemedText className="font-medium flex-1">Avez-vous un garant?</ThemedText>
             <CustomButton
               title={formik.values.hasGuarantor ? "Oui" : "Non"}
               onPress={() => formik.setFieldValue('hasGuarantor', !formik.values.hasGuarantor)}
               type={formik.values.hasGuarantor ? "primary" : "outline"}
               className="w-20"
             />
-          </View>
+          </ThemedView>
           
-          <View className="bg-gray-50 p-4 rounded-lg my-4">
-            <Text className="text-lg font-semibold mb-2">Résumé des coûts</Text>
-            <View className="flex-row justify-between mb-2">
-              <Text>Loyer mensuel</Text>
-              <Text>{property?.monthlyRent} €</Text>
-            </View>
-            <View className="flex-row justify-between mb-2">
-              <Text>Dépôt de garantie</Text>
-              <Text>{property?.depositAmount} €</Text>
-            </View>
-            <View className="flex-row justify-between pt-2 border-t border-gray-200 mt-2">
-              <Text className="font-bold">Total à payer</Text>
-              <Text className="font-bold">{calculateTotalAmount()} €</Text>
-            </View>
-          </View>
+          <ThemedView className="bg-gray-50 p-4 rounded-lg my-4">
+            <ThemedText className="text-lg font-semibold mb-2">Résumé des coûts</ThemedText>
+            <ThemedView className="flex-row justify-between mb-2">
+              <ThemedText>Loyer mensuel</ThemedText>
+              <ThemedText>{property?.monthlyRent} €</ThemedText>
+            </ThemedView>
+            <ThemedView className="flex-row justify-between mb-2">
+              <ThemedText>Dépôt de garantie</ThemedText>
+              <ThemedText>{property?.depositAmount} €</ThemedText>
+            </ThemedView>
+            <ThemedView className="flex-row justify-between pt-2 border-t border-gray-200 mt-2">
+              <ThemedText className="font-bold">Total à payer</ThemedText>
+              <ThemedText className="font-bold">{calculateTotalAmount()} €</ThemedText>
+            </ThemedView>
+          </ThemedView>
           
-          <Text className="mb-4 text-sm text-gray-600">
+          <ThemedText className="mb-4 text-sm text-gray-600">
             En cliquant sur "Continuer", vous acceptez de soumettre votre dossier pour vérification.
             Vous devrez télécharger les documents nécessaires à l'étape suivante.
-          </Text>
+          </ThemedText>
           
           <CustomButton
             title="Continuer vers les documents"
@@ -191,7 +194,7 @@ const ReservationScreen = () => {
             loading={loading}
             disabled={!formik.isValid || loading}
           />
-        </View>
+        </ThemedView>
       </ScrollView>
     </SafeAreaView>
   );

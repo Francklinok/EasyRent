@@ -6,17 +6,21 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Ionicons } from '@expo/vector-icons';
 
-import ContractSummary from '@/components/contact/contratSummary';
-import PartyInfoSection from '@/components/contact/partyInfo';
-import  ContractStatusSection from '@/components/contact/contractStatusSection';
+import ContractSummary from '@/components/contract/contratSummary';
+import PartyInfoSection from '@/components/contract/partyInfo';
+import  ContractStatusSection from '@/components/contract/contractStatusSection';
 import { ContractActionButtons } from '@/components/ui/contractActionButton';
-import LegalNoticeSection from '@/components/contact/legalNoticeSection';
-import FooterSection from '@/components/contact/footerSection';
+import LegalNoticeSection from '@/components/contract/legalNoticeSection';
+import FooterSection from '@/components/contract/footerSection';
 import { CustomButton } from '@/components/ui';
 import generateContractHTML from '@/components/utils/generateContractHTML';
-import generateAdvancedQRCode from '@/components/contact/utilsgeneratecodeQr';
+import generateAdvancedQRCode from '@/components/contract/utilsgeneratecodeQr';
 import generateWatermark from '@/components/utils/generateWatermark';
 import { Property,Reservation, User } from '@/types/type';
+import { ThemedView } from '@/components/ui/ThemedView';
+import { ThemedText } from '@/components/ui/ThemedText';
+
+
 
 const ContractScreen = () => {
   const navigation = useNavigation();
@@ -263,8 +267,8 @@ const ContractScreen = () => {
     return (
       <SafeAreaView className="flex-1 bg-white justify-center items-center p-4">
         <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-        <Text className="text-xl font-semibold mt-4 mb-2 text-center">Une erreur est survenue</Text>
-        <Text className="text-gray-600 text-center mb-6">{errorMessage}</Text>
+        <ThemedText className="text-xl font-semibold mt-4 mb-2 text-center">Une erreur est survenue</ThemedText>
+        <ThemedText className="text-gray-600 text-center mb-6">{errorMessage}</ThemedText>
         <CustomButton 
           title="Retour à l'accueil" 
           onPress={() => navigation.navigate('Home')}
@@ -277,31 +281,31 @@ const ContractScreen = () => {
   return (
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView className="flex-1 p-4">
-        <Text className="text-2xl font-bold mb-4">Contrat de location</Text>
+        <ThemedText className="text-2xl font-bold mb-4">Contrat de location</ThemedText>
         
-        <View className="bg-green-50 p-4 rounded-lg mb-6 border border-green-200">
-          <Text className="text-green-800 font-medium mb-2">
+        <ThemedView className="bg-green-50 p-4 rounded-lg mb-6 border border-green-200">
+          <ThemedText className="text-green-800 font-medium mb-2">
             Félicitations ! Votre location a été finalisée.
-          </Text>
-          <Text className="text-green-700">
+          </ThemedText>
+          <ThemedText className="text-green-700">
             Le contrat de location 
             {contractFileUri ? ' a été généré' : ' sera généré'} 
             automatiquement avec un design futuriste de haute valeur. Vous pouvez le consulter, le télécharger ou le partager.
-          </Text>
-        </View>
+          </ThemedText>
+        </ThemedView>
 
-        <View className="bg-indigo-50 p-4 rounded-lg mb-6 border border-indigo-200">
-          <View className="flex-row items-center mb-2">
+        <ThemedView className="bg-indigo-50 p-4 rounded-lg mb-6 border border-indigo-200">
+          <ThemedView className="flex-row items-center mb-2">
             <Ionicons name="information-circle" size={24} color="#4F46E5" />
-            <Text className="text-indigo-800 font-medium ml-2">Contrat avec Identifiant Unique</Text>
-          </View>
-          <Text className="text-indigo-700">
+            <ThemedText className="text-indigo-800 font-medium ml-2">Contrat avec Identifiant Unique</ThemedText>
+          </ThemedView>
+          <ThemedText className="text-indigo-700">
             ID: {contractId}
-          </Text>
-          <Text className="text-indigo-700 mt-1">
+          </ThemedText>
+          <ThemedText className="text-indigo-700 mt-1">
             Ce contrat est sécurisé et comprend un code QR avancé pour la vérification d'authenticité.
-          </Text>
-        </View>
+          </ThemedText>
+        </ThemedView>
         
         <ContractSummary 
           property={property} 

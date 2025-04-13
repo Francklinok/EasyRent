@@ -5,7 +5,8 @@ import { useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Ionicons } from '@expo/vector-icons';
-
+import { ThemedView } from '@/components/ui/ThemedView';
+import { ThemedText } from '@/components/ui/ThemedText';
 interface Reservation {
   id: string;
   propertyTitle: string;
@@ -174,33 +175,33 @@ const  ReservationStatusScreen = () => {
         className="bg-white rounded-lg shadow-sm mb-4 overflow-hidden"
         onPress={() => handleReservationPress(item)}
       >
-        <View className="p-4">
-          <View className="flex-row justify-between items-center mb-2">
-            <Text className="text-lg font-semibold">{item.propertyTitle}</Text>
-            <View className={`px-2 py-1 rounded-full ${statusInfo.color}`}>
-              <Text className="text-xs font-medium">{statusInfo.text}</Text>
-            </View>
-          </View>
+        <ThemedView className="p-4">
+          <ThemedView className="flex-row justify-between items-center mb-2">
+            <ThemedText className="text-lg font-semibold">{item.propertyTitle}</ThemedText>
+            <ThemedText className={`px-2 py-1 rounded-full ${statusInfo.color}`}>
+              <ThemedText className="text-xs font-medium">{statusInfo.text}</ThemedText>
+            </ThemedText>
+          </ThemedView>
           
-          <View className="mb-3">
-            <Text className="text-gray-600 text-sm">
+          <ThemedView className="mb-3">
+            <ThemedText className="text-gray-600 text-sm">
               Demande créée le {formatDate(item.createdAt)}
-            </Text>
-            <Text className="text-gray-600 text-sm">
+            </ThemedText>
+            <ThemedText className="text-gray-600 text-sm">
               Période: {formatDate(item.startDate)} - {formatDate(item.endDate)}
-            </Text>
-            <Text className="text-gray-600 text-sm">
+            </ThemedText>
+            <ThemedText className="text-gray-600 text-sm">
               Loyer mensuel: {item.monthlyRent} €
-            </Text>
-          </View>
+            </ThemedText>
+          </ThemedView>
           
-          <View className="flex-row justify-between items-center border-t border-gray-200 pt-3">
-            <Text className="text-blue-600 font-medium">
+          <ThemedView className="flex-row justify-between items-center border-t border-gray-200 pt-3">
+            <ThemedText className="text-blue-600 font-medium">
               {getNextAction(item.status)}
-            </Text>
+            </ThemedText>
             <Ionicons name="chevron-forward" size={20} color="#4B5563" />
-          </View>
-        </View>
+          </ThemedView>
+        </ThemedView>
       </TouchableOpacity>
     );
   };
@@ -215,20 +216,20 @@ const  ReservationStatusScreen = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      <View className="p-4">
+      <ThemedView className="p-4">
         <Text className="text-2xl font-bold mb-4">Mes réservations</Text>
         
         {reservations.length === 0 ? (
-          <View className="bg-white rounded-lg shadow-sm p-6 items-center justify-center">
+          <ThemedView className="bg-white rounded-lg shadow-sm p-6 items-center justify-center">
             <Ionicons name="calendar-outline" size={48} color="#9CA3AF" />
-            <Text className="text-lg font-medium text-gray-700 mt-4 mb-2">
+            <ThemedText className="text-lg font-medium text-gray-700 mt-4 mb-2">
               Aucune réservation trouvée
-            </Text>
-            <Text className="text-gray-500 text-center mb-4">
+            </ThemedText>
+            <ThemedText className="text-gray-500 text-center mb-4">
               {userType === 'tenant' 
                 ? 'Vous n\'avez pas encore effectué de demande de réservation.'
                 : 'Vous n\'avez pas encore reçu de demande de réservation.'}
-            </Text>
+            </ThemedText>
 
             {/* modify the route after  */}
 
@@ -240,7 +241,7 @@ const  ReservationStatusScreen = () => {
                 <Text className="text-white font-medium">Chercher un logement</Text>
               </TouchableOpacity>
             )}
-          </View>
+          </ThemedView>
         ) : (
           <FlatList
             data={reservations}
@@ -250,7 +251,7 @@ const  ReservationStatusScreen = () => {
             contentContainerStyle={{ paddingBottom: 20 }}
           />
         )}
-      </View>
+      </ThemedView>
     </SafeAreaView>
   );
 }

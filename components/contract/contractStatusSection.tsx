@@ -2,6 +2,9 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Reservation } from '@/types/type'
+import { ThemedView } from '../ui/ThemedView';
+import { ThemedText } from '../ui/ThemedText';
+
 
 interface ContractStatusSectionProps {
   contractFileUri: string | null;
@@ -40,29 +43,29 @@ const ContractStatusSection: React.FC<ContractStatusSectionProps> = ({
   const { icon, color, text } = getStatusInfo();
 
   return (
-    <View className="bg-gray-50 p-4 rounded-lg mb-6">
-      <Text className="text-lg font-semibold mb-2">Statut du contrat</Text>
-      <View className="flex-row items-center">
+    <ThemedView className="bg-gray-50 p-4 rounded-lg mb-6">
+      <ThemedText className="text-lg font-semibold mb-2">Statut du contrat</ThemedText>
+      <ThemedView className="flex-row items-center">
         <Ionicons name={icon} size={24} color={color} />
-        <Text className="ml-2">{text}</Text>
-      </View>
+        <ThemedText className="ml-2">{text}</ThemedText>
+      </ThemedView>
       
       {reservation?.status === 'contract_generated' && !reservation?.status.includes('signed') && (
-        <View className="mt-3 p-2 bg-yellow-50 rounded border border-yellow-200">
-          <Text className="text-yellow-800 text-sm">
+        <ThemedView className="mt-3 p-2 bg-yellow-50 rounded border border-yellow-200">
+          <ThemedText className="text-yellow-800 text-sm">
             Le contrat est en attente de signature par les deux parties.
-          </Text>
-        </View>
+          </ThemedText>
+        </ThemedView>
       )}
       
       {reservation?.status === 'contract_signed' && (
-        <View className="mt-3 p-2 bg-green-50 rounded border border-green-200">
-          <Text className="text-green-800 text-sm">
+        <ThemedView className="mt-3 p-2 bg-green-50 rounded border border-green-200">
+          <ThemedText className="text-green-800 text-sm">
             Le contrat a été signé électroniquement et est désormais légalement contraignant.
-          </Text>
-        </View>
+          </ThemedText>
+        </ThemedView>
       )}
-    </View>
+    </ThemedView>
   );
 };
 
