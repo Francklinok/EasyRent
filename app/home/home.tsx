@@ -75,16 +75,16 @@ const Home = () => {
       from={{ opacity: 0 }}
       animate={{ opacity: isLoaded ? 1 : 0 }}
       transition={{ type: 'timing', duration: 800 }}
-      className="flex bg-gray-50"
+      className="flex bg-white "
     >
-      <ThemedView className="mb-0">
-        {/* Header avec effet subtil */}
+      <ThemedView className="mb-1">
+
         <MotiView
           from={{ translateY: -20, opacity: 0 }}
           animate={{ translateY: 0, opacity: 1 }}
           transition={{ delay: 200, type: 'spring', stiffness: 100 }}
         >
-          {/* <Header /> */}
+          <Header/>
         </MotiView>
         
         {/* Section compacte combinée */}
@@ -92,38 +92,19 @@ const Home = () => {
           from={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 300, type: 'spring', stiffness: 100 }}
-          className=" rounded-2xl overflow-hidden shadow-md"
+          className=" overflow-hidden shadow-md"
         >
-          {/* <Image
-            source={{ uri: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=1000" }}
-            className="w-full h-22 absolute"
-            resizeMode="cover"
-          /> */}
-          {/* <LinearGradient
-            colors={['rgba(79, 70, 229, 0.85)', 'rgba(109, 40, 217, 0.95)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            className="w-full h-10"
-          > */}
-            {/* En-tête et contenu */}
-            {/* <View className="px-4 pt-3 pb-2">
-              <Text className="text-white text-xl font-bold mb-1">
-                Trouvez votre bien idéal
-              </Text>
-              {/* <Text className="text-white/80 text-sm mb-3">
-                Des propriétés sélectionnées pour vous
-              </Text> 
-            </View> */}
+         
             
             {/* Catégories à l'intérieur du dégradé */}
-            <ThemedView className="mx-1 bg-white rounded-xl p-1 ">
+            <ThemedView className=" bg-white  ">
               <ThemedView className="flex-row justify-between">
                 {categories.map((category) => (
                   <TouchableOpacity
                     key={category.key}
                     onPress={() => handleSetActiveComponent(category.key)}
                     style={{ width: (width - 48) / categories.length - 6 }}
-                    className={` px-1 rounded-lg items-center ${
+                    className={` items-center ${
                       selectedCategory === category.key 
                         ? 'bg-white' 
                         : 'bg-transparent'
@@ -131,14 +112,15 @@ const Home = () => {
                   >
                     <Ionicons 
                       name={category.icon as any} 
-                      size={18} 
+                      size={15} 
                       color={selectedCategory === category.key ? "green" : "blue"} 
                     />
-                    <ThemedText className={`text-10 ${
+                    <ThemedText className={`text-xl ${
                       selectedCategory === category.key
                         ? 'text-indigo-400 font-medium'
                         : 'text-blue-600'
-                    }`}>
+                    }`}
+                    style = {{fontSize:10}}>
                       {category.label}
                     </ThemedText>
                   </TouchableOpacity>
@@ -146,26 +128,7 @@ const Home = () => {
               </ThemedView>
             </ThemedView>
             
-            {/* Actions secondaires */}
-            {/* <View className="flex-row justify-between px-4 pb-2">
-              <TouchableOpacity className="bg-white/20 rounded-full px-3 py-1 flex-row items-center">
-                <MaterialCommunityIcons name="filter-variant" size={16} color="white" />
-                <Text className="text-white text-xs ml-1">Filtres</Text>
-              </TouchableOpacity>
-              
-              <View className="flex-row">
-                <TouchableOpacity className="bg-white/20 rounded-full px-3 py-1 flex-row items-center mr-2">
-                  <MaterialCommunityIcons name="sort" size={16} color="white" />
-                  <Text className="text-white text-xs ml-1">Trier</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity className="bg-white/20 rounded-full px-3 py-1 flex-row items-center">
-                  <MaterialCommunityIcons name="map-marker-outline" size={16} color="white" />
-                  <Text className="text-white text-xs ml-1">Carte</Text>
-                </TouchableOpacity>
-              </View>
-            </View> */}
-          {/* </LinearGradient> */}
+           
         </MotiView>
         
         {/* Content Section with Animation */}

@@ -1,9 +1,8 @@
 
 import React from 'react';
 import { Stack } from "expo-router";
-import ChatHeader from '@/components/messages/chat/MessageHeader';
 
-export default function ChatLayout() {
+export default function BookingLayout() {
   return (
     <Stack
       screenOptions={{
