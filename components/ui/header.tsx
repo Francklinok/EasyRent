@@ -89,12 +89,12 @@ const Header = ({
         style={[
           { 
             paddingTop: insets.top > 0 ? 0 : 8, // Ajouter un padding si nécessaire
-            height: Platform.OS === 'android' ? 70 : 60, // Ajuster la hauteur selon la plateforme
+            height: Platform.OS === 'android' ? 60 : 60, // Ajuster la hauteur selon la plateforme
           }, 
           style
         ]}
       >
-        <ThemedView className="flex-row items-center justify-between z-10 h-40">
+        <ThemedView className="flex-row items-center justify-between z-10 h-20">
           {leftElement || defaultLeftElement}
           {mainElement || defaultMainElement}
           {rightElement || defaultRightElement}

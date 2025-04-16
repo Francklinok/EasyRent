@@ -13,7 +13,7 @@ export default function HomeLayout() {
   
   // Calculer la hauteur correcte du header en fonction de la plateforme
   const headerHeight = Platform.OS === 'android' 
-    ? 70 + statusBarHeight 
+    ?70 + statusBarHeight 
     : 0 + insets.top;
 
   return (

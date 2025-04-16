@@ -42,7 +42,7 @@ export default function TabLayout() {
         name="Search"
         options={{
           title: 'Search',
-          tabBarIcon: ({ color }) => <AntDesign name="search1" size={28} color="black" />,
+          tabBarIcon: ({ color }) => <AntDesign name="search1" size={28} color={color} />,
         }}
       />
 
