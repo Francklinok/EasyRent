@@ -1,14 +1,14 @@
 import React, { ReactNode } from 'react';
-import { View, ViewProps, StyleSheet } from 'react-native';
-
+import { ViewProps, StyleSheet } from 'react-native';
+import { ThemedView } from './ThemedView';
 interface CustomViewProps extends ViewProps {
   children?: ReactNode;
 }
 
 const Container: React.FC<CustomViewProps> = ({ children, style, ...props }) => (
-  <View style={[styles.container, style]} {...props}>
+  <ThemedView style={[styles.container, style]} {...props}>
     {children}
-  </View>
+  </ThemedView>
 );
 
 const styles = StyleSheet.create({

@@ -16,8 +16,9 @@ import { Housing } from '@/types/HousingType';
 import { SearchFilters } from '@/types/FilterType';
 import renderHousingCard from '@/components/search/renderHousingcard';
 import FilterModal from '@/components/search/renderFilter';
-
-
+import { ThemedView } from '../ui/ThemedView';
+import { ThemedText } from '../ui/ThemedText';
+import { ThemedScrollView } from '../ui/ScrolleView';
 const AdvancedHousingSearch = ()=>{
 
   const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
@@ -106,9 +107,9 @@ const AdvancedHousingSearch = ()=>{
   }, [housings, filters, searchQuery]);
 
   return (
-    <Container>
+    <Container className = 'h-full'>
       <SearchBar>
-        <View className="flex-1 flex-row items-center bg-gray-100 rounded-xl px-3 py-2">
+        <ThemedView className="flex-1 flex-row items-center bg-gray-100 rounded-xl px-3 py-2">
           <Ionicons name="search" size={20} color="#4B5563" className="mr-2" />
           <TextInput
             placeholder="Search housing"
@@ -116,21 +117,23 @@ const AdvancedHousingSearch = ()=>{
             onChangeText={setSearchQuery}
             className="flex-1"
           />
-        </View>
+        </ThemedView>
         <FilterButton onPress={() => setIsFilterModalVisible(true)}>
           <Ionicons name="filter" size={24} color="white" />
         </FilterButton>
       </SearchBar>
+      
+      <ThemedScrollView className="p-1">
 
       <HousingMap 
         housings={filteredHousings} 
         currentLocation={currentLocation} 
       />
-
-      <ScrollView className="p-8">
         {filteredHousings.map(housing => renderHousingCard(housing))}
-      </ScrollView>
+      </ThemedScrollView>
 
+
+    
       <FilterModal 
         isVisible={isFilterModalVisible}
         filters={filters}

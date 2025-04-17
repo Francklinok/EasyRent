@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Image, TouchableOpacity, Dimensions, Animated, StatusBar } from "react-native";
 import { FontAwesome5, MaterialIcons, Ionicons, Entypo } from "@expo/vector-icons";
@@ -120,44 +118,44 @@ const RenHouseAcceuil = () => {
     );
   };
 
-  // const categories = ["All", "Luxury", "Smart Home", "Eco-Friendly", "Space View"];
+  const categories = ["All", "Luxury", "Smart Home", "Eco-Friendly", "Space View"];
 
-  // const renderCategoryTabs = () => (
-  //   <ThemedView className="flex-row px-4 py-3 mt-12">
-  //     <ThemedScrollView 
-  //       horizontal 
-  //       showsHorizontalScrollIndicator={false}
-  //       contentContainerStyle={{ gap: 10 }}
-  //     >
-  //       {categories.map((category) => (
-  //         <TouchableOpacity 
-  //           key={category}
-  //           onPress={() => setSelectedCategory(category)}
-  //           className={`px-4 py-2 rounded-2xl border ${
-  //             selectedCategory === category 
-  //               ? "border-primary" 
-  //               : isDark ? "border-white/20" : "border-black/10"
-  //           }`}
-  //           style={{
-  //             backgroundColor: selectedCategory === category 
-  //               ? colors.primary 
-  //               : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-  //           }}
-  //         >
-  //           <ThemedText 
-  //             style={{ 
-  //               color: selectedCategory === category 
-  //                 ? '#FFFFFF' 
-  //                 : colors.text 
-  //             }}
-  //           >
-  //             {category}
-  //           </ThemedText>
-  //         </TouchableOpacity>
-  //       ))}
-  //     </ThemedScrollView>
-  //   </ThemedView>
-  // );
+  const renderCategoryTabs = () => (
+    <ThemedView className="flex-row px-4 py-3 mt-12">
+      <ThemedScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 10 }}
+      >
+        {categories.map((category) => (
+          <TouchableOpacity 
+            key={category}
+            onPress={() => setSelectedCategory(category)}
+            className={`px-4 py-2 rounded-2xl border ${
+              selectedCategory === category 
+                ? "border-primary" 
+                : isDark ? "border-white/20" : "border-black/10"
+            }`}
+            style={{
+              backgroundColor: selectedCategory === category 
+                ? colors.primary 
+                : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+            }}
+          >
+            <ThemedText 
+              style={{ 
+                color: selectedCategory === category 
+                  ? '#FFFFFF' 
+                  : colors.text 
+              }}
+            >
+              {category}
+            </ThemedText>
+          </TouchableOpacity>
+        ))}
+      </ThemedScrollView>
+    </ThemedView>
+  );
 
   // const renderHeader = () => (
   //   <ThemedView>
