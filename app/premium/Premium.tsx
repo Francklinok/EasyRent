@@ -1,11 +1,49 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, Image, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
-import { useTheme } from '../contexts/theme/themehook';
+import { useTheme } from '@/components/contexts/theme/themehook';
 import { ThemedView } from '@/components/ui/ThemedView';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import PlanCard from '@/components/premium/PlanCard';
 // Composant pour la souscription premium
-export const PremiumSubscriptionScreen = () => {
+
+
+const PremiumPlans = [
+  {
+    id: 'basic',
+    title: 'Basic',
+    price: '4,99€ / mois',
+    features: [
+      'Navigation sans publicités',
+      'Contact direct avec les vendeurs',
+    ],
+    icon: 'star-outline',
+  },
+  {
+    id: 'pro',
+    title: 'Pro',
+    price: '9,99€ / mois',
+    features: [
+      'Toutes les fonctionnalités de Basic',
+      'Accès aux statistiques du marché',
+      'Planification de visites',
+    ],
+    icon: 'star-half-full',
+  },
+  {
+    id: 'ultimate',
+    title: 'Ultimate',
+    price: '14,99€ / mois',
+    features: [
+      'Toutes les fonctionnalités de Pro',
+      'Accès prioritaire aux annonces',
+      'Support client prioritaire',
+    ],
+    icon: 'star',
+  },
+];
+
+
+ const PremiumSubscriptionScreen = () => {
     const { theme } = useTheme();
     const [selectedPlan, setSelectedPlan] = useState(null);
   
@@ -170,7 +208,7 @@ export const PremiumSubscriptionScreen = () => {
                 fontWeight: 'bold',
                 fontSize: 16
               }}>
-                {selectedPlan ? 'S'ABONNER MAINTENANT' : 'SÉLECTIONNEZ UN PLAN'}
+                {selectedPlan ? 'S ABONNER MAINTENANT' : 'SÉLECTIONNEZ UN PLAN'}
               </Text>
             </TouchableOpacity>
             
@@ -187,3 +225,5 @@ export const PremiumSubscriptionScreen = () => {
       </ThemedView>
     );
   };
+
+  export default PremiumSubscriptionScreen

@@ -1,11 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
-import { useTheme } from '../contexts/theme/themehook';
+import { View, Text, FlatList, Image, TouchableOpacity } from 'react-native';
+import { useTheme } from '@/components/contexts/theme/themehook';
 import { ThemedView } from '@/components/ui/ThemedView';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { ThemedText } from '@/components/ui/ThemedText';
+import FavoriteItem from '@/components/favoris/Favoritecomponent';
+// Types
+type FavoriteItemType = {
+  id: string;
+  title: string;
+  type: string;
+  location: string;
+  price: string;
+  surface: string;
+  rooms: number | null;
+  imageUrl: string;
+};
 
-// Données simulées pour les favoris
-const DUMMY_FAVORITES = [
+// Données simulées
+const DUMMY_FAVORITES: FavoriteItemType[] = [
   {
     id: '1',
     title: 'Villa Moderne',
@@ -38,113 +51,98 @@ const DUMMY_FAVORITES = [
   },
 ];
 
-// Composant pour les plans premium
-const PremiumPlans = [
-  {
-    id: 'basic',
-    title: 'Découverte',
-    price: '4,99 €/mois',
-    color: '#5865F2', // Couleur Discord bleu
-    features: [
-      'Alertes personnalisées',
-      'Suppression des publicités',
-      'Sauvegarde jusqu'à 20 favoris'
-    ]
-  },
-  {
-    id: 'premium',
-    title: 'Premium',
-    price: '9,99 €/mois',
-    color: '#FEE75C', // Couleur Discord jaune
-    popular: true,
-    features: [
-      'Alertes personnalisées',
-      'Suppression des publicités',
-      'Sauvegarde illimitée des favoris',
-      'Accès aux statistiques du marché',
-      'Contact direct avec les vendeurs'
-    ]
-  },
-  {
-    id: 'pro',
-    title: 'Professionnel',
-    price: '19,99 €/mois',
-    color: '#ED4245', 
-    features: [
-      'Toutes les fonctionnalités Premium',
-      'Signature virtuelle de documents',
-      'Visites virtuelles illimitées',
-      'Outil d'évaluation de biens',
-      'Support client prioritaire'
-    ]
-  }
-];
-
-// Composant d'un élément de la liste des favoris
-const FavoriteItem = ({ item, onRemove }) => {
+// Composant principal
+const FavoritesScreen = () => {
   const { theme } = useTheme();
-  
+  const [favorites, setFavorites] = useState<FavoriteItemType[]>(DUMMY_FAVORITES);
+
+  const removeFavorite = (id: string) => {
+    setFavorites((prev) => prev.filter((item) => item.id !== id));
+  };
+
   return (
-    <ThemedView 
-      variant="surface" 
-      elevated="small" 
-      style={{
-        marginBottom: 10,
-        borderRadius: 12,
-        overflow: 'hidden'
-      }}
-    >
-      <View style={{ flexDirection: 'row', height: 120 }}>
-        {/* Image de la propriété */}
-        <View style={{ width: 120, height: '100%', backgroundColor: theme.surfaceVariant }}>
-          <Image 
-            source={{ uri: item.imageUrl }}
-            style={{ width: '100%', height: '100%' }}
-            defaultSource={require('../assets/placeholder-property.png')}
-          />
-        </View>
-
-        {/* Détails de la propriété */}
-        <View style={{ flex: 1, padding: 12, justifyContent: 'space-between' }}>
-          <View>
-            <Text style={{ fontWeight: 'bold', fontSize: 16, color: theme.onSurface }}>
-              {item.title}
-            </Text>
-            <Text style={{ fontSize: 14, color: theme.onSurfaceVariant, marginTop: 2 }}>
-              {item.location}
-            </Text>
-          </View>
-
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ fontWeight: 'bold', color: theme.primary, fontSize: 16 }}>
-              {item.price}
-            </Text>
-            <View style={{ flexDirection: 'row' }}>
-              <Text style={{ color: theme.onSurfaceVariant, marginRight: 8 }}>
-                {item.surface}
-              </Text>
-              {item.rooms && (
-                <Text style={{ color: theme.onSurfaceVariant }}>
-                  {item.rooms} pièces
-                </Text>
-              )}
-            </View>
-          </View>
-        </View>
-
-        {/* Bouton de suppression des favoris */}
-        <TouchableOpacity 
-          style={{ 
-            padding: 10, 
-            justifyContent: 'flex-start', 
-            alignItems: 'center' 
+    <ThemedView variant="default" style={{ flex: 1 , paddingTop:40}}>
+      <View style={{ padding: 16 }}>
+        <Text
+          style={{
+            fontSize: 24,
+            fontWeight: 'bold',
+            color: theme.onSurface,
+            marginBottom: 8,
           }}
-          onPress={() => onRemove(item.id)}
         >
-          <Icon name="heart" size={24} color={theme.error || '#ED4245'} />
-        </TouchableOpacity>
+          Vos Favoris
+        </Text>
+        <Text
+          style={{
+            fontSize: 16,
+            color: theme.onSurface || theme.onSurfaceVariant,
+            marginBottom: 16,
+          }}
+        >
+          Gérez vos propriétés sauvegardées
+        </Text>
       </View>
+
+      {favorites.length > 0 ? (
+        <FlatList
+          data={favorites}
+          renderItem={({ item }) => (
+            <FavoriteItem key={item.id} item={item} onRemove={removeFavorite} />
+          )}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ padding: 16 }}
+        />
+      ) : (
+        <ThemedView
+          variant="surface"
+          style={{
+            flex: 1,
+            margin: 16,
+            borderRadius: 12,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 24,
+          }}
+        >
+          <Icon name="heart-outline" size={64} color={theme.onSurface} />
+          <Text
+            style={{
+              textAlign: 'center',
+              fontSize: 18,
+              fontWeight: 'bold',
+              color: theme.onSurface,
+              marginTop: 16,
+            }}
+          >
+            Aucun favori pour le moment
+          </Text>
+          <Text
+            style={{
+              textAlign: 'center',
+              fontSize: 16,
+              color: theme.onSurface,
+              marginTop: 8,
+              marginBottom: 16,
+            }}
+          >
+            Ajoutez des propriétés à vos favoris pour les retrouver ici
+          </Text>
+          <TouchableOpacity
+            style={{
+              backgroundColor: theme.primary,
+              paddingVertical: 12,
+              paddingHorizontal: 24,
+              borderRadius: 8,
+            }}
+          >
+            <Text style={{ color: theme.onSurface, fontWeight: 'bold' }}>
+              EXPLORER LES PROPRIÉTÉS
+            </Text>
+          </TouchableOpacity>
+        </ThemedView>
+      )}
     </ThemedView>
   );
 };
-
+export default FavoritesScreen

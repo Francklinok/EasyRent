@@ -51,7 +51,7 @@ const ParamsScreen = () => {
             label="Favoris" 
             icon="star"
             iconColor="#FAA81A"
-            onPress={() => router.navigate('/profile/Favorites')}
+            onPress={() => router.navigate('/favoris/Favoris')}
           />
         </ThemedView>
         
@@ -65,7 +65,7 @@ const ParamsScreen = () => {
             description="Améliorez votre expérience"
             icon ="diamond"
             iconColor="#FF73FA"
-            onPress={() => router.navigate('/profile/Premium')}
+            onPress={() => router.navigate('/premium/Premium')}
           />
           <SettingsItem showArrow='on'
             label="Portefeuille" 
