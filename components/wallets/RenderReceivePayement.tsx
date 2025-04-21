@@ -1,85 +1,218 @@
-import { ScrollView, TouchableOpacity,Text,View,StyleSheet, TextInput } from "react-native";
+import { ScrollView, TouchableOpacity, Text, View, StyleSheet, TextInput, Alert } from "react-native";
+import { ArrowLeft, DollarSign, Bitcoin, Copy } from 'lucide-react-native';
+import { useTheme } from '@/components/contexts/theme/themehook';
+import { ThemedView } from "../ui/ThemedView";
+import _ from 'lodash';
+import { ThemedText } from "../ui/ThemedText";
+type Props = {
+  setCurrentSection: (section: string) => void;
+}
 
-const RenderReceivePayment:React.FC<Props> = () => (
-  <ScrollView className="w-full h-full">
-    <ThemedView variant="surface" style={styles.sectionContainer}>
-      <View style={styles.sectionHeader}>
-        <TouchableOpacity onPress={() => setCurrentSection('main')} style={styles.backButton}>
-          <ArrowLeft size={20} color={theme.onSurface} />
-        </TouchableOpacity>
-        <Text style={[styles.sectionHeaderTitle, { color: theme.onSurface }]}>Recevoir un paiement</Text>
-      </View>
-      
-      <View style={styles.receiveContainer}>
-        <View style={[styles.qrCodeContainer, { borderColor: theme.outline }]}>
-          <View style={styles.qrCodePlaceholder}>
-            {/* Ici serait le QR code généré avec l'adresse de réception */}
-            <View style={[styles.qrCode, { borderColor: theme.outline }]} />
-          </View>
-        </View>
-        
-        <Text style={[styles.receiveInfoText, { color: theme.onSurfaceVariant }]}>
-          Partagez ce QR code ou votre identifiant pour recevoir un paiement
-        </Text>
-        
-        <View style={[styles.receiveIdContainer, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
-          <Text style={[styles.receiveId, { color: theme.onSurface }]}>wallet-immo-42586</Text>
-          <TouchableOpacity 
-            style={[styles.copyButton, { backgroundColor: theme.primary }]}
-            onPress={() => {
-              // Logique pour copier dans le presse-papier
-              Alert.alert('Copié', 'Identifiant copié dans le presse-papier');
-            }}
-          >
-            <Copy size={16} color="#fff" />
+const RenderReceivePayment: React.FC<Props> = ({ setCurrentSection }) => {
+  const {theme} = useTheme();
+  
+  return (
+    <ScrollView className="w-full h-full">
+      <ThemedView variant="surface" style={styles.sectionContainer}>
+        <ThemedView style={styles.sectionHeader}>
+          <TouchableOpacity onPress={() => setCurrentSection('main')} style={styles.backButton}>
+            <ArrowLeft size={20} color={theme.onSurface} />
           </TouchableOpacity>
-        </View>
+          <ThemedText style={[styles.sectionHeaderTitle, { color: theme.onSurface }]}>Recevoir un paiement</ThemedText>
+        </ThemedView>
         
-        <Text style={[styles.formLabel, { color: theme.onSurfaceVariant }]}>Méthode de réception</Text>
-        <View style={styles.receiveMethodsContainer}>
-          <TouchableOpacity 
-            style={[styles.receiveMethodOption, { borderColor: theme.primary, backgroundColor: theme.surfaceVariant }]}
-          >
-            <DollarSign size={20} color={theme.primary} />
-            <Text style={[styles.receiveMethodText, { color: theme.onSurface }]}>Monnaie fiduciaire</Text>
-          </TouchableOpacity>
+        <ThemedView style={styles.receiveContainer}>
+          <ThemedView style={[styles.qrCodeContainer, { borderColor: theme.outline }]}>
+            <ThemedView style={styles.qrCodePlaceholder}>
+              {/* Ici serait le QR code généré avec l'adresse de réception */}
+              <ThemedView style={[styles.qrCode, { borderColor: theme.outline }]} />
+            </ThemedView>
+          </ThemedView>
           
-          <TouchableOpacity 
-            style={[styles.receiveMethodOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}
-          >
-            <Bitcoin size={20} color={theme.accent} />
-            <Text style={[styles.receiveMethodText, { color: theme.onSurface }]}>Crypto-monnaie</Text>
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.receiveFormContainer}>
-          <Text style={[styles.formLabel, { color: theme.onSurfaceVariant }]}>Montant à demander (optionnel)</Text>
-          <TextInput
-            placeholder="0.00"
-            keyboardType="numeric"
-            style={[styles.formInput, { borderColor: theme.outline, color: theme.onSurface }]}
-            placeholderTextColor={theme.onSurfaceVariant}
-          />
+          <ThemedText type = "body" style={[styles.receiveInfoText, { color: theme.onSurface}]}>
+            Partagez ce QR code ou votre identifiant pour recevoir un paiement
+          </ThemedText>
           
-          <Text style={[styles.formLabel, { color: theme.onSurfaceVariant }]}>Description (optionnel)</Text>
-          <TextInput
-            placeholder="Description du paiement demandé"
-            style={[styles.formInput, { borderColor: theme.outline, color: theme.onSurface }]}
-            placeholderTextColor={theme.onSurfaceVariant}
-          />
+          <ThemedView style={[styles.receiveIdContainer, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
+            <ThemedText style={[styles.receiveId, { color: theme.onSurface }]}>wallet-immo-42586</ThemedText>
+            <TouchableOpacity 
+              style={[styles.copyButton, { backgroundColor: theme.primary }]}
+              onPress={() => {
+                // Logique pour copier dans le presse-papier
+                Alert.alert('Copié', 'Identifiant copié dans le presse-papier');
+              }}
+            >
+              <Copy size={16} color="#fff" />
+            </TouchableOpacity>
+          </ThemedView>
           
-          <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: theme.primary }]}
-            onPress={() => {
-              // Générer un lien de demande de paiement
-              Alert.alert('Demande générée', 'Votre demande de paiement a été générée avec succès.');
-            }}
-          >
-            <Text style={styles.primaryButtonText}>Générer une demande de paiement</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </ThemedView>
-  </ScrollView>
-);
+          <ThemedText style={[styles.formLabel, { color: theme.onSurface}]}>Méthode de réception</ThemedText>
+          <ThemedView style={styles.receiveMethodsContainer}>
+            <TouchableOpacity 
+              style={[styles.receiveMethodOption, { borderColor: theme.primary, backgroundColor: theme.surfaceVariant }]}
+            >
+              <DollarSign size={20} color={theme.primary} />
+              <ThemedText style={[styles.receiveMethodText, { color: theme.onSurface }]}>Monnaie fiduciaire</ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.receiveMethodOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}
+            >
+              <Bitcoin size={20} color={theme.accent} />
+              <ThemedText style={[styles.receiveMethodText, { color: theme.onSurface }]}>Crypto-monnaie</ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
+          
+          <ThemedView style={styles.receiveFormContainer}>
+            <ThemedText style={[styles.formLabel, { color: theme.onSurface }]}>Montant à demander (optionnel)</ThemedText>
+            <TextInput
+              placeholder="0.00"
+              keyboardType="numeric"
+              style={[styles.formInput, { borderColor: theme.outline, color: theme.onSurface }]}
+              placeholderTextColor={theme.onSurface}
+            />
+            
+            <ThemedText style={[styles.formLabel, { color: theme.onSurface }]}>Description (optionnel)</ThemedText>
+            <TextInput
+              placeholder="Description du paiement demandé"
+              style={[styles.formInput, { borderColor: theme.outline, color: theme.onSurface }]}
+              placeholderTextColor={theme.onSurface}
+            />
+            
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+              onPress={() => {
+                // Générer un lien de demande de paiement
+                Alert.alert('Demande générée', 'Votre demande de paiement a été générée avec succès.');
+              }}
+            >
+              <ThemedText style={styles.primaryButtonText}>Générer une demande de paiement</ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
+        </ThemedView>
+      </ThemedView>
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  sectionContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 16,
+  },
+  sectionHeaderTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  receiveContainer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  qrCodeContainer: {
+    padding: 16,
+    borderWidth: 1,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  qrCodePlaceholder: {
+    width: 200,
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qrCode: {
+    width: 180,
+    height: 180,
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  receiveInfoText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 24,
+  },
+  receiveIdContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 24,
+    width: '100%',
+    justifyContent: 'space-between',
+  },
+  receiveId: {
+    fontSize: 16,
+    fontWeight: '500',
+    flex: 1,
+  },
+  copyButton: {
+    padding: 8,
+    borderRadius: 6,
+  },
+  formLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  receiveMethodsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 24,
+  },
+  receiveMethodOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderRadius: 8,
+    padding: 12,
+    width: '48%',
+    justifyContent: 'center',
+  },
+  receiveMethodText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  receiveFormContainer: {
+    width: '100%',
+  },
+  formInput: {
+    width: '100%',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  primaryButton: {
+    width: '100%',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  primaryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  }
+});
+
 export default RenderReceivePayment;

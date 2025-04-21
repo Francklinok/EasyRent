@@ -11,7 +11,7 @@ type ThemedScrollViewProps = ScrollViewProps & {
 export const ThemedScrollView: React.FC<ThemedScrollViewProps> = ({
   style,
   contentContainerStyle,
-  contentPadding = 16,
+  contentPadding = 0,
   children,
   ...props
 }) => {

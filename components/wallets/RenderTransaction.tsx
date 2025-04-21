@@ -1,81 +1,212 @@
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { ThemedView } from "../ui/ThemedView";
+import { ArrowLeft, Download, Send, Bitcoin } from 'lucide-react-native';
+import { useTheme } from '@/components/contexts/theme/themehook';
+import _ from 'lodash';
+import { ThemedText } from "../ui/ThemedText";
+import { ThemedScrollView } from "../ui/ScrolleView";
+type TransactionType = 'payment' | 'received' | 'crypto';
 
-const renderTransactions = () => (
-  <ScrollView className="w-full h-full">
-    <ThemedView variant="surface" style={styles.sectionContainer}>
-      <View style={styles.sectionHeader}>
-        <TouchableOpacity onPress={() => setCurrentSection('main')} style={styles.backButton}>
-          <ArrowLeft size={20} color={theme.onSurface} />
-        </TouchableOpacity>
-        <Text style={[styles.sectionHeaderTitle, { color: theme.onSurface }]}>Historique des transactions</Text>
-      </View>
-      
-      <View style={styles.transactionFilterContainer}>
-        <Text style={[styles.filterLabel, { color: theme.onSurfaceVariant }]}>Filtrer par</Text>
-        <View style={styles.filterOptions}>
-          <TouchableOpacity style={[styles.filterOption, { borderColor: theme.primary, backgroundColor: theme.surfaceVariant }]}>
-            <Text style={[styles.filterOptionText, { color: theme.primary }]}>Tout</Text>
+type TransactionHistory = {
+  id: number; 
+  type: TransactionType;
+  amount: number;
+  description: string;
+  date: string;
+  status: 'completed' | 'pending';
+  cryptoCurrency?: string;
+};
+
+type Props = {
+  formatAmount: (amount: number, currency?: string) => string;
+  setCurrentSection: (section: string) => void;
+  transactionHistory:TransactionHistory[]
+
+};
+
+
+const RenderTransactions: React.FC<Props> = ({ setCurrentSection,formatAmount,transactionHistory}) => {
+  const {theme} = useTheme();
+  
+  return (
+    <ThemedScrollView className="w-full h-full">
+      <ThemedView variant="default" style={styles.sectionContainer}>
+        <ThemedView style={styles.sectionHeader}>
+          <TouchableOpacity onPress={() => setCurrentSection('main')} style={styles.backButton}>
+            <ArrowLeft size={20} color={theme.onSurface} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.filterOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
-            <Text style={[styles.filterOptionText, { color: theme.onSurfaceVariant }]}>Envoyés</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.filterOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
-            <Text style={[styles.filterOptionText, { color: theme.onSurfaceVariant }]}>Reçus</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.filterOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
-            <Text style={[styles.filterOptionText, { color: theme.onSurfaceVariant }]}>Crypto</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      
-      <View style={styles.transactionsListContainer}>
-        {transactionHistory.map((transaction, index) => (
-          <TouchableOpacity 
-            key={transaction.id}
-            style={[styles.transactionItemLarge, index < transactionHistory.length - 1 ? { borderBottomColor: theme.outline, borderBottomWidth: 1 } : {}]}
-            onPress={() => setCurrentSection(`transaction-detail-${transaction.id}`)}
-          >
-            <View style={styles.transactionInfoLarge}>
-              <View style={[styles.transactionIconLarge, { 
-                backgroundColor: transaction.type === 'received' ? theme.accent : 
-                                 transaction.type === 'crypto' ? '#f7931a' : theme.secondary 
-              }]}>
-                {transaction.type === 'received' ? (
-                  <Download size={18} color="#fff" />
-                ) : transaction.type === 'crypto' ? (
-                  <Bitcoin size={18} color="#fff" />
-                ) : (
-                  <Send size={18} color="#fff" />
-                )}
-              </View>
-              <View style={styles.transactionDetailsLarge}>
-                <Text style={[styles.transactionDescLarge, { color: theme.onSurface }]}>
-                  {transaction.description}
-                </Text>
-                <Text style={[styles.transactionDateLarge, { color: theme.onSurfaceVariant }]}>
-                  {transaction.date}
-                </Text>
-                {transaction.status === 'pending' && (
-                  <View style={[styles.statusBadge, { backgroundColor: theme.surfaceVariant }]}>
-                    <Text style={[styles.statusBadgeText, { color: theme.onSurfaceVariant }]}>En attente</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-            <View style={styles.transactionAmountContainerLarge}>
-              <Text style={[styles.transactionAmountLarge, { 
-                color: transaction.type === 'received' ? '#4caf50' : 
-                       transaction.type === 'crypto' ? '#f7931a' : theme.onSurface 
-              }]}>
-                {transaction.type === 'received' ? '+' : transaction.type === 'crypto' ? '' : '-'} 
-                {transaction.type === 'crypto' 
-                  ? `${transaction.amount} ${transaction.cryptoCurrency}`
-                  : formatAmount(transaction.amount)
-                }
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </ThemedView>
-  </ScrollView>
-);
+          <ThemedText type = "title" style={[styles.sectionHeaderTitle, { color: theme.onSurface }]}>Historique des transactions</ThemedText>
+        </ThemedView>
+        
+        <ThemedView style={styles.transactionFilterContainer}>
+          <ThemedText style={[styles.filterLabel, { color: theme.onSurface }]}>Filtrer par</ThemedText>
+          <ThemedView style={styles.filterOptions}>
+            <TouchableOpacity style={[styles.filterOption, { borderColor: theme.surface, backgroundColor: theme.surfaceVariant }]}>
+              <ThemedText style={[styles.filterOptionText, { color: theme.text }]}>Tout</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.filterOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
+              <ThemedText style={[styles.filterOptionText, { color: theme.text }]}>Envoyés</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.filterOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
+              <ThemedText style={[styles.filterOptionText, { color: theme.text }]}>Reçus</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.filterOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
+              <ThemedText style={[styles.filterOptionText, { color: theme.text }]}>Crypto</ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
+        </ThemedView>
+        
+        <ThemedView style={styles.transactionsListContainer}>
+          {transactionHistory.map((transaction, index) => (
+            <TouchableOpacity 
+              key={transaction.id}
+              style={[styles.transactionItemLarge, index < transactionHistory.length - 1 ? { borderBottomColor: theme.outline, borderBottomWidth: 1 } : {}]}
+              onPress={() => setCurrentSection(`transaction-detail-${transaction.id}`)}
+            >
+              <ThemedView style={styles.transactionInfoLarge}>
+                <ThemedView style={[styles.transactionIconLarge, { 
+                  backgroundColor: transaction.type === 'received' ? theme.accent : 
+                                   transaction.type === 'crypto' ? '#f7931a' : theme.secondary 
+                }]}>
+                  {transaction.type === 'received' ? (
+                    <Download size={18} color="#fff" />
+                  ) : transaction.type === 'crypto' ? (
+                    <Bitcoin size={18} color="#fff" />
+                  ) : (
+                    <Send size={18} color="#fff" />
+                  )}
+                </ThemedView>
+                <ThemedView style={styles.transactionDetailsLarge}>
+                  <ThemedText style={[styles.transactionDescLarge, { color: theme.onSurface }]}>
+                    {transaction.description}
+                  </ThemedText>
+                  <ThemedText style={[styles.transactionDateLarge, { color: theme.onSurface }]}>
+                    {transaction.date}
+                  </ThemedText>
+                  {transaction.status === 'pending' && (
+                    <ThemedView style={[styles.statusBadge, { backgroundColor: theme.surfaceVariant }]}>
+                      <ThemedText style={[styles.statusBadgeText, { color: theme.onSurface }]}>En attente</ThemedText>
+                    </ThemedView>
+                  )}
+                </ThemedView>
+              </ThemedView>
+              <ThemedView style={styles.transactionAmountContainerLarge}>
+                <ThemedText style={[styles.transactionAmountLarge, { 
+                  color: transaction.type === 'received' ? '#4caf50' : 
+                         transaction.type === 'crypto' ? '#f7931a' : theme.onSurface 
+                }]}>
+                  {transaction.type === 'received' ? '+' : transaction.type === 'crypto' ? '' : '-'} 
+                  {transaction.type === 'crypto' 
+                    ? `${transaction.amount} ${transaction.cryptoCurrency}`
+                    : formatAmount(transaction.amount)
+                  }
+                </ThemedText>
+              </ThemedView>
+            </TouchableOpacity>
+          ))}
+        </ThemedView>
+      </ThemedView>
+    </ThemedScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  sectionContainer: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 'auto',
+    minHeight: 800,
+    padding: 16,
+
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 16,
+  },
+  sectionHeaderTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  transactionFilterContainer: {
+    marginBottom: 16,
+  },
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  filterOptions: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  filterOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  filterOptionText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  transactionsListContainer: {
+    marginTop: 8,
+  },
+  transactionItemLarge: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  transactionInfoLarge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  transactionIconLarge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  transactionDetailsLarge: {
+    flex: 1,
+  },
+  transactionDescLarge: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  transactionDateLarge: {
+    fontSize: 14,
+  },
+  transactionAmountContainerLarge: {
+    alignItems: 'flex-end',
+  },
+  transactionAmountLarge: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+});
+
+export default RenderTransactions;

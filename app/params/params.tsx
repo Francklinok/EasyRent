@@ -71,13 +71,13 @@ const ParamsScreen = () => {
             label="Portefeuille" 
             icon="wallet-outline"
             iconColor="#ED4245"
-            onPress={() => router.navigate('/profile/Wallet')}
+            onPress={() => router.navigate('/wallet/Wallet')}
           />
           <SettingsItem showArrow='on'
             label="Inventaire" 
             icon="toolbox"
             iconColor="#5865F2"
-            onPress={() => router.navigate('/profile/Listings')}
+            onPress={() => router.navigate('/inventory/Inventory')}
           />
         </ThemedView>
         
@@ -90,7 +90,7 @@ const ParamsScreen = () => {
             label="Paramètres" 
             icon="settings"
             iconColor="#B9BBBE"
-            onPress={() => navigation.navigate('GeneralSettings')}
+            onPress={() => router.navigate('/parameters/PConfidentiality')}
           />
           <SettingsItem showArrow='on'
             label="Compte" 

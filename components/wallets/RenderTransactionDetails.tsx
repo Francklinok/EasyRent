@@ -1,13 +1,44 @@
+import { ThemedView } from "../ui/ThemedView";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from "react-native";
+import { ArrowLeft, Download, Send, Bitcoin, Copy } from 'lucide-react-native';
+import { useTheme } from '@/components/contexts/theme/themehook';
+import _ from 'lodash';
 
 
-const renderTransactionDetail = (transactionId) => {
+type TransactionType = 'payment' | 'received' | 'crypto';
+
+type TransactionHistory = {
+  id: number; 
+  type: TransactionType;
+  amount: number;
+  description: string;
+  date: string;
+  status: 'completed' | 'pending';
+  cryptoCurrency?: string;
+};
+
+// const parts = currentSection.split('-');
+// const transactionId = parts.length > 1 ? parts.pop()! : '';
+
+
+
+type Props = {
+  transactionId?: string, 
+  setCurrentSection: (section: string) => void;
+  formatAmount: (amount: number) => string;
+  transactionHistory:TransactionHistory[]
+
+};
+
+const RenderTransactionDetail: React.FC<Props> = ({ transactionId, setCurrentSection ,formatAmount,transactionHistory}) => {
+  const theme = useTheme();
   const transaction = transactionHistory.find(t => t.id === parseInt(transactionId));
   
   if (!transaction) return <View><Text>Transaction non trouvée</Text></View>;
   
   return (
     <ScrollView className="w-full h-full">
-      <ThemedView variant="surface" style={styles.sectionContainer}>
+      <ThemedView variant='surface' style={styles.sectionContainer}>
         <View style={styles.sectionHeader}>
           <TouchableOpacity onPress={() => setCurrentSection('transactions')} style={styles.backButton}>
             <ArrowLeft size={20} color={theme.onSurface} />
@@ -115,3 +146,110 @@ const renderTransactionDetail = (transactionId) => {
     </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  sectionContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 16,
+  },
+  sectionHeaderTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  transactionDetailCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  transactionDetailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  transactionIconXLarge: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  transactionDetailHeaderInfo: {
+    flex: 1,
+  },
+  transactionDetailType: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  transactionDetailDate: {
+    fontSize: 14,
+  },
+  transactionDetailAmount: {
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderTopWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+  transactionDetailAmountValue: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  transactionDetailEquivalent: {
+    fontSize: 16,
+  },
+  transactionDetailInfo: {
+    marginBottom: 24,
+  },
+  transactionDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  transactionDetailLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  transactionDetailValue: {
+    fontSize: 14,
+    maxWidth: '60%',
+    textAlign: 'right',
+  },
+  transactionDetailStatusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 16,
+  },
+  transactionDetailStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  secondaryButton: {
+    padding: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+});
+
+export default RenderTransactionDetail;
