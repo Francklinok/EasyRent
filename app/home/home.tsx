@@ -14,7 +14,7 @@ import houseSelleAcceuil from '@/components/acceuill/houseSelleAcceuil';
 import landSelleAcceuill from '@/components/acceuill/landSelleAcceuill';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
-
+import { useTheme } from '@/components/contexts/theme/themehook';
 interface ComponentProps {
   itemId: string | string[];
 }
@@ -58,7 +58,7 @@ const Home = () => {
   };
   
   const ActiveComponent = componentMap[activeComponent];
-  
+  const {theme} = useTheme()
   useEffect(() => {
     // Animation d'entrée
     setIsLoaded(true);
@@ -101,28 +101,32 @@ const Home = () => {
               <ThemedView className="flex-row justify-between">
                 {categories.map((category) => (
                   <TouchableOpacity
-                    key={category.key}
-                    onPress={() => handleSetActiveComponent(category.key)}
-                    style={{ width: (width - 48) / categories.length - 6 }}
-                    className={` items-center ${
-                      selectedCategory === category.key 
-                        ? 'bg-white' 
-                        : 'bg-transparent'
-                    }`}
-                  >
-                    <Ionicons 
-                      name={category.icon as any} 
-                      size={15} 
-                      color={selectedCategory === category.key ? "green" : "blue"} 
-                    />
+                  key={category.key}
+                  onPress={() => handleSetActiveComponent(category.key)}
+                  style={{
+                    flex:1,
+                    justifyContent:"center",
+                    maxWidth:120,
+                    padding:3,
+                    marginLeft:20,
+                    borderRadius:15,
+                    marginRight:20,
+                    width: (width - 40) / categories.length - 2,
+                    backgroundColor: selectedCategory === category.key 
+                      ? theme.surface 
+                      : 'transparent'
+                  }}
+                  className="items-center"
+                >
+
                     <ThemedText className={`text-xl ${
                       selectedCategory === category.key
                         ? 'text-indigo-400 font-medium'
                         : 'text-blue-600'
                     }`}
-                    style = {{fontSize:10}}>
+                    style = {{fontSize:12}}>
                       {category.label}
-                    </ThemedText>
+                    </ThemedText> 
                   </TouchableOpacity>
                 ))}
               </ThemedView>

@@ -96,7 +96,7 @@ const ParamsScreen = () => {
             label="Compte" 
             icon="shield"
             iconColor="#B9BBBE"
-            onPress={() => navigation.navigate('AccountSettings')}
+            onPress={() => router.navigate("/account/Account")}
           />
           <SettingsItem showArrow='on'
             label="IA Assistant" 

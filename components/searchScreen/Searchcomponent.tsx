@@ -19,6 +19,7 @@ import FilterModal from '@/components/search/renderFilter';
 import { ThemedView } from '../ui/ThemedView';
 import { ThemedText } from '../ui/ThemedText';
 import { ThemedScrollView } from '../ui/ScrolleView';
+
 const AdvancedHousingSearch = ()=>{
 
   const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
@@ -34,6 +35,7 @@ const AdvancedHousingSearch = ()=>{
     type: null,
     country: null
   });
+
 
   // Location and Initial Data Fetch
   useEffect(() => {
@@ -109,7 +111,7 @@ const AdvancedHousingSearch = ()=>{
   return (
     <Container className = 'h-full'>
       <SearchBar>
-        <ThemedView className="flex-1 flex-row items-center bg-gray-100 rounded-xl px-3 py-2">
+        <ThemedView variant = "default" className="flex-1 flex-row items-center rounded-xl px-3 py-2">
           <Ionicons name="search" size={20} color="#4B5563" className="mr-2" />
           <TextInput
             placeholder="Search housing"

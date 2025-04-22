@@ -13,7 +13,7 @@ export default function ChatList () {
   return (
     <ThemedView>
       <Header />
-      <ThemedView className="flex gap-4 mt-3 w-full h-full pl-4 pr-4">
+      <ThemedView  className="flex gap-4 mt-3 w-full h-full pl-3 pr-3">
         <FlatList
           data={message}
           keyExtractor={(item) => item.id}
@@ -32,15 +32,15 @@ export default function ChatList () {
               style = {{marginTop:4}}
             >
               <ThemedView >
-                <ThemedView variant = 'surface' bordered className="flex flex-row gap-3 items-center p-1 rounded-xl">
+                <ThemedView  className="flex flex-row gap-3 items-center p-1 ">
                   <ThemedView className="w-16 h-16 rounded-full overflow-hidden border border-gray-600">
                     <Image source={{ uri: item.sender.avatar }} className="w-full h-full" />
                   </ThemedView>
-                  <ThemedView variant = "surface" className="flex-1 ml-1">
+                  <ThemedView   className="flex-1 ml-1">
                     <ThemedText className="font-bold ">{item.sender.name}</ThemedText>
                     <ThemedText className="text-gray-800 text-sm">{item.content}</ThemedText>
                   </ThemedView>
-                  <ThemedView variant = "surface" className="items-end">
+                  <ThemedView className="items-end">
                     {/* {item.count > 0 && <NotificationBadge count={item.count} />} */}
                     <Text className="text-gray-600 text-xs mt-2">{item.timestamp}</Text>
                   </ThemedView>
