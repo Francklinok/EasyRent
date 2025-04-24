@@ -1,4 +1,86 @@
-  const renderGridItem = ({ item, index }: { item: ExtendedItemType, index: number }) => (
+import React from "react";
+import { Image, TouchableOpacity } from "react-native";
+import { FontAwesome5, MaterialIcons, Ionicons,MaterialCommunityIcons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import { MotiView, MotiText } from "moti";
+import { ThemedText } from "@/components/ui/ThemedText";
+import { ThemedView } from "@/components/ui/ThemedView";
+import { ItemType, FeatureIcon } from "@/types/ItemType";
+import renderEnergyScore from "./renderEnergieScore";
+import { useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
+import toggleFavorite from "@/components/utils/homeUtils/toggleFavorite";
+  interface ExtendedItemType extends ItemType {
+    features: FeatureIcon[];
+    energyScore: number; // Score énergétique de 0 à 100
+    virtualTourAvailable: boolean;
+    distanceToAmenities: {
+      schools: number;
+      healthcare: number;
+      shopping: number;
+      transport: number;
+    };
+    aiRecommendation: string; // Recommandation personnalisée par IA
+  }
+  
+  import type { MutableRefObject } from "react";
+
+  type Props = {
+    item: ExtendedItemType;
+    index: number;
+    width: number;
+    lottieRef: MutableRefObject<any>; // ou lottieRef: MutableRefObject<LottieView | null> si tu as typé ton ref
+    setAnimatingElement: (id: string | null) => void;
+    favorites: string[];
+    setFavorites: React.Dispatch<React.SetStateAction<string[]>>;
+  };
+  
+  
+  const RenderGridItem:React.FC<Props> = ({   
+    item,
+    index,
+    setAnimatingElement,
+    setFavorites,
+    favorites,
+    lottieRef,
+    width,}) => {
+
+    const router = useRouter()
+
+    const navigateToInfo = (item: ExtendedItemType) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setAnimatingElement(item.id);
+      
+      // Add slight delay for transition effect
+      setTimeout(() => {
+        router.push({
+          pathname: "/info/[infoId]",
+          params: { 
+            id: item.id
+          }
+        });
+        
+        // Reset animating state
+        setTimeout(() => setAnimatingElement(null), 500);
+      }, 300);
+    };
+
+  // const toggleFavorite = (id: string) => {
+  //   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  //   setFavorites(prev => 
+  //     prev.includes(id) 
+  //       ? prev.filter(itemId => itemId !== id) 
+  //       : [...prev, id]
+  //   );
+    
+  //   // Play heart animation
+  //   if (lottieRef.current && !favorites.includes(id)) {
+  //     lottieRef.current.play(0, 60);
+  //   }
+  // };
+
+
+    return  (
     <MotiView
       from={{ opacity: 0, translateY: 30 }}
       animate={{ opacity: 1, translateY: 0 }}
@@ -124,4 +206,6 @@
         </ThemedView>
       </TouchableOpacity>
     </MotiView>
-  );
+  )}
+
+  export  default RenderGridItem;

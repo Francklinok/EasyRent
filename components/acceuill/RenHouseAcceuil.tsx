@@ -16,7 +16,8 @@ import { useThemeColors, useDarkMode, useThemeControls } from "../contexts/theme
 import { ThemedText } from "../ui/ThemedText";
 import { ThemedView } from "../ui/ThemedView";
 import { ThemedScrollView } from "../ui/ScrolleView";
-
+import renderAIRecommendation from "./home/renderAIRecommendation";
+import renderHeader from "./home/RenderHeader";
 // Interface for our internally extended data
 interface ExtendedItemType extends ItemType {
   features: FeatureIcon[];
@@ -170,43 +171,42 @@ const RenHouseAcceuil = () => {
     }
     
     return () => {
-      // Cleanup animations
       pulseAnim.setValue(1);
       fadeAnim.setValue(0);
     };
   }, [pulsate, fadeAnim]);
   
-  const navigateToInfo = (item: ExtendedItemType) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setAnimatingElement(item.id);
+  // const navigateToInfo = (item: ExtendedItemType) => {
+  //   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  //   setAnimatingElement(item.id);
     
-    // Add slight delay for transition effect
-    setTimeout(() => {
-      router.push({
-        pathname: "/info/[infoId]",
-        params: { 
-          id: item.id
-        }
-      });
+  //   // Add slight delay for transition effect
+  //   setTimeout(() => {
+  //     router.push({
+  //       pathname: "/info/[infoId]",
+  //       params: { 
+  //         id: item.id
+  //       }
+  //     });
       
-      // Reset animating state
-      setTimeout(() => setAnimatingElement(null), 500);
-    }, 300);
-  };
+  //     // Reset animating state
+  //     setTimeout(() => setAnimatingElement(null), 500);
+  //   }, 300);
+  // };
 
-  const toggleFavorite = (id: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setFavorites(prev => 
-      prev.includes(id) 
-        ? prev.filter(itemId => itemId !== id) 
-        : [...prev, id]
-    );
+  // const toggleFavorite = (id: string) => {
+  //   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  //   setFavorites(prev => 
+  //     prev.includes(id) 
+  //       ? prev.filter(itemId => itemId !== id) 
+  //       : [...prev, id]
+  //   );
     
-    // Play heart animation
-    if (lottieRef.current && !favorites.includes(id)) {
-      lottieRef.current.play(0, 60);
-    }
-  };
+  //   // Play heart animation
+  //   if (lottieRef.current && !favorites.includes(id)) {
+  //     lottieRef.current.play(0, 60);
+  //   }
+  // };
 
   // Expanded categories
   const categories = ["All", "Luxury", "Smart Home", "Eco-Friendly", "Space View", "Family", "Investment", "Vacation"];

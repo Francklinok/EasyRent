@@ -1,5 +1,20 @@
-/ INNOVATION 1: Carte de recommandation IA personnalisée
-  const renderAIRecommendation = () => {
+ 
+ import React from "react";
+ import { TouchableOpacity} from "react-native";
+ import {  MaterialCommunityIcons } from "@expo/vector-icons";
+ import { LinearGradient } from "expo-linear-gradient";
+ import { BlurView } from "expo-blur";
+ import { MotiView, MotiText } from "moti";
+ import { ThemedText } from "@/components/ui/ThemedText";
+ import { ThemedView } from "@/components/ui/ThemedView";
+ 
+type Props = {
+  showAIRecommendations:boolean,
+  setShowAIRecommendations: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+
+ const RenderAIRecommendation:React.FC<Props> = ({showAIRecommendations,setShowAIRecommendations}) => {
     if (!showAIRecommendations) return null;
     
     return (
@@ -82,3 +97,5 @@
       </MotiView>
     );
   };
+
+  export default RenderAIRecommendation;

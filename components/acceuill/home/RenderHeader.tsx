@@ -28,7 +28,7 @@ interface Props {
 
 }
 
-  const renderHeader:React.FC<Props> = ({viewType,setViewType,setFilterModalVisible }) => {
+  const RenderHeader:React.FC<Props> = ({viewType,setViewType,setFilterModalVisible }) => {
 
     const {theme} = useTheme()
 
@@ -102,4 +102,4 @@ interface Props {
       </BlurView>
     </Animated.View>
   )};
-export  default renderHeader;
+export  default RenderHeader;

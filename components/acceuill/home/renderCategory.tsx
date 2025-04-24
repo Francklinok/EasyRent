@@ -1,5 +1,20 @@
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Image, TouchableOpacity, Dimensions, Animated, StatusBar, View } from "react-native";
+import * as Haptics from "expo-haptics";
+import { MotiView } from "moti";
+import { ThemedText } from "@/components/ui/ThemedText";
+import { ThemedView } from "@/components/ui/ThemedView";
+import { ThemedScrollView } from "@/components/ui/ScrolleView";
 
-  const renderCategoryTabs = () => (
+type Props = {
+  fadeAnim: Animated.Value,
+  selectedCategory: string,
+  setSelectedCategory: React.Dispatch<React.SetStateAction<string>>,
+}
+  const RenderCategoryTabs:React.FC<Props> = ({fadeAnim,selectedCategory,setSelectedCategory }) => {
+    const categories = ["All", "Luxury", "Smart Home", "Eco-Friendly", "Space View", "Family", "Investment", "Vacation"];
+
+    return(
     <Animated.View 
       style={{
         opacity: fadeAnim,
@@ -54,4 +69,6 @@
         </ThemedScrollView>
       </ThemedView>
     </Animated.View>
-  );
+  )}
+
+  export  default  RenderCategoryTabs;

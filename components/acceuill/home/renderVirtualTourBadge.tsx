@@ -1,4 +1,10 @@
-const renderVirtualTourBadge = (available: boolean) => {
+
+import { ThemedView } from "@/components/ui/ThemedView";
+import { ThemedText } from "@/components/ui/ThemedText";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+
+
+const RenderVirtualTourBadge = (available: boolean) => {
     if (!available) return null;
     
     return (
@@ -27,3 +33,4 @@ const renderVirtualTourBadge = (available: boolean) => {
       </ThemedView>
     );
   };
+export  default RenderVirtualTourBadge;

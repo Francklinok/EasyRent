@@ -1,5 +1,17 @@
-// Filter modal
-  const renderFilterModal = () => {
+import React from "react";
+import { Image, TouchableOpacity, Animated } from "react-native";
+import { FontAwesome5,AntDesign } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import { ThemedText } from "@/components/ui/ThemedText";
+import { ThemedView } from "@/components/ui/ThemedView";
+
+type Props = {
+  filterModalVisible:boolean,
+  setFilterModalVisible:React.Dispatch<React.SetStateAction<boolean>>;
+
+  :
+}
+const RenderFilterModal:React.FC<Props> = ({filterModalVisible,setFilterModalVisible}) => {
     if (!filterModalVisible) return null;
     
     return (
@@ -178,3 +190,5 @@
       </Animated.View>
     );
   };
+
+  export default  RenderFilterModal;

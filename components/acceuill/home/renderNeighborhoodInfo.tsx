@@ -1,4 +1,23 @@
-const renderNeighborhoodInfo = (item: ExtendedItemType) => (
+import { ThemedView } from "@/components/ui/ThemedView";
+import { FontAwesome5, MaterialIcons} from "@expo/vector-icons";
+import { ThemedText } from "@/components/ui/ThemedText";
+import { ItemType, FeatureIcon } from "@/types/ItemType";
+
+interface ExtendedItemType extends ItemType {
+  features: FeatureIcon[];
+  energyScore: number; // Score énergétique de 0 à 100
+  virtualTourAvailable: boolean;
+  distanceToAmenities: {
+    schools: number;
+    healthcare: number;
+    shopping: number;
+    transport: number;
+  };
+  aiRecommendation: string; // Recommandation personnalisée par IA
+}
+
+
+const RenderNeighborhoodInfo = (item: ExtendedItemType) => (
     <ThemedView 
       className=" flex-row justify-between items-center p-1 rounded-lg border"
       style={{
@@ -35,3 +54,4 @@ const renderNeighborhoodInfo = (item: ExtendedItemType) => (
       </ThemedView>
     </ThemedView>
   );
+export default  RenderNeighborhoodInfo
