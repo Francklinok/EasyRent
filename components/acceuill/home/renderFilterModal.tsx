@@ -4,14 +4,19 @@ import { FontAwesome5,AntDesign } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { ThemedText } from "@/components/ui/ThemedText";
 import { ThemedView } from "@/components/ui/ThemedView";
+import { useTheme } from "@/components/contexts/theme/themehook";
+
 
 type Props = {
+  fadeAnim: Animated.Value,
   filterModalVisible:boolean,
   setFilterModalVisible:React.Dispatch<React.SetStateAction<boolean>>;
 
-  :
 }
-const RenderFilterModal:React.FC<Props> = ({filterModalVisible,setFilterModalVisible}) => {
+const RenderFilterModal:React.FC<Props> = ({fadeAnim, filterModalVisible,setFilterModalVisible}) => {
+    const {theme} = useTheme()
+
+
     if (!filterModalVisible) return null;
     
     return (
@@ -22,7 +27,7 @@ const RenderFilterModal:React.FC<Props> = ({filterModalVisible,setFilterModalVis
           left: 0,
           right: 0,
           zIndex: 1000,
-          backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.8)',
+          backgroundColor:'rgba(0,0,0,0.8)' ,
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
           paddingBottom: 40,
@@ -35,10 +40,10 @@ const RenderFilterModal:React.FC<Props> = ({filterModalVisible,setFilterModalVis
         }}
       >
         <BlurView 
-          intensity={isDark ? 40 : 80}
-          tint={isDark ? "dark" : "light"}
+          intensity={ 40} 
+          tint={"dark"}
           className="rounded-t-3xl overflow-hidden border-t border-x"
-          style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}
+          style={{ borderColor:'rgba(255,255,255,0.1)'}}
         >
           <ThemedView className="p-2">
             <ThemedView className="flex-row justify-between items-center mb-4">
@@ -47,7 +52,7 @@ const RenderFilterModal:React.FC<Props> = ({filterModalVisible,setFilterModalVis
                 onPress={() => setFilterModalVisible(false)}
                 className="p-2"
               >
-                <AntDesign name="close" size={24} color={colors.text} />
+                <AntDesign name="close" size={24} color={theme.text} />
               </TouchableOpacity>
             </ThemedView>
             
@@ -59,7 +64,7 @@ const RenderFilterModal:React.FC<Props> = ({filterModalVisible,setFilterModalVis
                   className="h-2 rounded-full" 
                   style={{ 
                     width: '60%', 
-                    backgroundColor: isDark ? '#3b82f6' : '#2563eb'
+                    backgroundColor: '#3b82f6' 
                   }} 
                 />
               </ThemedView>
@@ -78,14 +83,14 @@ const RenderFilterModal:React.FC<Props> = ({filterModalVisible,setFilterModalVis
                     key={idx}
                     className={`px-3 py-2 rounded-lg border ${
                       idx === 0 ? 
-                        (isDark ? 'bg-blue-500/20 border-blue-500/40' : 'bg-blue-100 border-blue-200') :
-                        (isDark ? 'bg-gray-800/40 border-gray-700/30' : 'bg-white/70 border-gray-200/60')
+                        ('bg-blue-500/20 border-blue-500/40'  ) :
+                        ( 'bg-gray-800/40 border-gray-700/30' )
                     }`}
                   >
                     <ThemedText 
                       style={{ 
                         color: idx === 0 ? 
-                          (isDark ? '#93c5fd' : '#2563eb') : colors.text,
+                        '#93c5fd'  : theme.text,
                         fontWeight: idx === 0 ? '600' : '400'
                       }}
                     >
@@ -105,14 +110,14 @@ const RenderFilterModal:React.FC<Props> = ({filterModalVisible,setFilterModalVis
                     key={idx}
                     className={`w-10 h-10 rounded-full border flex items-center justify-center ${
                       idx === 1 ? 
-                        (isDark ? 'bg-blue-500/20 border-blue-500/40' : 'bg-blue-100 border-blue-200') :
-                        (isDark ? 'bg-gray-800/40 border-gray-700/30' : 'bg-white/70 border-gray-200/60')
+                        ('bg-blue-500/20 border-blue-500/40' ) :
+                        ('bg-gray-800/40 border-gray-700/30' )
                     }`}
                   >
                     <ThemedText 
                       style={{ 
                         color: idx === 1 ? 
-                          (isDark ? '#93c5fd' : '#2563eb') : colors.text,
+                          '#93c5fd'  : theme.text,
                         fontWeight: idx === 1 ? '600' : '400'
                       }}
                     >
@@ -132,8 +137,8 @@ const RenderFilterModal:React.FC<Props> = ({filterModalVisible,setFilterModalVis
                     key={idx}
                     className={`px-3 py-2 rounded-lg border flex-row items-center gap-1 ${
                       [0, 2, 5].includes(idx) ? 
-                        (isDark ? 'bg-blue-500/20 border-blue-500/40' : 'bg-blue-100 border-blue-200') :
-                        (isDark ? 'bg-gray-800/40 border-gray-700/30' : 'bg-white/70 border-gray-200/60')
+                        ('bg-blue-500/20 border-blue-500/40') :
+                        ('bg-gray-800/40 border-gray-700/30')
                     }`}
                   >
                     <FontAwesome5 
@@ -146,13 +151,13 @@ const RenderFilterModal:React.FC<Props> = ({filterModalVisible,setFilterModalVis
                       } 
                       size={14} 
                       color={[0, 2, 5].includes(idx) ? 
-                        (isDark ? '#93c5fd' : '#2563eb') : colors.subtext
+                        '#93c5fd'  : theme.subtext
                       } 
                     />
                     <ThemedText 
                       style={{ 
                         color: [0, 2, 5].includes(idx) ? 
-                          (isDark ? '#93c5fd' : '#2563eb') : colors.text,
+                           '#93c5fd'  : theme.text,
                         fontWeight: [0, 2, 5].includes(idx) ? '600' : '400'
                       }}
                     >
@@ -168,7 +173,7 @@ const RenderFilterModal:React.FC<Props> = ({filterModalVisible,setFilterModalVis
               <TouchableOpacity 
                 className="flex-1 py-3 border rounded-xl"
                 style={{ 
-                  borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'
+                  borderColor: 'rgba(255,255,255,0.2)' 
                 }}
                 onPress={() => setFilterModalVisible(false)}
               >
@@ -178,7 +183,7 @@ const RenderFilterModal:React.FC<Props> = ({filterModalVisible,setFilterModalVis
               <TouchableOpacity 
                 className="flex-1 py-3 rounded-xl"
                 style={{ 
-                  backgroundColor: isDark ? '#3b82f6' : '#2563eb'
+                  backgroundColor: '#3b82f6' 
                 }}
                 onPress={() => setFilterModalVisible(false)}
               >

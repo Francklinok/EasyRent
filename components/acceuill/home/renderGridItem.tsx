@@ -10,6 +10,8 @@ import renderEnergyScore from "./renderEnergieScore";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import toggleFavorite from "@/components/utils/homeUtils/toggleFavorite";
+import { useTheme } from "@/components/contexts/theme/themehook";
+
   interface ExtendedItemType extends ItemType {
     features: FeatureIcon[];
     energyScore: number; // Score énergétique de 0 à 100
@@ -45,6 +47,7 @@ import toggleFavorite from "@/components/utils/homeUtils/toggleFavorite";
     lottieRef,
     width,}) => {
 
+      const {theme} = useTheme()
     const router = useRouter()
 
     const navigateToInfo = (item: ExtendedItemType) => {
@@ -64,21 +67,6 @@ import toggleFavorite from "@/components/utils/homeUtils/toggleFavorite";
         setTimeout(() => setAnimatingElement(null), 500);
       }, 300);
     };
-
-  // const toggleFavorite = (id: string) => {
-  //   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  //   setFavorites(prev => 
-  //     prev.includes(id) 
-  //       ? prev.filter(itemId => itemId !== id) 
-  //       : [...prev, id]
-  //   );
-    
-  //   // Play heart animation
-  //   if (lottieRef.current && !favorites.includes(id)) {
-  //     lottieRef.current.play(0, 60);
-  //   }
-  // };
-
 
     return  (
     <MotiView
@@ -102,9 +90,9 @@ import toggleFavorite from "@/components/utils/homeUtils/toggleFavorite";
         >
           <BlurView 
             intensity={isDark ? 20 : 70} 
-            tint={isDark ? "dark" : "light"} 
+            tint={ "dark"} 
             className={`border rounded-2xl overflow-hidden ${
-              isDark ? "border-white/10" : "border-black/5"
+               "border-white/10"
             }`}
           >
             {/* Image */}
@@ -149,7 +137,7 @@ import toggleFavorite from "@/components/utils/homeUtils/toggleFavorite";
             <ThemedView className="p-2">
               {/* Location */}
               <ThemedView className="flex-row items-center">
-                <MaterialIcons name="location-on" size={12} color={colors.subtext} />
+                <MaterialIcons name="location-on" size={12} color={theme.subtext} />
                 <ThemedText className="text-xs ml-1 font-medium" numberOfLines={1}>
                   {item.location}
                 </ThemedText>
@@ -169,9 +157,9 @@ import toggleFavorite from "@/components/utils/homeUtils/toggleFavorite";
                   <ThemedView 
                     key={idx} 
                     className="p-1 rounded-md"
-                    style={{ backgroundColor: isDark ? 'rgba(55, 65, 81, 0.3)' : 'rgba(243, 244, 246, 0.8)' }}
+                    style={{ backgroundColor: 'rgba(55, 65, 81, 0.3)'  }}
                   >
-                    <FontAwesome5 name={feature.icon} size={8} color={colors.subtext} />
+                    <FontAwesome5 name={feature.icon} size={8} color={theme.subtext} />
                   </ThemedView>
                 ))}
               </ThemedView>
@@ -197,7 +185,7 @@ import toggleFavorite from "@/components/utils/homeUtils/toggleFavorite";
                 {/* Virtual tour badge mini */}
                 {item.virtualTourAvailable && (
                   <ThemedView className="p-1 rounded-md bg-blue-500/20">
-                    <MaterialCommunityIcons name="rotate-3d-variant" size={10} color={isDark ? '#93c5fd' : '#1e40af'} />
+                    <MaterialCommunityIcons name="rotate-3d-variant" size={10} color= {'#93c5fd'} />
                   </ThemedView>
                 )}
               </ThemedView>

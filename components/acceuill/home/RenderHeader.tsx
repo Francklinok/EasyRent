@@ -8,29 +8,32 @@ import { MotiText } from "moti";
 import { useTheme } from "@/components/contexts/theme/themehook";
 
 
-  const headerTranslate = scrollY.interpolate({
-    inputRange: [0, 100],
-    outputRange: [0, -20],
-    extrapolate: 'clamp'
-  });
-
-// Header opacity animation
-const headerOpacity = scrollY.interpolate({
-    inputRange: [0, 100, 200],
-    outputRange: [0, 0.8, 1],
-    extrapolate: 'clamp'
-  });
-
 interface Props {
   viewType: "grid" | "list";
   setViewType: React.Dispatch<React.SetStateAction<"grid" | "list">>;
   setFilterModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
+  scrollY: Animated.Value;
+
 
 }
 
-  const RenderHeader:React.FC<Props> = ({viewType,setViewType,setFilterModalVisible }) => {
+  const RenderHeader:React.FC<Props> = ({viewType,setViewType,setFilterModalVisible, scrollY}) => {
 
-    const {theme} = useTheme()
+    const  {theme} = useTheme()
+     
+    const headerTranslate = scrollY.interpolate({
+      inputRange: [0, 100],
+      outputRange: [0, -20],
+      extrapolate: 'clamp'
+    });
+  
+  // Header opacity animation
+  const headerOpacity = scrollY.interpolate({
+      inputRange: [0, 100, 200],
+      outputRange: [0, 0.8, 1],
+      extrapolate: 'clamp'
+    });
+  
 
     return (
     <Animated.View
@@ -45,8 +48,8 @@ interface Props {
       }}
     >
       <BlurView
-        intensity={isDark ? 40 : 80}
-        tint={isDark ? "dark" : "light"}
+        intensity={ 40 }
+        tint={ "dark"}
         className="px-4 pt-4 pb-2"
       >
         <ThemedView className="flex-row justify-between items-center">
@@ -55,7 +58,7 @@ interface Props {
               from={{ opacity: 0, translateX: -20 }}
               animate={{ opacity: 1, translateX: 0 }}
               transition={{ delay: 200, type: 'timing' }}
-              className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
+              className="text-2xl font-bold "
             >
               RenHouse
             </MotiText>
@@ -63,7 +66,7 @@ interface Props {
               from={{ opacity: 0, translateX: -20 }}
               animate={{ opacity: 1, translateX: 0 }}
               transition={{ delay: 300, type: 'timing' }}
-              className={`text-base ${isDark ? 'text-blue-300' : 'text-blue-600'}`}
+              className="text-base  text-blue-300"
             >
               Trouvez votre logement idéal
             </MotiText>
@@ -76,7 +79,7 @@ interface Props {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
               className={`p-2.5 rounded-full border ${
-                isDark ? "border-white/20 bg-white/10" : "border-black/10 bg-black/5"
+               "border-white/20 bg-white/10" 
               }`}
             >
               <MaterialIcons
