@@ -13,18 +13,27 @@ export interface BaseModel {
 }
 
 export interface Property extends BaseModel {
+
   title: string;
   description: string;
   address: string;
-  price: number;
+  monthlyRent: number;
+  depositAmount: number;
+  maxOccupants: number;
+  bedrooms: number;
+  bathrooms: number;
+  area: number;
+  ownerId: string;
+  amenities?: string[];
+  availableFrom: Date;
+  createdAt: Date;
   type: string;
-  bedrooms?: number;
-  bathrooms?: number;
-  area?: number;
+  surface: number;
+  rooms: number;
   latitude?: number;
   longitude?: number;
-  ownerId: string;
   images: PropertyImage[];
+
 }
 
 export interface PropertyImage extends BaseModel {

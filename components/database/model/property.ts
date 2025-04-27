@@ -10,6 +10,9 @@ export default class PropertyModel extends Model {
   @text('title') title!: string;
   @text('description') description!: string;
   @text('address') address!: string;
+  @field('monthlyRent') monthlyRent?:number;
+  @field('depositAmount') depositAmount?: number;
+  @field('maxOccupants') maxOccupants?:number;
   @field('price') price!: number;
   @text('type') type!: string;
   @field('bedrooms') bedrooms?: number;
@@ -24,7 +27,6 @@ export default class PropertyModel extends Model {
   @text('sync_status') syncStatusRaw!: string;
   @text('sync_error') syncError?: string;
   @date('last_sync_at') lastSyncAt?: Date;
-
   @children('property_images') images: any;
   @relation('users', 'owner_id') owner: any;
 

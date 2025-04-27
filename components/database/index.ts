@@ -18,6 +18,6 @@ export const database = new Database({
   adapter,
   modelClasses: [
     PropertyModel,
-    // Ajoutez les autres modèles ici
+    //A joutez les autres modèles ici
   ],
 });

@@ -1,7 +1,6 @@
 // src/services/apiService.ts
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { connectivityManager } from '../manager/connectivityManager';
-import { queueManager } from '../manager/queueManager';
 import { authService } from './authService';
 
 export class ApiService {
