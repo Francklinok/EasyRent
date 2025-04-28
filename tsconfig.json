@@ -1,20 +1,4 @@
-// {
-//   "extends": "expo/tsconfig.base",
-//   "compilerOptions": {
-//     "strict": true,
-//     "paths": {
-//       "@/*": [
-//         "./*"
-//       ]
-//     }
-//   },
-//   "include": [
-//     "**/*.ts",
-//     "**/*.tsx",
-//     ".expo/types/**/*.ts",
-//     "expo-env.d.ts"
-// , "../autre/Collapsible.tsx", "../autre/ExternalLink.tsx", "../autre/HapticTab.tsx", "../autre/HelloWave.tsx", "../autre/ParallaxScrollView.tsx", "../autre/ThemedText.tsx", "../autre/ThemedView.tsx"  ]
-// }
+
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
