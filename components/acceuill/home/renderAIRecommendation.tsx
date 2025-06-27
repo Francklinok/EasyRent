@@ -24,7 +24,7 @@ type Props = {
         from={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: 'spring', delay: 300 }}
-        className="mx-2 mb-6"
+        className="mx-2 mb-2"
       >
         <TouchableOpacity
           onPress={() => setShowAIRecommendations(false)}
@@ -40,7 +40,7 @@ type Props = {
               colors={
                 ['rgba(30, 58, 138, 0.4)', 'rgba(37, 99, 235, 0.1)'] }
         
-              className="px-4 py-4"
+              className="px-4 py-2"
             >
               <ThemedView className="flex-row items-center gap-3" style={{ backgroundColor: 'transparent' }}>
                 <ThemedView 
@@ -60,18 +60,18 @@ type Props = {
               </ThemedView>
               
               <ThemedView 
-                className="mt-3 p-3 rounded-xl"
+                className="mt-3 p-4 rounded-xl "
                 style={{ backgroundColor:'rgba(30, 58, 138, 0.3)'}}
               >
-                <ThemedText className="leading-5" style={{ color:"#bfdbfe"  }}>
+                <ThemedText  type ='caption' className="leading-1  w-70 text-wrap text-justify" style={{ color:"#bfdbfe"  }}>
                   Basé sur vos préférences, nous avons sélectionné 3 propriétés qui correspondent à vos critères. 
                   Notre analyse IA suggère que la propriété à "California" correspond le mieux à votre style de vie.
                 </ThemedText>
               </ThemedView>
 
-              <ThemedView className="mt-3 flex-row justify-between" style={{ backgroundColor: 'transparent' }}>
+              <ThemedView className="mt-3  mb-2 flex-row justify-between" style={{ backgroundColor: 'transparent' }}>
                 <TouchableOpacity 
-                  className="px-3 py-2 rounded-lg border"
+                  className="px-2 py-1 rounded-lg border"
                   style={{ 
                     backgroundColor:'rgba(37, 99, 235, 0.2)',
                     borderColor:'rgba(37, 99, 235, 0.3)'
@@ -83,7 +83,7 @@ type Props = {
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
-                  className="px-3 py-2 rounded-lg"
+                  className="px-3 py-1 rounded-lg"
                   style={{ 
                     backgroundColor: 'rgba(37, 99, 235, 0.4)',
                   }}

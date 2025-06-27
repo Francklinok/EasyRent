@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Image, TouchableOpacity, Dimensions, Animated, StatusBar } from "react-native";
 import { FontAwesome5, MaterialIcons, Ionicons, Entypo } from "@expo/vector-icons";
@@ -13,7 +11,6 @@ import { ItemType, FeatureIcon } from "@/types/ItemType";
 import { useThemeColors, useDarkMode, useThemeControls } from "../contexts/theme/themehook";
 import { ThemedText } from "../ui/ThemedText";
 import { ThemedView } from "../ui/ThemedView";
-import { ThemedScrollView } from "../ui/ScrolleView";
 
 // Interface for our internally extended data
 interface ExtendedItemType extends ItemType {
@@ -65,7 +62,6 @@ const { width } = Dimensions.get('window');
 
 const HouseSelleAcceuil = () => {
   const router = useRouter();
-  const [selectedCategory, setSelectedCategory] = useState("All");
   const [scrollY] = useState(new Animated.Value(0));
   const [favorites, setFavorites] = useState<string[]>([]);
   
@@ -105,7 +101,7 @@ const HouseSelleAcceuil = () => {
     router.push({
       pathname: "/info/[infoId]",
       params: { 
-        id: item.id
+        infoId: item.id 
       }
     });
   };
@@ -119,83 +115,12 @@ const HouseSelleAcceuil = () => {
     );
   };
 
-  const categories = ["All", "Luxury", "Smart Home", "Eco-Friendly", "Space View"];
-
-  const renderCategoryTabs = () => (
-    <ThemedView className="flex-row px-4 py-3 mt-12">
-      <ThemedScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 10 }}
-      >
-        {categories.map((category) => (
-          <TouchableOpacity 
-            key={category}
-            onPress={() => setSelectedCategory(category)}
-            className={`px-4 py-2 rounded-2xl border ${
-              selectedCategory === category 
-                ? "border-primary" 
-                : isDark ? "border-white/20" : "border-black/10"
-            }`}
-            style={{
-              backgroundColor: selectedCategory === category 
-                ? colors.primary 
-                : isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-            }}
-          >
-            <ThemedText 
-              style={{ 
-                color: selectedCategory === category 
-                  ? '#FFFFFF' 
-                  : colors.text 
-              }}
-            >
-              {category}
-            </ThemedText>
-          </TouchableOpacity>
-        ))}
-      </ThemedScrollView>
-    </ThemedView>
-  );
-
-  const renderHeader = () => (
-    <ThemedView>
-      <ThemedView className="flex-row justify-between items-center p-4 pt-12">
-        <ThemedView>
-          <ThemedText type="heading">Découvrez</ThemedText>
-          <ThemedText type="subtitle" variant="primary">Propriétés immobilières</ThemedText>
-        </ThemedView>
-        
-        <TouchableOpacity 
-          onPress={toggleTheme}
-          className={`p-2.5 rounded-full border ${
-            isDark ? "border-white/20 bg-white/10" : "border-black/10 bg-black/5"
-          }`}
-        >
-          <Ionicons 
-            name={isDark ? 'sunny' : 'moon'} 
-            size={24} 
-            color={colors.text} 
-          />
-        </TouchableOpacity>
-      </ThemedView>
-      
-      {renderCategoryTabs()}
-      
-      <ThemedView className="px-4 py-2">
-        <ThemedText type="body" intensity="light">
-          {extendedData.length} propriétés disponibles
-        </ThemedText>
-      </ThemedView>
-    </ThemedView>
-  );
-
   const renderItem = ({ item, index }: { item: ExtendedItemType, index: number }) => (
     <MotiView
       from={{ opacity: 0, translateY: 50 }}
       animate={{ opacity: 1, translateY: 0 }}
       transition={{ delay: index * 100, type: 'timing' }}
-      className="mb-6 px-1"
+      className="mb-2 px-1"
     >
       <ThemedView 
         elevated="medium"

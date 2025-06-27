@@ -1,13 +1,17 @@
-import React from "react";
+import React, {useState, useRef} from "react";
 import { TouchableOpacity,  Animated} from "react-native";
 import { MaterialIcons, Ionicons} from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { ThemedView } from "@/components/ui/ThemedView";
+import { ThemedText } from "@/components/ui/ThemedText";
+import { useThemeColors } from "@/components/contexts/theme/themehook";
 import { MotiText } from "moti";
 import { useTheme } from "@/components/contexts/theme/themehook";
-
-
+import { useDarkMode } from "@/components/contexts/theme/themehook";
+import { useThemeControls } from "@/components/contexts/theme/themehook";
+import { ThemedScrollView } from "@/components/ui/ScrolleView";
+import  RenderCategoryTabs from  "@/components/acceuill/home/renderCategory"
 interface Props {
   viewType: "grid" | "list";
   setViewType: React.Dispatch<React.SetStateAction<"grid" | "list">>;
@@ -18,12 +22,13 @@ interface Props {
 }
 
   const RenderHeader:React.FC<Props> = ({viewType,setViewType,setFilterModalVisible, scrollY}) => {
-
+     
+        
     const  {theme} = useTheme()
      
     const headerTranslate = scrollY.interpolate({
       inputRange: [0, 100],
-      outputRange: [0, -20],
+      outputRange: [10, -20],
       extrapolate: 'clamp'
     });
   
@@ -33,8 +38,8 @@ interface Props {
       outputRange: [0, 0.8, 1],
       extrapolate: 'clamp'
     });
-  
-
+    
+    
     return (
     <Animated.View
       style={{
@@ -48,28 +53,20 @@ interface Props {
       }}
     >
       <BlurView
-        intensity={ 40 }
+        intensity={ 10 }
         tint={ "dark"}
-        className="px-4 pt-4 pb-2"
+        className="px-2 pb-1"
       >
         <ThemedView className="flex-row justify-between items-center">
-          <ThemedView className="flex-1">
+          <ThemedView className="flex-1 ">
             <MotiText
-              from={{ opacity: 0, translateX: -20 }}
-              animate={{ opacity: 1, translateX: 0 }}
-              transition={{ delay: 200, type: 'timing' }}
-              className="text-2xl font-bold "
-            >
-              RenHouse
-            </MotiText>
-            <MotiText
-              from={{ opacity: 0, translateX: -20 }}
+              from={{ opacity: 0, translateX: -10 }}
               animate={{ opacity: 1, translateX: 0 }}
               transition={{ delay: 300, type: 'timing' }}
-              className="text-base  text-blue-300"
+              className="text-base  text-blue-300 w-80"
             >
-              Trouvez votre logement idéal
-            </MotiText>
+               <RenderCategoryTabs/>
+:          </MotiText>
           </ThemedView>
           
           <ThemedView className="flex-row gap-2">
@@ -78,9 +75,7 @@ interface Props {
                 setViewType(viewType === "list" ? "grid" : "list");
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
-              className={`p-2.5 rounded-full border ${
-               "border-white/20 bg-white/10" 
-              }`}
+              className={`p-2.5 `}
             >
               <MaterialIcons
                 name={viewType === "list" ? "grid-view" : "view-list"}
@@ -94,10 +89,10 @@ interface Props {
                 setFilterModalVisible(true);
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               }}
-              className='p-2.5 rounded-full border'
+              className='p-1.5 '
               
             >
-              <Ionicons name="filter" size={22} color={theme.text} />
+              <Ionicons name="filter" size={20} color={theme.text} />
             </TouchableOpacity>
     
           </ThemedView>

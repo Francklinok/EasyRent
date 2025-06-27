@@ -1,77 +1,126 @@
-import React from "react";
-import { TouchableOpacity, Animated } from "react-native";
+import React, { useState, useRef, useEffect } from "react";
+import { TouchableOpacity, Animated, ScrollView } from "react-native";
 import * as Haptics from "expo-haptics";
 import { MotiView } from "moti";
 import { ThemedText } from "@/components/ui/ThemedText";
 import { ThemedView } from "@/components/ui/ThemedView";
-import { ThemedScrollView } from "@/components/ui/ScrolleView";
 import { useTheme } from "@/components/contexts/theme/themehook";
+import { MaterialCommunityIcons } from "@expo/vector-icons"; // Example for icons
 
+const categoryIcons = {
+  All: "view-grid",
+  Luxury: "crown",
+  "Smart Home": "lightbulb-group",
+  "Eco-Friendly": "leaf",
+  "Space View": "galaxy",
+  Family: "home-group",
+  Investment: "chart-line",
+  Vacation: "airplane",
+};
 
-type Props = {
-  fadeAnim: Animated.Value,
-  selectedCategory: string,
-  setSelectedCategory: React.Dispatch<React.SetStateAction<string>>,
-}
-  const RenderCategoryTabs:React.FC<Props> = ({fadeAnim,selectedCategory,setSelectedCategory }) => {
-    const  {theme} = useTheme()
-    const categories = ["All", "Luxury", "Smart Home", "Eco-Friendly", "Space View", "Family", "Investment", "Vacation"];
+const RenderCategoryTabs = () => {
+  const { theme } = useTheme();
+  const categories = Object.keys(categoryIcons); // Use keys for consistency
 
-    return(
-    <Animated.View 
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  useEffect(() => {
+    const index = categories.indexOf(selectedCategory);
+    if (scrollRef.current && index !== -1) {
+      // You might need to measure actual item width for precise scrolling
+      scrollRef.current.scrollTo({
+        x: index * 100, // Still an assumption for now
+        animated: true,
+      });
+    }
+  }, [selectedCategory, categories]);
+
+  return (
+    <Animated.View
       style={{
         opacity: fadeAnim,
-        transform: [{ translateY: fadeAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [50, 0]
-        }) }]
+        transform: [
+          {
+            translateY: fadeAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [30, 0], // Slightly less aggressive entry animation
+            }),
+          },
+        ],
       }}
     >
-      <ThemedView className="flex-row px-3 py-2 mt-1">
-        <ThemedScrollView 
-          horizontal 
+      <ThemedView className="flex-row px-2 mt-4">
+        <ScrollView
+          ref={scrollRef}
+          horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap:5 }}
+          contentContainerStyle={{ gap: 8, paddingHorizontal: 4 }} // Increased gap and padding
         >
-          {categories.map((category, index) => (
-            <MotiView
-              key={category}
-              from={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 50, type: 'timing' }}
-            >
-              <TouchableOpacity 
-                onPress={() => {
-                  setSelectedCategory(category);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }}
-                className={`px-4 py-1 rounded-2xl border ${
-                  selectedCategory === category 
-                    ? "border-primary" 
-                    :"border-white/20" 
-                }`}
-                style={{
-                  backgroundColor: selectedCategory === category 
-                    ? theme.primary 
-                    :'rgba(255,255,255,0.1)',
+          {categories.map((category, index) => {
+            const isSelected = selectedCategory === category;
+            const iconName = categoryIcons[category];
+
+            return (
+              <MotiView
+                key={category}
+                from={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: isSelected ? 1.02 : 1 }} // Slight scale up on select
+                transition={{
+                  delay: index * 40,
+                  type: "spring", // Spring animation for a bouncier feel
+                  damping: 15,
+                  stiffness: 150,
                 }}
               >
-                <ThemedText 
-                  // style={{ 
-                  //   color: selectedCategory === category 
-                  //     ? '#FFFFFF' 
-                  //     : colors.theme.text,
-                  //   fontWeight: '600' 
-                  // }}
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedCategory(category);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  className={`flex-row items-center justify-center py-1 px-4 rounded-full border ${
+                    isSelected ? "border-primary" : "border-white/10"
+                  }`}
+                  style={{
+                    backgroundColor: isSelected
+                      ? theme.primary
+                      : "rgba(255,255,255,0.08)", // Slightly darker non-selected background
+                  }}
                 >
-                  {category}
-                </ThemedText>
-              </TouchableOpacity>
-            </MotiView>
-          ))}
-        </ThemedScrollView>
+                  {iconName && (
+                    <MaterialCommunityIcons
+                      name={iconName}
+                      size={16}
+                      color={isSelected ? "#FFFFFF" : theme.text}
+                      style={{ marginRight: 6 }}
+                    />
+                  )}
+                  <ThemedText
+                    type="caption"
+                    style={{
+                      color: isSelected ? "#FFFFFF" : theme.text,
+                      fontWeight: isSelected ? "700" : "600", // Slightly bolder for selected
+                    }}
+                  >
+                    {category}
+                  </ThemedText>
+                </TouchableOpacity>
+              </MotiView>
+            );
+          })}
+        </ScrollView>
       </ThemedView>
     </Animated.View>
-  )}
+  );
+};
 
-  export  default  RenderCategoryTabs;
+export default RenderCategoryTabs;

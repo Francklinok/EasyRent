@@ -7,18 +7,16 @@
       "@/*": [
         "./*"
       ]
-    }
+    },
+    "types": ["react"]
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
-    "../autre/**/*.tsx",
     "babel.config.js",
     "metro.config.js",
     "nativewind-env.d.ts"
-, "../autre/index.ts"  ],
+  ]
 }
-
-

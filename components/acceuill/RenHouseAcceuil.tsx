@@ -120,11 +120,11 @@ const extendedData =  enrichItems(data)
               ListHeaderComponent={
                 <>
                                   
-                  <RenderCategoryTabs
+                  {/* <RenderCategoryTabs
                   fadeAnim = {fadeAnim}
                   selectedCategory = {selectedCategory}
                   setSelectedCategory = {setSelectedCategory}
-                  />
+                  /> */}
                   
                   <RenderAIRecommendation
                   showAIRecommendations= {showAIRecommendations}

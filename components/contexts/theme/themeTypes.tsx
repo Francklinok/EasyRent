@@ -3,13 +3,15 @@ export type ThemeType = "dark" | "light" | "system" | "premium" | "pastel" | str
 
 export type ThemeColors = {
   // Couleurs de base
-  background: string[];
-  cardGradient: string[];
+  background: [string, string, ...string[]];
+  cardGradient: [string, string, ...string[]];
+
+  // cardGradient: string[];
   text: string;
   subtext: string;
   cardBorder: string;
-  buttonGradient: string[];
-  priceGradient: string[];
+  buttonGradient: [string, string, ...string[]];
+  priceGradient: [string, string, ...string[]];
   statusBar: "light-content" | "dark-content";
   tagBg: string;
   reviewBg: string;

@@ -98,7 +98,7 @@ const Home = () => {
             
             {/* Catégories à l'intérieur du dégradé */}
             <ThemedView className=" bg-white  ">
-              <ThemedView className="flex-row justify-between">
+              {/* <ThemedView className="flex-row justify-between">
                 {categories.map((category) => (
                   <TouchableOpacity
                   key={category.key}
@@ -129,7 +129,7 @@ const Home = () => {
                     </ThemedText> 
                   </TouchableOpacity>
                 ))}
-              </ThemedView>
+              </ThemedView> */}
             </ThemedView>
             
            

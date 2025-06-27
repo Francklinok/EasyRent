@@ -1,12 +1,12 @@
 
 
 import React from "react";
-import { View, Text, TouchableOpacity, ViewStyle, Platform, StatusBar as RNStatusBar } from "react-native";
+import { TouchableOpacity, ViewStyle, Platform, StatusBar as RNStatusBar } from "react-native";
 import { SafeAreaView, StatusBar } from "react-native";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Svg, { Text as SvgText, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
 import NotificationBadge from "@/components/utils/Notification";
-import ThemeToggle from "../ui/ThemeToggle";
+// import ThemeToggle from "../ui/ThemeToggle";
 import { ReactNode } from "react";
 import { ThemedView } from "./ThemedView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -33,7 +33,7 @@ const Header = ({
   
   // Default logo element with gradient text
   const defaultLeftElement = (
-    <Svg height="40" width="150">
+    <Svg height="35" width="150">
       <Defs>
         <SvgLinearGradient id="textGradient" x1="0" y1="1" x2="1" y2="0">
           <Stop offset="0" stopColor="#88B4DB" stopOpacity="1" />
@@ -41,9 +41,9 @@ const Header = ({
         </SvgLinearGradient>
       </Defs>
       <SvgText
-        x="10"
-        y="30"
-        fontSize="30"
+        x="8"
+        y="25"
+        fontSize="25"
         fontWeight="bold"
         fill="url(#textGradient)"
       >
@@ -52,19 +52,19 @@ const Header = ({
     </Svg>
   );
   
-  const defaultMainElement = (
-    <ThemedView>
-      <ThemeToggle />
-    </ThemedView>
-  );
+  // const defaultMainElement = (
+  //   <ThemedView>
+  //     <ThemeToggle />
+  //   </ThemedView>
+  // );
   
   // Default right element with notification icon
   const defaultRightElement = (
     <ThemedView className="flex">
       <TouchableOpacity>
-        <Ionicons name="notifications-outline" size={26} color="black" />
+        <Ionicons name="notifications-outline" size={20} color="black" />
       </TouchableOpacity>
-      <ThemedView className="absolute top-3 right-3">
+      <ThemedView className="absolute top-2 right-2">
         <NotificationBadge count={1} />
       </ThemedView>
     </ThemedView>
@@ -73,7 +73,6 @@ const Header = ({
   return (
     <SafeAreaView 
       style={{ 
-        backgroundColor: "white", 
         // Utiliser statusBarHeight pour gérer correctement l'espace en haut de l'écran
         paddingTop: Platform.OS === 'android' ? statusBarHeight : 70,
         zIndex: 1000, // S'assurer que le header est au-dessus des autres éléments
@@ -88,15 +87,15 @@ const Header = ({
         className="w-full  px-3 overflow-visible"
         style={[
           { 
-            paddingTop: insets.top > 0 ? 0 : 8, // Ajouter un padding si nécessaire
-            height: Platform.OS === 'android' ? 60 : 60, // Ajuster la hauteur selon la plateforme
+            paddingTop: insets.top > 0 ? 0 : 8,
+            height: Platform.OS === 'android' ? 60 : 60, 
           }, 
           style
         ]}
       >
-        <ThemedView className="flex-row items-center justify-between z-10 h-20">
+        <ThemedView className="flex-row items-center justify-between z-8 h-15">
           {leftElement || defaultLeftElement}
-          {mainElement || defaultMainElement}
+          {/* {mainElement || defaultMainElement} */}
           {rightElement || defaultRightElement}
         </ThemedView>
 
