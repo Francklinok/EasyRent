@@ -12,6 +12,7 @@ import { useDarkMode } from "@/components/contexts/theme/themehook";
 import { useThemeControls } from "@/components/contexts/theme/themehook";
 import { ThemedScrollView } from "@/components/ui/ScrolleView";
 import  RenderCategoryTabs from  "@/components/acceuill/home/renderCategory"
+
 interface Props {
   viewType: "grid" | "list";
   setViewType: React.Dispatch<React.SetStateAction<"grid" | "list">>;
@@ -27,7 +28,7 @@ interface Props {
     const  {theme} = useTheme()
      
     const headerTranslate = scrollY.interpolate({
-      inputRange: [0, 100],
+      inputRange: [0, 80],
       outputRange: [10, -20],
       extrapolate: 'clamp'
     });
@@ -41,41 +42,43 @@ interface Props {
     
     
     return (
-    <Animated.View
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 100,
-        opacity: headerOpacity,
-        transform: [{ translateY: headerTranslate }]
-      }}
-    >
+    // <Animated.View
+    //   style={{
+    //     position: 'absolute',
+    //     top: 6,
+    //     left: 0,
+    //     right: 0,
+    //     zIndex: 1000,
+    //     opacity: headerOpacity,
+    //     transform: [{ translateY: headerTranslate }]
+    //   }}
+    // >
+
+    <ThemedView>
       <BlurView
-        intensity={ 10 }
+        intensity={ 0 }
         tint={ "dark"}
-        className="px-2 pb-1"
+        className="px-2 h-15"
       >
         <ThemedView className="flex-row justify-between items-center">
-          <ThemedView className="flex-1 ">
-            <MotiText
+          <ThemedView className="flex-1">
+            {/* <MotiText
               from={{ opacity: 0, translateX: -10 }}
               animate={{ opacity: 1, translateX: 0 }}
               transition={{ delay: 300, type: 'timing' }}
-              className="text-base  text-blue-300 w-80"
-            >
+              className="text-base  text-blue-300 w-70 h-20"
+            > */}
                <RenderCategoryTabs/>
-:          </MotiText>
+{/* :          </MotiText> */}
           </ThemedView>
           
-          <ThemedView className="flex-row gap-2">
+          {/* <ThemedView className="flex-row gap-1 ">
             <TouchableOpacity
               onPress={() => {
                 setViewType(viewType === "list" ? "grid" : "list");
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
-              className={`p-2.5 `}
+              className={`p-1.5 `}
             >
               <MaterialIcons
                 name={viewType === "list" ? "grid-view" : "view-list"}
@@ -95,9 +98,10 @@ interface Props {
               <Ionicons name="filter" size={20} color={theme.text} />
             </TouchableOpacity>
     
-          </ThemedView>
+          </ThemedView> */}
         </ThemedView>
       </BlurView>
-    </Animated.View>
+      </ThemedView>
+    // </Animated.View>
   )};
 export  default RenderHeader;

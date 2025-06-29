@@ -87,17 +87,17 @@ export const ThemedText: React.FC<ThemedTextProps> = ({
     
     switch (type) {
       case 'heading':
-        baseSize = size || 24;
+        baseSize = size || 20;
         lineHeight = getAdaptiveSize(baseSize * 1.3);
         fontWeightValue = '700';
         break;
       case 'title':
-        baseSize = size || 32;
+        baseSize = size || 22;
         lineHeight = getAdaptiveSize(baseSize * 1.2);
         fontWeightValue = '600';
         break;
       case 'subtitle':
-        baseSize = size || 22;
+        baseSize = size || 18;
         lineHeight = getAdaptiveSize(baseSize * 1.3);
         fontWeightValue = '600';
         break;
@@ -106,17 +106,17 @@ export const ThemedText: React.FC<ThemedTextProps> = ({
         lineHeight = getAdaptiveSize(baseSize * 1.5);
         break;
       case 'normal':
-        baseSize = size || 18;
+        baseSize = size || 14;
         lineHeight = getAdaptiveSize(baseSize * 1.5);
         break;
       case 'link':
-        baseSize = size || 16;
+        baseSize = size || 12;
         lineHeight = getAdaptiveSize(baseSize * 1.5);
         break;
       case 'default':
       case 'body':
       default:
-        baseSize = size || 16;
+        baseSize = size || 14;
         lineHeight = getAdaptiveSize(baseSize * 1.5);
         break;
     }

@@ -11,7 +11,7 @@ import { ThemedText } from "../ui/ThemedText";
 import { ThemedView } from "../ui/ThemedView";
 import { ThemedScrollView } from "../ui/ScrolleView";
 import RenderHeader from "./home/RenderHeader";
-import RenderCategoryTabs from "./home/renderCategory";
+// import RenderCategoryTabs from "./home/renderCategory";
 import RenderAIRecommendation from "./home/renderAIRecommendation";
 import RenderFilterModal from "./home/renderFilterModal";
 import RenderItem from "./home/renderItem";
@@ -23,7 +23,7 @@ const { width, height } = Dimensions.get('window');
 
 const RenHouseAcceuil = () => {
   const router = useRouter();
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  // const [selectedCategory, setSelectedCategory] = useState("All");
   const [scrollY] = useState(new Animated.Value(0));
   const [favorites, setFavorites] = useState<string[]>([]);
   const [viewType, setViewType] = useState<"grid" | "list">("list");
@@ -116,20 +116,15 @@ const extendedData =  enrichItems(data)
                   setAnimatingElement={setAnimatingElement}
                 />)}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingTop: 120, paddingBottom: 30 }}
+              contentContainerStyle={{ paddingTop: 1, paddingBottom: 30 }}
               ListHeaderComponent={
                 <>
                                   
-                  {/* <RenderCategoryTabs
-                  fadeAnim = {fadeAnim}
-                  selectedCategory = {selectedCategory}
-                  setSelectedCategory = {setSelectedCategory}
-                  /> */}
-                  
-                  <RenderAIRecommendation
+              
+                  {/* <RenderAIRecommendation
                   showAIRecommendations= {showAIRecommendations}
                   setShowAIRecommendations = {setShowAIRecommendations}
-                  />
+                  /> */}
 
                 </>
               }
@@ -158,16 +153,13 @@ const extendedData =  enrichItems(data)
               contentContainerStyle={{ paddingTop: 120, paddingBottom: 30 }}
               ListHeaderComponent={
                 <>
-                    <RenderCategoryTabs
-                  fadeAnim = {fadeAnim}
-                  selectedCategory = {selectedCategory}
-                  setSelectedCategory = {setSelectedCategory}
-                  />
+                  {/* <RenderCategoryTabs
+                  /> */}
                   
-                  <RenderAIRecommendation
+                  {/* <RenderAIRecommendation
                   showAIRecommendations= {showAIRecommendations}
                   setShowAIRecommendations = {setShowAIRecommendations}
-                  />
+                  /> */}
                 
                 </>
               }

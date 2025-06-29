@@ -2,7 +2,7 @@ import React from "react";
 import { Image, TouchableOpacity } from "react-native";
 import { FontAwesome5, MaterialIcons, Ionicons,MaterialCommunityIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import { MotiView, MotiText } from "moti";
+import { MotiView } from "moti";
 import { ThemedText } from "@/components/ui/ThemedText";
 import { ThemedView } from "@/components/ui/ThemedView";
 import { ItemType, FeatureIcon } from "@/types/ItemType";
@@ -70,14 +70,14 @@ import { useTheme } from "@/components/contexts/theme/themehook";
 
     return  (
     <MotiView
-      from={{ opacity: 0, translateY: 30 }}
+      from={{ opacity: 0, translateY: 10 }}
       animate={{ opacity: 1, translateY: 0 }}
       transition={{ delay: index * 100, type: 'timing' }}
       style={{ 
         width: width / 2 - 24, 
         marginLeft: index % 2 === 0 ? 16 : 8,
         marginRight: index % 2 === 0 ? 8 : 16,
-        marginBottom: 16 
+        marginBottom: 16
       }}
     >
       <TouchableOpacity
@@ -99,7 +99,7 @@ import { useTheme } from "@/components/contexts/theme/themehook";
             <ThemedView className="relative">
               <Image 
                 source={item.avatar} 
-                style={{ width: '100%', height: 140 }}
+                style={{ width: '100%', height: 100 }}
                 resizeMode="cover" 
               />
               
