@@ -24,6 +24,7 @@ export type ThemeColors = {
   success: string;
   warning: string;
   info: string;
+  star:string
   
   // Interface utilisateur
   surface: string;

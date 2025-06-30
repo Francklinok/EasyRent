@@ -343,27 +343,19 @@ const RenderItem: React.FC<Props> = ({
 
   // Boutons d'action ultra-dynamiques
   const ActionButtons = useMemo(() => (
-    <ThemedView className="flex-row gap-3 mb-1 px-2 ">
+    <ThemedView className="flex-row gap-3 pb-2 px-1 ">
       <TouchableOpacity
         onPress={handlePress}
         className="flex-1 rounded-2xl overflow-hidden"
         accessibilityLabel="Explorer la propriété"
-        accessibilityRole="button"
-        style={{
-          // shadowColor: "#4338ca",
-          shadowOffset: { width: 0, height: 8 },
-          // shadowOpacity: 0.3,
-          // shadowRadius: 16,
-          // elevation: 12,
-        }}
-      >
+        accessibilityRole="button">
         <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-          <BlurView intensity={20} tint="light" className="overflow-hidden">
+          <BlurView intensity={20} tint="light" className="overflow-hidden ">
             <LinearGradient
-              colors={['#6366f1', '#8b5cf6', '#a855f7']}
-              start={{ x: 0, y: 0 }}
+              colors= {theme.buttonGradient}
+              start={{ x: 0, y: 1 }}
               end={{ x: 1, y: 1 }}
-              className="py-4 items-center relative"
+              className="py-2.5 items-center relative"
             >
               <Animated.View
                 style={{
@@ -372,7 +364,7 @@ const RenderItem: React.FC<Props> = ({
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  backgroundColor: '#ffffff',
+                  backgroundColor: theme.surface,
                   opacity: shimmerAnim.interpolate({
                     inputRange: [0, 0.5, 1],
                     outputRange: [0, 0.1, 0],
@@ -386,20 +378,20 @@ const RenderItem: React.FC<Props> = ({
                 }}
               />
               <ThemedView className="flex-row items-center gap-2 " style={{ backgroundColor: "transparent" }}>
-                <MaterialCommunityIcons name="rocket-launch" size={20} color="white" />
+                <MaterialCommunityIcons name="rocket-launch" size={20} color={theme.surface} />
                 <ThemedText
                   style={{
-                    color: 'white',
+                    color: theme.surface,
                     fontWeight: '900',
                     fontSize: 14,
-                    textShadowColor: 'rgba(0,0,0,0.3)',
+                    textShadowColor: theme.elevation.large,
                     textShadowOffset: { width: 0, height: 8 },
                     textShadowRadius: 4,
                   }}
                 >
                   DÉCOUVRIR
                 </ThemedText>
-                <Entypo name="chevron-right" size={20} color="white" />
+                <Entypo name="chevron-right" size={20} color={theme.surface} />
               </ThemedView>
             </LinearGradient>
           </BlurView>
@@ -412,13 +404,13 @@ const RenderItem: React.FC<Props> = ({
         transition={{ delay: 400, type: "spring" }}
       >
         <TouchableOpacity
-          className="rounded-2xl overflow-hidden p-3"
+          className="rounded-2xl overflow-hidden p-1"
           accessibilityLabel="Partager"
           accessibilityRole="button"
           style={{
-            backgroundColor: 'rgba(255,255,255,0.1)',
+            backgroundColor:theme.surface,
             borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.2)',
+            borderColor: theme.surface,
             // shadowColor: "#ffffff",
             // shadowOffset: { width: 0, height: 4 },
             // shadowOpacity: 0.1,
@@ -426,7 +418,7 @@ const RenderItem: React.FC<Props> = ({
             // elevation: 6,
           }}
         >
-          <MaterialIcons name="share" size={24} color="#000" />
+          <MaterialIcons name="share" size={24} color={theme.onSurface}/>
         </TouchableOpacity>
       </MotiView>
       
@@ -437,13 +429,12 @@ const RenderItem: React.FC<Props> = ({
           transition={{ delay: 500, type: "spring" }}
         >
           <TouchableOpacity
-            className="rounded-2xl overflow-hidden p-3 relative"
+            className="rounded-full overflow-hidden p-1.5 relative"
             accessibilityLabel="Visite virtuelle VR"
             accessibilityRole="button"
             style={{
-              backgroundColor: 'rgba(59, 130, 246, 0.2)',
               borderWidth: 1,
-              borderColor: 'rgba(59, 130, 246, 0.4)',
+              borderColor: theme.outline,
               // shadowColor: "#3b82f6",
               // shadowOffset: { width: 0, height: 6 },
               // shadowOpacity: 0.3,
@@ -456,13 +447,13 @@ const RenderItem: React.FC<Props> = ({
                 transform: [{ scale: breatheAnim }]
               }}
             >
-              <MaterialCommunityIcons name="virtual-reality" size={24} color="#3b82f6" />
+              <MaterialCommunityIcons name="virtual-reality" size={24} color={theme.primary} />
             </Animated.View>
             <ThemedView
-              className="absolute -top-1 -right-1 w-3 h-3 rounded-full"
+              className="absolute -top-2 -right-1 w-3 h-3 rounded-full"
               style={{
-                backgroundColor: '#ef4444',
-                shadowColor: "#ef4444",
+                backgroundColor: theme.error,
+                shadowColor:theme.error,
                 shadowOffset: { width: 0, height: 0 },
                 shadowOpacity: 1,
                 shadowRadius: 4,
@@ -476,38 +467,21 @@ const RenderItem: React.FC<Props> = ({
   ), [handlePress, scaleAnim, shimmerAnim, breatheAnim, item.virtualTourAvailable]);
 
   return (
-    <MotiView
-      from={{ opacity: 0, translateY: 100, scale: 0.8 }}
-      animate={{ opacity: 1, translateY: 0, scale: 1 }}
-      transition={{ 
-        delay: index * 200, 
-        type: "spring",
-        damping: 20,
-        stiffness: 100
-      }}
-      className="mb-6 px-2"
-    >
-      <Animatable.View
-        animation={animatingElement === item.id ? "pulse" : undefined}
-        duration={800}
+    <ThemedView className="mb-4  px-2"
       >
-        <Animated.View
-          style={{
-            transform: [{ scale: breatheAnim }],
-            shadowColor: item.availibility === "available" ? "#34d399" : "#64748b",
-            shadowOffset: { width: 0, height: 20 },
-            shadowOpacity: 0.15,
-            shadowRadius: 30,
-            elevation: 20,
-          }}
-        >
-          <ThemedView className="rounded-3xl overflow-hidden">
+          <ThemedView className="rounded-3xl overflow-hidden"
+          style = {{
+            borderWidth:1,
+            borderColor:theme.outline
+          }}>
+            
             <LinearGradient
               colors={theme.cardGradient}
               className="overflow-hidden relative"
+              
             >
               {/* Effet de lueur animée */}
-              <Animated.View
+              {/* <Animated.View
                 style={{
                   position: 'absolute',
                   top: 0,
@@ -522,9 +496,9 @@ const RenderItem: React.FC<Props> = ({
                   }),
                   zIndex: 1,
                 }}
-              />
+              /> */}
 
-              {/* Section Image inspirée du design moderne */}
+              {/* Section Image */}
               <ThemedView className="relative overflow-hidden">
                 <MotiView
                   from={{ scale: 1.1, opacity: 0 }}
@@ -564,19 +538,19 @@ const RenderItem: React.FC<Props> = ({
                       className="px-3 py-1.5 flex-row items-center gap-1.5"
                       style={{
                         backgroundColor: item.availibility === "available" 
-                          ? 'rgba(34, 197, 94, 0.9)' 
-                          : 'rgba(156, 163, 175, 0.9)',
+                          ? theme.success
+                          : theme.elevation.large,
                       }}
                     >
                       <ThemedView
                         className="w-1.5 h-1.5 rounded-full"
                         style={{
-                          backgroundColor: "#ffffff",
+                          backgroundColor: theme.surface,
                         }}
                       />
                       <ThemedText
                         style={{
-                          color: "#ffffff",
+                          color: theme.surface,
                           fontSize: 11,
                           fontWeight: "600",
                           letterSpacing: 0.5,
@@ -587,52 +561,6 @@ const RenderItem: React.FC<Props> = ({
                     </ThemedView>
                   </BlurView>
                 </MotiView>
-
-                {/* Boutons d'action rapide - Style moderne clean */}
-                <ThemedView className="absolute bottom-3 left-3 flex-row gap-2">
-                  {/* Bouton partager */}
-                  <MotiView
-                    from={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 400, type: "spring" }}
-                  >
-                    <TouchableOpacity
-                      className="w-10 h-10 rounded-full items-center justify-center"
-                      style={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                        shadowColor: "#000",
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 4,
-                        elevation: 4,
-                      }}
-                    >
-                      <MaterialIcons name="share" size={18} color="#374151" />
-                    </TouchableOpacity>
-                  </MotiView>
-
-                  {/* Bouton lien */}
-                  <MotiView
-                    from={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 450, type: "spring" }}
-                  >
-                    <TouchableOpacity
-                      className="w-10 h-10 rounded-full items-center justify-center"
-                      style={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                        shadowColor: "#000",
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 4,
-                        elevation: 4,
-                      }}
-                    >
-                      <MaterialIcons name="link" size={18} color="#374151" />
-                    </TouchableOpacity>
-                  </MotiView>
-                </ThemedView>
-
                 {/* Prix - Style épuré en bas à droite */}
                 <MotiView
                   from={{ opacity: 0, translateY: 20 }}
@@ -644,8 +572,8 @@ const RenderItem: React.FC<Props> = ({
                     <ThemedView
                       className="px-4 py-2"
                       style={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                        shadowColor: "#000",
+                        backgroundColor: theme.surface,
+                        shadowColor: theme.elevation.large,
                         shadowOffset: { width: 0, height: 4 },
                         shadowOpacity: 0.1,
                         shadowRadius: 8,
@@ -654,7 +582,7 @@ const RenderItem: React.FC<Props> = ({
                     >
                       <ThemedText
                         style={{
-                          color: '#111827',
+                          color: theme.onSurface,
                           fontWeight: '800',
                           fontSize: 18,
                           letterSpacing: -0.5,
@@ -667,12 +595,14 @@ const RenderItem: React.FC<Props> = ({
                 </MotiView>
 
                 {/* Bouton favori repositionné */}
+                
                 <MotiView
                   from={{ opacity: 0, scale: 0 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 500, type: "spring" }}
                   className="absolute top-3 right-3"
                 >
+                  
                   <TouchableOpacity
                     onPress={handleToggleFavorite}
                     className="w-12 h-12 rounded-full items-center justify-center"
@@ -680,9 +610,9 @@ const RenderItem: React.FC<Props> = ({
                     accessibilityRole="button"
                     style={{
                       backgroundColor: favorites.includes(item.id) 
-                        ? 'rgba(239, 68, 68, 0.9)' 
-                        : 'rgba(255, 255, 255, 0.9)',
-                      shadowColor: "#000",
+                        ? theme.error 
+                        : theme.surface,
+                      shadowColor: theme.onSurface,
                       shadowOffset: { width: 0, height: 4 },
                       shadowOpacity: 0.15,
                       shadowRadius: 8,
@@ -705,22 +635,21 @@ const RenderItem: React.FC<Props> = ({
                         <Ionicons
                           name="heart"
                           size={24}
-                          color="#ffffff"
+                          color={theme.surface}
                         />
                       ) : (
                         <Ionicons
                           name="heart-outline"
                           size={24}
-                          color="#374151"
+                          color={theme.typography.caption}
                         />
                       )}
                     </Animated.View>
                   </TouchableOpacity>
                 </MotiView>
-
                 {/* Features avec style minimaliste */}
                 {item.features && item.features.length > 0 && (
-                  <ThemedView className="absolute top-16 left-3">
+                  <ThemedView className="absolute top-16 left-3 rounded-2xl">
                     <MotiView
                       from={{ opacity: 0, translateX: -20 }}
                       animate={{ opacity: 1, translateX: 0 }}
@@ -736,13 +665,13 @@ const RenderItem: React.FC<Props> = ({
                           <FontAwesome5 
                             name={item.features[0]?.icon || "home"} 
                             size={12} 
-                            color="#6b7280" 
+                            color={theme.typography.caption}
                           />
                           <ThemedText
                             style={{
                               fontSize: 10,
                               fontWeight: "600",
-                              color: "#6b7280",
+                              color: theme.typography.caption,
                               letterSpacing: 0.3,
                             }}
                           >
@@ -756,32 +685,37 @@ const RenderItem: React.FC<Props> = ({
               </ThemedView>
 
               {/* Section contenu */}
-              <ThemedView className="px-5 py-2 gap-1">
+              <ThemedView className="px-3 py-2 gap-1">
                 {/* En-tête avec localisation */}
-                <MotiView
-                  from={{ opacity: 0, translateY: 20 }}
-                  animate={{ opacity: 1, translateY: 0 }}
-                  transition={{ delay: 300, type: "spring" }}
-                  className="flex-row justify-between items-center"
+                <ThemedView className = " flex-row item-center  justify-between"
+                  // from={{ opacity: 0, translateY: 20 }}
+                  // animate={{ opacity: 1, translateY: 0 }}
+                  // transition={{ delay: 300, type: "spring" }}
+                  // className="flex-row justify-between items-center"
                 >
-                  <ThemedView className="flex-row items-center gap-2 flex-1">
+                  <ThemedView className="flex-row items-center gap-3 w-20">
                     <MaterialIcons
                       name="location-on"
                       size={20}
-                      color="#ef4444"
+                      color= {theme.error}
                       style={{
-                        textShadowColor: 'rgba(239, 68, 68, 0.3)',
+                        textShadowColor: theme.error,
                         textShadowOffset: { width: 0, height: 0 },
                         textShadowRadius: 8,
                       }}
                     />
-                    <ThemedText
+                    <ThemedText type="caption"
                       className="text-base font-bold flex-1"
-                      style={{ fontSize: 16 }}
                     >
                       {item.location}
                     </ThemedText>
                   </ThemedView>
+                  
+                  <ThemedView
+
+                >
+                  <RenderNeighborhoodInfo item={item} />
+                </ThemedView>
 
                   <MotiView
                     from={{ opacity: 0, scale: 0 }}
@@ -789,29 +723,28 @@ const RenderItem: React.FC<Props> = ({
                     transition={{ delay: 400, type: "spring" }}
                   >
                     <BlurView intensity={30} tint="light" className="rounded-xl overflow-hidden">
-                      <LinearGradient
-                        colors={['rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 0.8)']}
-                        className="flex-row items-center gap-2 px-3 py-2 border border-yellow-400/30"
+                      <ThemedView
+                        className="flex-row items-center gap-2 px-3 py-1 border border-yellow-400/30"
                       >
-                        <FontAwesome5 name="star" size={16} color="#fcd34d" />
-                        <ThemedText className="text-lg font-bold" style={{ color: '#fcd34d' }}>
+                        <FontAwesome5 name="star" size={16} color={theme.star} />
+                        <ThemedText className="text-lg font-bold" style={{ color: theme.star }}>
                           {item.stars}
                         </ThemedText>
-                      </LinearGradient>
+                      </ThemedView>
                     </BlurView>
                   </MotiView>
-                </MotiView>
+                </ThemedView>
 
                 {/* {AiBadges} */}
 
                 {/* Informations de quartier */}
-                <MotiView
+                {/* <MotiView
                   from={{ opacity: 0, translateY: 20 }}
                   animate={{ opacity: 1, translateY: 0 }}
                   transition={{ delay: 500, type: "spring" }}
                 >
                   <RenderNeighborhoodInfo item={item} />
-                </MotiView>
+                </MotiView> */}
 
                 {/* Avis avec style moderne */}
                 <MotiView
@@ -820,21 +753,20 @@ const RenderItem: React.FC<Props> = ({
                   transition={{ delay: 600, type: "spring" }}
                 >
                   <BlurView intensity={20} tint="light" className="rounded-2xl overflow-hidden">
-                    <LinearGradient
-                      colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-                      className="p-2 border border-white/10"
+                    <ThemedView
+                      className="p-2"
                     >
-                      <ThemedText
+                      <ThemedText  type = "caption"
                         className="text-base leading-6"
                         style={{ 
-                          fontSize: 13,
-                          lineHeight: 20,
+                          // fontSize: 13,
+                          // lineHeight: 20,
                           color: theme.text
                         }}
                       >
                         {item.review?.length > 120 ? `${item.review.substring(0, 120)}...` : item.review}
                       </ThemedText>
-                    </LinearGradient>
+                    </ThemedView>
                   </BlurView>
                 </MotiView>
 
@@ -849,9 +781,9 @@ const RenderItem: React.FC<Props> = ({
               </ThemedView>
             </LinearGradient>
           </ThemedView>
-        </Animated.View>
-      </Animatable.View>
-    </MotiView>
+        {/* </Animated.View> */}
+      {/* </Animatable.View> */}
+    </ThemedView>
   );
 };
 
