@@ -19,7 +19,7 @@ import { useTheme } from "@/components/contexts/theme/themehook";
 
 const { width } = Dimensions.get('window');
 
-interface ExtendedItemType extends ItemType {
+interface ExtendedItemTypes extends ItemType {
   features: FeatureIcon[];
   energyScore: number;
   virtualTourAvailable: boolean;
@@ -34,13 +34,14 @@ interface ExtendedItemType extends ItemType {
 }
 
 type Props = {
-  item: ExtendedItemType;
+  item: ExtendedItemTypes;
   index: number;
   lottieRef: MutableRefObject<any>;
   setAnimatingElement: (id: string | null) => void;
   favorites: string[];
+  setFavorites: React.Dispatch<React.SetStateAction<string[]>>; // 👈 AJOUTER ICI
   animatingElement: string | null;
-  navigateToInfo: (item: ExtendedItemType) => void;
+  navigateToInfo: (item: ExtendedItemTypes) => void;
 };
 
 const RenderItem: React.FC<Props> = ({
@@ -48,6 +49,7 @@ const RenderItem: React.FC<Props> = ({
   index,
   lottieRef,
   favorites,
+  setFavorites,
   animatingElement,
   setAnimatingElement,
   navigateToInfo
@@ -55,6 +57,7 @@ const RenderItem: React.FC<Props> = ({
   const { theme } = useTheme();
   const [isPressed, setIsPressed] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+
   
   // Animations avancées
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -155,24 +158,31 @@ const RenderItem: React.FC<Props> = ({
   }, [item, navigateToInfo, scaleAnim]);
 
   const handleToggleFavorite = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
-    Animated.sequence([
-      Animated.timing(rotateAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(rotateAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    
-    toggleFavorite(item.id);
-    setAnimatingElement(item.id);
-  }, [item.id, setAnimatingElement, rotateAnim]);
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  
+  Animated.sequence([
+    Animated.timing(rotateAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }),
+    Animated.timing(rotateAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }),
+  ]).start();
+
+  toggleFavorite({
+    id: item.id,
+    lottieRef,
+    favorites,
+    setFavorites, 
+  });
+
+  setAnimatingElement(item.id);
+}, [item.id, setAnimatingElement, rotateAnim, lottieRef, favorites, setFavorites]);
+
 
   // Badge de statut ultra-moderne
   const StatusBadge = useMemo(() => (

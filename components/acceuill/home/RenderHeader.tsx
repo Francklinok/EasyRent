@@ -16,17 +16,11 @@ interface Props {
   const RenderHeader:React.FC<Props> = ({viewType,setViewType,setFilterModalVisible, scrollY}) => {
     return (
     <ThemedView>
-      <BlurView
-        intensity={ 0 }
-        tint={ "dark"}
-        className="px-2 h-15"
-      >
         <ThemedView className="flex-row justify-between items-center">
           <ThemedView className="flex-1">
                <RenderCategoryTabs/>
           </ThemedView>
         </ThemedView>
-      </BlurView>
       </ThemedView>
   )};
 export  default RenderHeader;

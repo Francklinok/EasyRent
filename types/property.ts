@@ -1,3 +1,6 @@
+import { ItemType, FeatureIcon } from "@/types/ItemType";
+
+
 // Fichier: types.ts
 export interface Property {
     id: string;
@@ -18,4 +21,16 @@ export interface Property {
     type: string;
     surface: number;
     rooms: number;
+  }
+  export  interface ExtendedItemType extends ItemType {
+    features: FeatureIcon[];
+    energyScore: number;
+    virtualTourAvailable: boolean;
+    distanceToAmenities?: {
+      schools: number;
+      healthcare: number;
+      shopping: number;
+      transport: number;
+    };
+    aiRecommendation: string;
   }
