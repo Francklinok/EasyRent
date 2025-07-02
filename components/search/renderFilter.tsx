@@ -1,11 +1,11 @@
 import React from 'react';
 import {
-  View,
-  Text,
   TouchableOpacity,
   Modal,
   TextInput
 } from 'react-native';
+import { ThemedText } from '../ui/ThemedText';
+import { ThemedView } from '../ui/ThemedView';
 import { SearchFilters } from '@/types/FilterType';
 
 interface FilterModalProps {
@@ -30,14 +30,14 @@ const FilterModal: React.FC<FilterModalProps> = ({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View className="flex-1 justify-end bg-black/50">
-        <View className="bg-white rounded-t-3xl p-6">
-          <Text className="text-2xl font-bold mb-4">Advanced Filters</Text>
+      <ThemedView className="flex-1 justify-end bg-black/50">
+        <ThemedView className="bg-white rounded-t-3xl p-6">
+          <ThemedText className="text-2xl font-bold mb-4">Advanced Filters</ThemedText>
           
           {/* Price Range */}
-          <View className="mb-4">
-            <Text>Price Range: {filters.minPrice}€ - {filters.maxPrice}€</Text>
-            <View className="flex-row">
+          <ThemedView className="mb-4">
+            <ThemedText>Price Range: {filters.minPrice}€ - {filters.maxPrice}€</ThemedText>
+            <ThemedView className="flex-row">
               <TextInput
                 placeholder="Min Price"
                 keyboardType="numeric"
@@ -52,12 +52,12 @@ const FilterModal: React.FC<FilterModalProps> = ({
                 onChangeText={(val) => setFilters(prev => ({ ...prev, maxPrice: Number(val) || 10000 }))}
                 className="flex-1 border p-2 rounded"
               />
-            </View>
-          </View>
+            </ThemedView>
+          </ThemedView>
 
           {/* Surface Range */}
-          <View className="mb-4">
-            <Text>Minimum Surface: {filters.minSurface} m²</Text>
+          <ThemedView className="mb-4">
+            <ThemedText>Minimum Surface: {filters.minSurface} m²</ThemedText>
             <TextInput
               placeholder="Minimum Surface"
               keyboardType="numeric"
@@ -65,11 +65,11 @@ const FilterModal: React.FC<FilterModalProps> = ({
               onChangeText={(val) => setFilters(prev => ({ ...prev, minSurface: Number(val) || 20 }))}
               className="border p-2 rounded"
             />
-          </View>
+          </ThemedView>
 
           {/* Rooms */}
-          <View className="mb-4">
-            <Text>Minimum Rooms: {filters.rooms}</Text>
+          <ThemedView className="mb-4">
+            <ThemedText>Minimum Rooms: {filters.rooms}</ThemedText>
             <TextInput
               placeholder="Minimum Rooms"
               keyboardType="numeric"
@@ -77,28 +77,28 @@ const FilterModal: React.FC<FilterModalProps> = ({
               onChangeText={(val) => setFilters(prev => ({ ...prev, rooms: Number(val) || 1 }))}
               className="border p-2 rounded"
             />
-          </View>
+          </ThemedView>
 
           {/* Type Selection (Optional) */}
-          <View className="mb-4">
-            <Text>Property Type</Text>
+          <ThemedView className="mb-4">
+            <ThemedText>Property Type</ThemedText>
             {/* Add dropdown or selection logic for property type */}
-          </View>
+          </ThemedView>
 
           {/* Country Selection (Optional) */}
-          <View className="mb-4">
-            <Text>Country</Text>
+          <ThemedView className="mb-4">
+            <ThemedText>Country</ThemedText>
             {/* Add dropdown or selection logic for country */}
-          </View>
+          </ThemedView>
           
           <TouchableOpacity
             onPress={applyFilters}
             className="bg-blue-500 p-3 rounded-xl mt-4"
           >
-            <Text className="text-white text-center">Apply Filters</Text>
+            <ThemedText className="text-white text-center">Apply Filters</ThemedText>
           </TouchableOpacity>
-        </View>
-      </View>
+        </ThemedView>
+      </ThemedView>
     </Modal>
   );
 };

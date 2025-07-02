@@ -98,7 +98,7 @@ const REAL_ESTATE_SETTINGS_DATA = {
 
 const SettingsPanel = () => {
   const { theme, toggleTheme } = useTheme();
-  const currentUserType = 'buyer'; // À remplacer par la logique réelle
+  const currentUserType = 'buyer';
   
   // --- États innovants ---
   const [expandedCategory, setExpandedCategory] = useState(null);

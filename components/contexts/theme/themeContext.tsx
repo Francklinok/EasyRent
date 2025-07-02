@@ -4,7 +4,7 @@ import React, { useState, useEffect, createContext } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useColorScheme } from "react-native";
 import * as Haptics from "expo-haptics";
-import { ThemeType, ThemeColors, ThemeContextType } from "./ThemeTypes";
+import { ThemeType, ThemeColors, ThemeContextType } from "./themeTypes";
 import { defaultThemes } from "./defaultTheme";
 
 // Clés de stockage
@@ -15,8 +15,8 @@ const THEME_CONFIG_STORAGE_KEY = "@app_theme_config";
 // Valeurs par défaut du contexte
 const defaultContextValue: ThemeContextType = {
   currentTheme: "system",
-  theme: defaultThemes.dark,
-  isDark: true,
+  theme: defaultThemes.light,
+  isDark: false,
   isAnimatingTheme: false,
   toggleTheme: () => {},
   setTheme: () => {},
@@ -47,7 +47,7 @@ type ThemeProviderProps = {
 // Provider du thème
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   children,
-  initialTheme = "system",
+  initialTheme = "light",
   customThemes: initialCustomThemes = {},
   themeConfig: initialThemeConfig = {},
 }) => {
@@ -59,7 +59,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   const [customThemes, setCustomThemes] = useState<Record<string, ThemeColors>>({});
   const [isAnimatingTheme, setIsAnimatingTheme] = useState(false);
   const [themeConfig, setThemeConfigState] = useState({
-    ...defaultContextValue.themeConfig,
+    animationDuration: 300,
+    useSystemTheme: true,
+    preferDarkTheme: true,
     ...initialThemeConfig,
   });
 
@@ -162,54 +164,104 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     return () => clearTimeout(timeout);
   }, [isAnimatingTheme, themeConfig.animationDuration]);
 
-  // Déterminer le thème actif
   const getActiveThemeColors = (): ThemeColors => {
-    // Si le thème est "system" et que l'option d'utilisation du thème système est activée
-    if (currentTheme === "system" && themeConfig.useSystemTheme) {
-      return systemColorScheme === "dark" ? defaultThemes.dark : defaultThemes.light;
+    console.log('Current theme:', currentTheme); // Debug
+    console.log('System color scheme:', systemColorScheme); // Debug
+    
+    // Si le thème est "system"
+    if (currentTheme === "system") {
+      const themeToUse = systemColorScheme === "dark" ? defaultThemes.light : defaultThemes.dark;
+      console.log('Using system theme:', systemColorScheme, themeToUse); // Debug
+      return themeToUse;
     }
+    
     // Si c'est un thème personnalisé
-    else if (customThemes[currentTheme]) {
+    if (customThemes[currentTheme]) {
+      console.log('Using custom theme:', currentTheme); // Debug
       return customThemes[currentTheme];
     }
+    
     // Si c'est un thème par défaut
-    else if (defaultThemes[currentTheme]) {
+    if (defaultThemes[currentTheme]) {
+      console.log('Using default theme:', currentTheme); // Debug
       return defaultThemes[currentTheme];
     }
-    // Thème par défaut basé sur la préférence
-    return themeConfig.preferDarkTheme ? defaultThemes.dark : defaultThemes.light;
+    
+    // Fallback
+    console.log('Using fallback theme'); // Debug
+    return themeConfig.preferDarkTheme ? defaultThemes.light : defaultThemes.dark;
   };
 
   const theme = getActiveThemeColors();
   
-  // Déterminer si le thème actuel est sombre - CORRECTION APPORTÉE ICI
-  const isDark = 
-    (currentTheme === "system" && themeConfig.useSystemTheme)
-      ? systemColorScheme === "dark" 
-      : (Array.isArray(theme.background) && theme.background[0] === defaultThemes.dark.background[0]) || 
-        theme.text === defaultThemes.dark.text ||
-        theme.surface === defaultThemes.dark.surface;
+  // ✅ LOGIQUE CORRIGÉE pour déterminer isDark
+  const getIsDark = (): boolean => {
+    if (currentTheme === "system") {
+      return systemColorScheme === "dark";
+    }
+    
+    // Pour les thèmes nommés explicitement
+    if (currentTheme === "dark" || currentTheme === "premium" || 
+        currentTheme === "nightshift" || currentTheme === "materialYou") {
+      return true;
+    }
+    
+    if (currentTheme === "light" || currentTheme === "pastel") {
+      return false;
+    }
+    
+    // Pour les thèmes personnalisés, vérifier la couleur de fond
+    if (customThemes[currentTheme]) {
+      const bg = Array.isArray(theme.background) ? theme.background[0] : theme.background;
+      // Convertir hex en RGB pour calculer la luminosité
+      const hex = bg.replace('#', '');
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      return luminance < 0.5; // Sombre si luminance < 50%
+    }
+    
+    return themeConfig.preferDarkTheme;
+  };
 
-  // Fonction de bascule entre thèmes clair et sombre
+  const isDark = getIsDark();
+  
+
+
+  // ✅ FONCTION TOGGLE CORRIGÉE
   const toggleTheme = () => {
+    console.log('Toggling theme from:', currentTheme); // Debug
     setIsAnimatingTheme(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     if (currentTheme === "system") {
-      setCurrentTheme(systemColorScheme === "dark" ? "light" : "dark");
-    } else if (currentTheme === "dark" || isDark) {
+      // Si on est en système, basculer vers l'opposé du système
+      const newTheme = systemColorScheme === "dark" ? "light" : "dark";
+      console.log('Switching from system to:', newTheme); // Debug
+      setCurrentTheme(newTheme);
+    } else if (currentTheme === "dark" || currentTheme === "premium" || 
+               currentTheme === "nightshift" || currentTheme === "materialYou") {
+      console.log('Switching to light'); // Debug
       setCurrentTheme("light");
     } else {
+      console.log('Switching to dark'); // Debug
       setCurrentTheme("dark");
     }
   };
 
-  // Fonction pour définir un thème spécifique
-  const setTheme = (theme: ThemeType) => {
-    setIsAnimatingTheme(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setCurrentTheme(theme);
+  // ✅ FONCTION SET THEME CORRIGÉE
+  const setTheme = (newTheme: ThemeType) => {
+    console.log('Setting theme to:', newTheme); // Debug
+    if (newTheme !== currentTheme) {
+      setIsAnimatingTheme(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setCurrentTheme(newTheme);
+    }
   };
+
+
+
 
   // Ajouter un thème personnalisé
   const addCustomTheme = (name: string, colors: Partial<ThemeColors>) => {
@@ -290,7 +342,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     toggleTheme,
     setTheme,
     theme,
-    themes: allThemes,
+    themes: { ...defaultThemes, ...customThemes },
     addCustomTheme,
     removeCustomTheme,
     updateCustomTheme,

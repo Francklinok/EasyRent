@@ -13,7 +13,7 @@ const Container: React.FC<CustomViewProps> = ({ children, style, ...props }) => 
 
 const styles = StyleSheet.create({
   container: {
-    // flex: 1,
+    flex: 1,
     backgroundColor: '#f9fafb'
   }
 });

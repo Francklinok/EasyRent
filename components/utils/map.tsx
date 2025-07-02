@@ -19,7 +19,7 @@ const HousingMap = ({
   <MapView
     style={{ 
       width: Dimensions.get('window').width, 
-      height: 300 
+      height: 450 
     }}
     initialRegion={currentLocation ? {
       latitude: currentLocation.coords.latitude,

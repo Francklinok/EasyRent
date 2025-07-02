@@ -71,6 +71,7 @@ export type ThemeColors = {
     focused: string;
     disabled: string;
   };
+[key: string]: unknown;
 };
 
 export type ThemeContextType = {

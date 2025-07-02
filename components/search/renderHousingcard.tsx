@@ -1,5 +1,5 @@
 
-import { View, Text, Image } from 'react-native';
+import { Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Housing } from '@/types/HousingType';
 import { HousingCard } from '../ui';
@@ -11,16 +11,16 @@ const renderHousingCard = (housing: Housing) => (
     
   <HousingCard 
     key={housing.id} 
-    title={housing.title}   // Assurez-vous de passer title
-    price={housing.price}   // Assurez-vous de passer price
+    title={housing.title}   
+    price={housing.price}   
     className="mb-2"
   >
     <Image 
       source={{ uri: housing.images[0] }} 
-      className="w-24 h-24 rounded-xl mr-4" 
+      className="w-28 h-18 rounded-xl mr-2" 
     />
-    <ThemedView className="flex">
-      <ThemedText className="text-lg font-bold">{housing.title}</ThemedText>
+    <ThemedView className="flex-1">
+      <ThemedText type = 'caption' intensity='strong'>{housing.title}</ThemedText>
       <ThemedView className="flex-row justify-between mt-2">
         <ThemedView>
           <ThemedText className="text-gray-600">{housing.city}, {housing.country}</ThemedText>

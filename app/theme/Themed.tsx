@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, Text, Switch, Animated } from 'react-native';
-import { useTheme, useThemeControls, useCustomThemes, useThemeConfig, useThemeTransition } from  '@/components/contexts/theme/themehook';;
+import { ScrollView, TouchableOpacity, Text, Switch, Animated } from 'react-native';
+import { useTheme, useThemeControls, useCustomThemes, useThemeConfig, useThemeTransition } from '@/components/contexts/theme/themehook';
 import { ChevronRight, Check, Plus, Trash2, Sun, Moon, Monitor, PaintBucket, Settings, RefreshCw } from 'lucide-react-native';
-import Slider from '@react-native-community/slider'
+import Slider from '@react-native-community/slider';
+import { ThemedView } from '@/components/ui/ThemedView';
+import { ThemedText } from '@/components/ui/ThemedText';
+import {ThemeColors} from'@/components/contexts/theme/themeTypes'
+
+type SectionKey = 'appearance' | 'themes' | 'settings' | 'customThemes';
+type ThemeName = string;
 
 const ThemeSwitcher = () => {
   const { themes, currentTheme, theme } = useTheme();
@@ -11,7 +17,7 @@ const ThemeSwitcher = () => {
   const { themeConfig, setThemeConfig, enableSystemTheme, disableSystemTheme } = useThemeConfig();
   const { getTransitionStyle } = useThemeTransition();
   
-  const [isExpanded, setIsExpanded] = useState({
+  const [isExpanded, setIsExpanded] = useState<Record<SectionKey, boolean>>({
     appearance: true,
     themes: false,
     settings: false,
@@ -40,14 +46,14 @@ const ThemeSwitcher = () => {
     ...getTransitionStyle()
   };
   
-  const toggleSection = (section) => {
+  const toggleSection = (section:SectionKey) => {
     setIsExpanded(prev => ({
       ...prev,
       [section]: !prev[section]
     }));
   };
   
-  const renderThemePreview = (themeName, themeColors) => {
+  const renderThemePreview = (themeName:ThemeName, themeColors:ThemeColors) => {
     const isActive = currentTheme === themeName;
     
     return (
@@ -65,7 +71,7 @@ const ThemeSwitcher = () => {
         }}
         onPress={() => setTheme(themeName)}
       >
-        <View 
+        <ThemedView 
           style={{
             width: 36,
             height: 36,
@@ -74,25 +80,28 @@ const ThemeSwitcher = () => {
             overflow: 'hidden'
           }}
         >
-          <View style={{
+          <ThemedView style={{
             flex: 1,
             flexDirection: 'row'
           }}>
-            <View style={{ flex: 1, backgroundColor: Array.isArray(themeColors.background) ? themeColors.background[0] : themeColors.background }} />
-            <View style={{ flex: 1, backgroundColor: themeColors.primary }} />
-          </View>
-        </View>
+            <ThemedView style={{ 
+              flex: 1, 
+              backgroundColor: Array.isArray(themeColors.background) ? themeColors.background[0] : themeColors.background 
+            }} />
+            <ThemedView style={{ flex: 1, backgroundColor: themeColors.primary }} />
+          </ThemedView>
+        </ThemedView>
         
-        <View style={{ flex: 1 }}>
-          <Text style={{ ...textStyle, fontWeight: isActive ? 'bold' : 'normal' }}>
+        <ThemedView style={{ flex: 1 }}>
+          <ThemedText style={{ ...textStyle, fontWeight: isActive ? 'bold' : 'normal' }}>
             {themeName.charAt(0).toUpperCase() + themeName.slice(1)}
-          </Text>
+          </ThemedText>
           {isActive && (
-            <Text style={{ color: theme.primary, fontSize: 12 }}>
+            <ThemedText style={{ color: theme.primary, fontSize: 12 }}>
               Thème actif
-            </Text>
+            </ThemedText>
           )}
-        </View>
+        </ThemedView>
         
         {isActive && <Check size={20} color={theme.primary} />}
       </TouchableOpacity>
@@ -100,7 +109,7 @@ const ThemeSwitcher = () => {
   };
   
   return (
-    <ScrollView className = "h-full" style={{ backgroundColor: theme.background[0], ...getTransitionStyle() }}>
+    <ScrollView className="h-full" style={{ backgroundColor: theme.background[0], ...getTransitionStyle() }}>
       <Animated.View 
         style={{
           position: 'absolute',
@@ -116,10 +125,10 @@ const ThemeSwitcher = () => {
         }}
       />
       
-      <View style={{ padding: 16 }}>
-        <Text style={{ ...textStyle, fontSize: 24, fontWeight: 'bold', marginBottom: 16 }}>
+      <ThemedView style={{ padding: 16 }}>
+        <ThemedText style={{ ...textStyle, fontSize: 24, fontWeight: 'bold', marginBottom: 16 }}>
           Paramètres d'apparence
-        </Text>
+        </ThemedText>
         
         {/* Section Apparence */}
         <TouchableOpacity 
@@ -134,7 +143,7 @@ const ThemeSwitcher = () => {
           onPress={() => toggleSection('appearance')}
         >
           <PaintBucket size={24} color={theme.primary} style={{ marginRight: 12 }} />
-          <Text style={{ ...textStyle, flex: 1, fontWeight: 'bold' }}>Apparence</Text>
+          <ThemedText style={{ ...textStyle, flex: 1, fontWeight: 'bold' }}>Apparence</ThemedText>
           <ChevronRight 
             size={20} 
             color={theme.text} 
@@ -146,13 +155,13 @@ const ThemeSwitcher = () => {
         </TouchableOpacity>
         
         {isExpanded.appearance && (
-          <View style={{ 
+          <ThemedView style={{ 
             backgroundColor: theme.surfaceVariant,
             borderRadius: 8,
             padding: 16,
             marginBottom: 16
           }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 }}>
+            <ThemedView style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 }}>
               <TouchableOpacity
                 style={{
                   flex: 1,
@@ -165,13 +174,13 @@ const ThemeSwitcher = () => {
                 onPress={() => setTheme('light')}
               >
                 <Sun size={24} color={currentTheme === 'light' ? theme.onSurface : theme.text} />
-                <Text style={{ 
+                <ThemedText style={{ 
                   color: currentTheme === 'light' ? theme.onSurface : theme.text,
                   marginTop: 8,
                   fontWeight: currentTheme === 'light' ? 'bold' : 'normal'
                 }}>
                   Clair
-                </Text>
+                </ThemedText>
               </TouchableOpacity>
               
               <TouchableOpacity
@@ -186,13 +195,13 @@ const ThemeSwitcher = () => {
                 onPress={() => setTheme('dark')}
               >
                 <Moon size={24} color={currentTheme === 'dark' ? theme.onSurface : theme.text} />
-                <Text style={{ 
+                <ThemedText style={{ 
                   color: currentTheme === 'dark' ? theme.onSurface : theme.text,
                   marginTop: 8,
                   fontWeight: currentTheme === 'dark' ? 'bold' : 'normal'
                 }}>
                   Sombre
-                </Text>
+                </ThemedText>
               </TouchableOpacity>
               
               <TouchableOpacity
@@ -200,22 +209,28 @@ const ThemeSwitcher = () => {
                   flex: 1,
                   alignItems: 'center',
                   padding: 12,
-                  backgroundColor: currentTheme === 'system' ? theme.primary : theme.surface,
+                  backgroundColor: themeConfig.useSystemTheme ? theme.primary : theme.surface,
                   borderRadius: 8,
                   marginLeft: 8
                 }}
-                onPress={() => setTheme('system')}
+                onPress={() => {
+                  if (themeConfig.useSystemTheme) {
+                    disableSystemTheme();
+                  } else {
+                    enableSystemTheme();
+                  }
+                }}
               >
-                <Monitor size={24} color={currentTheme === 'system' ? theme.onSurface : theme.text} />
-                <Text style={{ 
-                  color: currentTheme === 'system' ? theme.onSurface : theme.text,
+                <Monitor size={24} color={themeConfig.useSystemTheme ? theme.onSurface : theme.text} />
+                <ThemedText style={{ 
+                  color: themeConfig.useSystemTheme ? theme.onSurface : theme.text,
                   marginTop: 8,
-                  fontWeight: currentTheme === 'system' ? 'bold' : 'normal'
+                  fontWeight: themeConfig.useSystemTheme ? 'bold' : 'normal'
                 }}>
                   Système
-                </Text>
+                </ThemedText>
               </TouchableOpacity>
-            </View>
+            </ThemedView>
             
             <TouchableOpacity
               style={{
@@ -228,9 +243,9 @@ const ThemeSwitcher = () => {
               onPress={toggleTheme}
             >
               <RefreshCw size={20} color={theme.primary} style={{ marginRight: 12 }} />
-              <Text style={{ ...textStyle, flex: 1 }}>Basculer le thème</Text>
+              <ThemedText style={{ ...textStyle, flex: 1 }}>Basculer le thème</ThemedText>
             </TouchableOpacity>
-          </View>
+          </ThemedView>
         )}
         
         {/* Section Thèmes */}
@@ -246,7 +261,7 @@ const ThemeSwitcher = () => {
           onPress={() => toggleSection('themes')}
         >
           <PaintBucket size={24} color={theme.secondary} style={{ marginRight: 12 }} />
-          <Text style={{ ...textStyle, flex: 1, fontWeight: 'bold' }}>Thèmes disponibles</Text>
+          <ThemedText style={{ ...textStyle, flex: 1, fontWeight: 'bold' }}>Thèmes disponibles</ThemedText>
           <ChevronRight 
             size={20} 
             color={theme.text} 
@@ -258,7 +273,7 @@ const ThemeSwitcher = () => {
         </TouchableOpacity>
         
         {isExpanded.themes && (
-          <View style={{ 
+          <ThemedView style={{ 
             backgroundColor: theme.surfaceVariant,
             borderRadius: 8,
             padding: 16,
@@ -267,7 +282,7 @@ const ThemeSwitcher = () => {
             {Object.entries(themes).map(([name, colors]) => 
               renderThemePreview(name, colors)
             )}
-          </View>
+          </ThemedView>
         )}
         
         {/* Section Thèmes Personnalisés */}
@@ -283,7 +298,7 @@ const ThemeSwitcher = () => {
           onPress={() => toggleSection('customThemes')}
         >
           <PaintBucket size={24} color={theme.accent} style={{ marginRight: 12 }} />
-          <Text style={{ ...textStyle, flex: 1, fontWeight: 'bold' }}>Thèmes personnalisés</Text>
+          <ThemedText style={{ ...textStyle, flex: 1, fontWeight: 'bold' }}>Thèmes personnalisés</ThemedText>
           <ChevronRight 
             size={20} 
             color={theme.text} 
@@ -295,7 +310,7 @@ const ThemeSwitcher = () => {
         </TouchableOpacity>
         
         {isExpanded.customThemes && (
-          <View style={{ 
+          <ThemedView style={{ 
             backgroundColor: theme.surfaceVariant,
             borderRadius: 8,
             padding: 16,
@@ -303,7 +318,7 @@ const ThemeSwitcher = () => {
           }}>
             {Object.entries(customThemes).length > 0 ? (
               Object.entries(customThemes).map(([name, colors]) => (
-                <View key={name} style={{ marginBottom: 8 }}>
+                <ThemedView key={name} style={{ marginBottom: 8 }}>
                   {renderThemePreview(name, colors)}
                   <TouchableOpacity
                     style={{
@@ -318,14 +333,14 @@ const ThemeSwitcher = () => {
                     onPress={() => removeCustomTheme(name)}
                   >
                     <Trash2 size={16} color="#fff" style={{ marginRight: 8 }} />
-                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Supprimer</Text>
+                    <ThemedText style={{ color: '#fff', fontWeight: 'bold' }}>Supprimer</ThemedText>
                   </TouchableOpacity>
-                </View>
+                </ThemedView>
               ))
             ) : (
-              <Text style={{ ...textStyle, textAlign: 'center', padding: 16 }}>
+              <ThemedText style={{ ...textStyle, textAlign: 'center', padding: 16 }}>
                 Vous n'avez pas encore de thèmes personnalisés
-              </Text>
+              </ThemedText>
             )}
             
             <TouchableOpacity
@@ -342,6 +357,7 @@ const ThemeSwitcher = () => {
                 // Exemple d'ajout d'un thème personnalisé
                 const newThemeName = `custom${Object.keys(customThemes).length + 1}`;
                 addCustomTheme(newThemeName, {
+                  ...theme, // Copie le thème actuel comme base
                   primary: '#FF5500',
                   accent: '#FF9900',
                   background: ['#333333', '#444444']
@@ -349,9 +365,9 @@ const ThemeSwitcher = () => {
               }}
             >
               <Plus size={20} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Ajouter un thème</Text>
+              <ThemedText style={{ color: '#fff', fontWeight: 'bold' }}>Ajouter un thème</ThemedText>
             </TouchableOpacity>
-          </View>
+          </ThemedView>
         )}
         
         {/* Section Configuration */}
@@ -367,7 +383,7 @@ const ThemeSwitcher = () => {
           onPress={() => toggleSection('settings')}
         >
           <Settings size={24} color={theme.info} style={{ marginRight: 12 }} />
-          <Text style={{ ...textStyle, flex: 1, fontWeight: 'bold' }}>Configuration du thème</Text>
+          <ThemedText style={{ ...textStyle, flex: 1, fontWeight: 'bold' }}>Configuration du thème</ThemedText>
           <ChevronRight 
             size={20} 
             color={theme.text} 
@@ -379,19 +395,19 @@ const ThemeSwitcher = () => {
         </TouchableOpacity>
         
         {isExpanded.settings && (
-          <View style={{ 
+          <ThemedView style={{ 
             backgroundColor: theme.surfaceVariant,
             borderRadius: 8,
             padding: 16,
             marginBottom: 16
           }}>
-            <View style={{
+            <ThemedView style={{
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
               marginBottom: 16
             }}>
-              <Text style={textStyle}>Utiliser le thème système</Text>
+              <ThemedText style={textStyle}>Utiliser le thème système</ThemedText>
               <Switch
                 value={themeConfig.useSystemTheme}
                 onValueChange={(value) => 
@@ -400,15 +416,15 @@ const ThemeSwitcher = () => {
                 trackColor={{ false: theme.outline, true: theme.primary }}
                 thumbColor={theme.surface}
               />
-            </View>
+            </ThemedView>
             
-            <View style={{
+            <ThemedView style={{
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
               marginBottom: 16
             }}>
-              <Text style={textStyle}>Préférer le thème sombre</Text>
+              <ThemedText style={textStyle}>Préférer le thème sombre</ThemedText>
               <Switch
                 value={themeConfig.preferDarkTheme}
                 onValueChange={(value) => 
@@ -417,11 +433,11 @@ const ThemeSwitcher = () => {
                 trackColor={{ false: theme.outline, true: theme.primary }}
                 thumbColor={theme.surface}
               />
-            </View>
+            </ThemedView>
             
-            <Text style={{ ...textStyle, marginBottom: 8 }}>
+            <ThemedText style={{ ...textStyle, marginBottom: 8 }}>
               Durée d'animation: {themeConfig.animationDuration}ms
-            </Text>
+            </ThemedText>
             <Slider
               value={themeConfig.animationDuration}
               minimumValue={0}
@@ -435,15 +451,15 @@ const ThemeSwitcher = () => {
               thumbTintColor={theme.secondary}
             />
             
-            <Text style={{ ...textStyle, fontSize: 12, marginTop: 8, color: theme.subtext }}>
+            <ThemedText style={{ ...textStyle, fontSize: 12, marginTop: 8, color: theme.subtext }}>
               Réglez sur 0 pour désactiver les animations
-            </Text>
-          </View>
+            </ThemedText>
+          </ThemedView>
         )}
-      </View>
+      </ThemedView>
       
       {/* Aperçu du thème actuel */}
-      <View style={{
+      <ThemedView style={{
         margin: 16,
         padding: 16,
         backgroundColor: theme.surface,
@@ -451,39 +467,39 @@ const ThemeSwitcher = () => {
         borderWidth: 1,
         borderColor: theme.outline
       }}>
-        <Text style={{ ...textStyle, fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>
+        <ThemedText style={{ ...textStyle, fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>
           Aperçu du thème actuel
-        </Text>
+        </ThemedText>
         
-        <View style={{
+        <ThemedView style={{
           flexDirection: 'row',
           marginBottom: 12,
           flexWrap: 'wrap'
         }}>
           {['primary', 'secondary', 'accent', 'error', 'success', 'warning', 'info'].map(colorKey => (
-            <View key={colorKey} style={{ marginRight: 8, marginBottom: 8, alignItems: 'center' }}>
-              <View style={{
+            <ThemedView key={colorKey} style={{ marginRight: 8, marginBottom: 8, alignItems: 'center' }}>
+              <ThemedView style={{
                 width: 32,
                 height: 32,
                 borderRadius: 16,
-                backgroundColor: theme[colorKey],
+                backgroundColor: theme[colorKey] as string,
                 marginBottom: 4
               }} />
-              <Text style={{ ...textStyle, fontSize: 10 }}>{colorKey}</Text>
-            </View>
+              <ThemedText style={{ ...textStyle, fontSize: 10 }}>{colorKey}</ThemedText>
+            </ThemedView>
           ))}
-        </View>
+        </ThemedView>
         
-        <View style={{
+        <ThemedView style={{
           padding: 12,
           backgroundColor: theme.surfaceVariant,
           borderRadius: 4,
           marginBottom: 12
         }}>
-          <Text style={textStyle}>Surface Variant</Text>
-        </View>
+          <ThemedText style={textStyle}>Surface Variant</ThemedText>
+        </ThemedView>
         
-        <View style={{
+        <ThemedView style={{
           flexDirection: 'row',
           justifyContent: 'space-between',
           marginBottom: 12
@@ -493,7 +509,7 @@ const ThemeSwitcher = () => {
             backgroundColor: theme.primary,
             borderRadius: 4
           }}>
-            <Text style={{ color: theme.onSurface }}>Bouton Primaire</Text>
+            <ThemedText style={{ color: theme.onSurface }}>Bouton Primaire</ThemedText>
           </TouchableOpacity>
           
           <TouchableOpacity style={{
@@ -501,20 +517,20 @@ const ThemeSwitcher = () => {
             backgroundColor: theme.secondary,
             borderRadius: 4
           }}>
-            <Text style={{ color: theme.onSurface }}>Bouton Secondaire</Text>
+            <ThemedText style={{ color: theme.onSurface }}>Bouton Secondaire</ThemedText>
           </TouchableOpacity>
-        </View>
+        </ThemedView>
         
-        <View style={{
+        <ThemedView style={{
           padding: 10,
           borderWidth: 1,
           borderColor: theme.outline,
           borderRadius: 4,
           backgroundColor: theme.input.background
         }}>
-          <Text style={{ color: theme.input.placeholder }}>Champ de saisie</Text>
-        </View>
-      </View>
+          <ThemedText style={{ color: theme.input.placeholder }}>Champ de saisie</ThemedText>
+        </ThemedView>
+      </ThemedView>
     </ScrollView>
   );
 };

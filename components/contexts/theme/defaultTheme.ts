@@ -1,5 +1,5 @@
 
-import { ThemeColors } from "./ThemeTypes";
+import { ThemeColors } from "./themeTypes";
 
 const darkTheme: ThemeColors = {
   background: ["#0f172a", "#1e293b"],
@@ -126,6 +126,7 @@ const premiumTheme: ThemeColors = {
   secondary: "#7c3aed",
   accent: "#c026d3",
   error: "#ef4444",
+  star:"#fcd34d",
   success: "#10b981",
   warning: "#f59e0b",
   info: "#06b6d4",
@@ -180,6 +181,7 @@ const pastelTheme: ThemeColors = {
   secondary: "#8b5cf6",
   accent: "#d946ef",
   error: "#f87171",
+  star:"#fcd34d",
   success: "#4ade80",
   warning: "#fbbf24",
   info: "#22d3ee",
@@ -237,6 +239,7 @@ const nightshiftTheme: ThemeColors = {
   error: "#ff3b30",
   success: "#32d74b",
   warning: "#ff9500",
+  star:"#fcd34d",
   info: "#64d2ff",
   surface: "#2c2c2e",
   surfaceVariant: "#3a3a3c",
@@ -290,6 +293,7 @@ const materialYouDarkTheme: ThemeColors = {
   secondary: "#03dac6",
   accent: "#cf6679",
   error: "#cf6679",
+star:"#fcd34d",
   success: "#03dac6",
   warning: "#ffb74d",
   info: "#4fc3f7",

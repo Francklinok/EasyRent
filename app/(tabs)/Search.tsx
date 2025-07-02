@@ -5,8 +5,8 @@ import { ThemedView } from "@/components/ui/ThemedView"
 
 export default function Search(){
   return (
-    <ThemedView>
-        <Header/>
+    <ThemedView variant= "surface">
+        {/* <Header/> */}
         <AdvancedHousingSearch/>
     </ThemedView>
   )
