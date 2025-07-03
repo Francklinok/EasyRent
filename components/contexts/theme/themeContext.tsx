@@ -1,6 +1,4 @@
-
-
-import React, { useState, useEffect, createContext } from "react";
+import React, { useState, useEffect, createContext,useMemo} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useColorScheme } from "react-native";
 import * as Haptics from "expo-haptics";
@@ -28,7 +26,7 @@ const defaultContextValue: ThemeContextType = {
   themeConfig: {
     animationDuration: 300,
     useSystemTheme: true,
-    preferDarkTheme: true,
+    preferDarkTheme: false,
   },
   setThemeConfig: () => {},
 };
@@ -47,7 +45,7 @@ type ThemeProviderProps = {
 // Provider du thème
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   children,
-  initialTheme = "light",
+  initialTheme = "system",
   customThemes: initialCustomThemes = {},
   themeConfig: initialThemeConfig = {},
 }) => {
@@ -61,9 +59,92 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   const [themeConfig, setThemeConfigState] = useState({
     animationDuration: 300,
     useSystemTheme: true,
-    preferDarkTheme: true,
+    preferDarkTheme: false,
     ...initialThemeConfig,
   });
+
+  // Fonction pour résoudre le thème effectif
+  const resolveEffectiveTheme = (theme: ThemeType): ThemeType => {
+    if (theme === "system") {
+      return systemColorScheme === "dark" ? "dark" : "light";
+    }
+    return theme;
+  };
+
+  // Fonction pour obtenir les couleurs du thème actuel
+  const getActiveThemeColors = (): ThemeColors => {
+    const effectiveTheme = resolveEffectiveTheme(currentTheme);
+    
+    console.log('Current theme:', currentTheme);
+    console.log('Effective theme:', effectiveTheme);
+    console.log('System color scheme:', systemColorScheme);
+    
+    // Vérifier d'abord les thèmes personnalisés
+    if (customThemes[effectiveTheme]) {
+      console.log('Using custom theme:', effectiveTheme);
+      return customThemes[effectiveTheme];
+    }
+    
+    // Ensuite les thèmes par défaut
+    if (defaultThemes[effectiveTheme]) {
+      console.log('Using default theme:', effectiveTheme);
+      return defaultThemes[effectiveTheme];
+    }
+    
+    // Fallback sur le thème préféré
+    console.log('Using fallback theme');
+    return themeConfig.preferDarkTheme ? defaultThemes.dark : defaultThemes.light;
+  };
+
+  // Fonction pour déterminer si le thème est sombre
+  const getIsDark = (): boolean => {
+    const effectiveTheme = resolveEffectiveTheme(currentTheme);
+    
+    // Thèmes explicitement sombres
+    const darkThemes = ["dark", "premium", "nightshift", "materialYou"];
+    const lightThemes = ["light", "pastel"];
+    
+    if (darkThemes.includes(effectiveTheme)) {
+      return true;
+    }
+    
+    if (lightThemes.includes(effectiveTheme)) {
+      return false;
+    }
+    
+    // Pour les thèmes personnalisés, analyser la couleur de fond
+    if (customThemes[effectiveTheme]) {
+      const theme = customThemes[effectiveTheme];
+      const bg = Array.isArray(theme.background) ? theme.background[0] : theme.background;
+      
+      // Calculer la luminosité
+      const hex = bg.replace('#', '');
+      if (hex.length === 6) {
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance < 0.5;
+      }
+    }
+    
+    return false;
+  };
+  const theme = useMemo(() => getActiveThemeColors(), [
+  currentTheme,
+  customThemes,
+  systemColorScheme,
+  themeConfig.preferDarkTheme,
+]);
+
+const isDark = useMemo(() => getIsDark(), [
+  currentTheme,
+  customThemes,
+  systemColorScheme,
+]);
+
+  // const theme = getActiveThemeColors();
+  // const isDark = getIsDark();
 
   // Chargement des données sauvegardées
   useEffect(() => {
@@ -72,21 +153,23 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
         // Chargement du thème
         const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
         if (savedTheme !== null) {
+          console.log('Loaded theme from storage:', savedTheme);
           setCurrentTheme(savedTheme as ThemeType);
         }
 
         // Chargement des thèmes personnalisés
         const savedCustomThemes = await AsyncStorage.getItem(CUSTOM_THEMES_STORAGE_KEY);
         if (savedCustomThemes !== null) {
-          setCustomThemes(JSON.parse(savedCustomThemes));
+          const parsed = JSON.parse(savedCustomThemes);
+          console.log('Loaded custom themes from storage:', Object.keys(parsed));
+          setCustomThemes(parsed);
         } else if (Object.keys(initialCustomThemes).length > 0) {
-          // Utiliser les thèmes personnalisés initiaux si fournis
+          // Traitement des thèmes personnalisés initiaux
           const processedThemes: Record<string, ThemeColors> = {};
           
           Object.entries(initialCustomThemes).forEach(([name, partialTheme]) => {
-            // Fusionner avec le thème sombre par défaut pour compléter les valeurs manquantes
             processedThemes[name] = {
-              ...defaultThemes.dark,
+              ...defaultThemes.light,
               ...partialTheme,
             } as ThemeColors;
           });
@@ -94,16 +177,18 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
           setCustomThemes(processedThemes);
         }
 
-        // Chargement de la configuration du thème
+        // Chargement de la configuration
         const savedThemeConfig = await AsyncStorage.getItem(THEME_CONFIG_STORAGE_KEY);
         if (savedThemeConfig !== null) {
+          const parsed = JSON.parse(savedThemeConfig);
+          console.log('Loaded theme config from storage:', parsed);
           setThemeConfigState(prev => ({
             ...prev,
-            ...JSON.parse(savedThemeConfig),
+            ...parsed,
           }));
         }
       } catch (error) {
-        console.log("Erreur lors du chargement des préférences de thème:", error);
+        console.error("Erreur lors du chargement des préférences de thème:", error);
       }
     };
 
@@ -115,23 +200,23 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     const saveTheme = async () => {
       try {
         await AsyncStorage.setItem(THEME_STORAGE_KEY, currentTheme);
+        console.log('Theme saved to storage:', currentTheme);
       } catch (error) {
-        console.log("Erreur lors de l'enregistrement du thème:", error);
+        console.error("Erreur lors de l'enregistrement du thème:", error);
       }
     };
 
-    if (currentTheme !== initialTheme) {
-      saveTheme();
-    }
-  }, [currentTheme, initialTheme]);
+    saveTheme();
+  }, [currentTheme]);
 
   // Sauvegarde des thèmes personnalisés
   useEffect(() => {
     const saveCustomThemes = async () => {
       try {
         await AsyncStorage.setItem(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(customThemes));
+        console.log('Custom themes saved to storage');
       } catch (error) {
-        console.log("Erreur lors de l'enregistrement des thèmes personnalisés:", error);
+        console.error("Erreur lors de l'enregistrement des thèmes personnalisés:", error);
       }
     };
 
@@ -140,20 +225,21 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     }
   }, [customThemes]);
 
-  // Sauvegarde de la configuration du thème
+  // Sauvegarde de la configuration
   useEffect(() => {
     const saveThemeConfig = async () => {
       try {
         await AsyncStorage.setItem(THEME_CONFIG_STORAGE_KEY, JSON.stringify(themeConfig));
+        console.log('Theme config saved to storage');
       } catch (error) {
-        console.log("Erreur lors de l'enregistrement de la configuration du thème:", error);
+        console.error("Erreur lors de l'enregistrement de la configuration:", error);
       }
     };
 
     saveThemeConfig();
   }, [themeConfig]);
 
-  // Animation du changement de thème
+  // Gestion de l'animation
   useEffect(() => {
     let timeout: NodeJS.Timeout;
     if (isAnimatingTheme) {
@@ -164,125 +250,69 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     return () => clearTimeout(timeout);
   }, [isAnimatingTheme, themeConfig.animationDuration]);
 
-  const getActiveThemeColors = (): ThemeColors => {
-    console.log('Current theme:', currentTheme); // Debug
-    console.log('System color scheme:', systemColorScheme); // Debug
-    
-    // Si le thème est "system"
-    if (currentTheme === "system") {
-      const themeToUse = systemColorScheme === "dark" ? defaultThemes.light : defaultThemes.dark;
-      console.log('Using system theme:', systemColorScheme, themeToUse); // Debug
-      return themeToUse;
-    }
-    
-    // Si c'est un thème personnalisé
-    if (customThemes[currentTheme]) {
-      console.log('Using custom theme:', currentTheme); // Debug
-      return customThemes[currentTheme];
-    }
-    
-    // Si c'est un thème par défaut
-    if (defaultThemes[currentTheme]) {
-      console.log('Using default theme:', currentTheme); // Debug
-      return defaultThemes[currentTheme];
-    }
-    
-    // Fallback
-    console.log('Using fallback theme'); // Debug
-    return themeConfig.preferDarkTheme ? defaultThemes.light : defaultThemes.dark;
-  };
-
-  const theme = getActiveThemeColors();
-  
-  // ✅ LOGIQUE CORRIGÉE pour déterminer isDark
-  const getIsDark = (): boolean => {
-    if (currentTheme === "system") {
-      return systemColorScheme === "dark";
-    }
-    
-    // Pour les thèmes nommés explicitement
-    if (currentTheme === "dark" || currentTheme === "premium" || 
-        currentTheme === "nightshift" || currentTheme === "materialYou") {
-      return true;
-    }
-    
-    if (currentTheme === "light" || currentTheme === "pastel") {
-      return false;
-    }
-    
-    // Pour les thèmes personnalisés, vérifier la couleur de fond
-    if (customThemes[currentTheme]) {
-      const bg = Array.isArray(theme.background) ? theme.background[0] : theme.background;
-      // Convertir hex en RGB pour calculer la luminosité
-      const hex = bg.replace('#', '');
-      const r = parseInt(hex.substr(0, 2), 16);
-      const g = parseInt(hex.substr(2, 2), 16);
-      const b = parseInt(hex.substr(4, 2), 16);
-      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-      return luminance < 0.5; // Sombre si luminance < 50%
-    }
-    
-    return themeConfig.preferDarkTheme;
-  };
-
-  const isDark = getIsDark();
-  
-
-
-  // ✅ FONCTION TOGGLE CORRIGÉE
+  // Fonction toggle corrigée
   const toggleTheme = () => {
-    console.log('Toggling theme from:', currentTheme); // Debug
+    console.log('Toggle theme called, current:', currentTheme);
     setIsAnimatingTheme(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (error) {
+      console.warn('Haptics not available:', error);
+    }
     
     if (currentTheme === "system") {
-      // Si on est en système, basculer vers l'opposé du système
+      // Basculer vers l'opposé du système
       const newTheme = systemColorScheme === "dark" ? "light" : "dark";
-      console.log('Switching from system to:', newTheme); // Debug
+      console.log('Switching from system to:', newTheme);
       setCurrentTheme(newTheme);
-    } else if (currentTheme === "dark" || currentTheme === "premium" || 
-               currentTheme === "nightshift" || currentTheme === "materialYou") {
-      console.log('Switching to light'); // Debug
-      setCurrentTheme("light");
     } else {
-      console.log('Switching to dark'); // Debug
-      setCurrentTheme("dark");
+      // Basculer entre light et dark
+      const newTheme = isDark ? "light" : "dark";
+      console.log('Switching to:', newTheme);
+      setCurrentTheme(newTheme);
     }
   };
 
-  // ✅ FONCTION SET THEME CORRIGÉE
+  // Fonction setTheme corrigée
   const setTheme = (newTheme: ThemeType) => {
-    console.log('Setting theme to:', newTheme); // Debug
+    console.log('Set theme called:', newTheme);
     if (newTheme !== currentTheme) {
       setIsAnimatingTheme(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch (error) {
+        console.warn('Haptics not available:', error);
+      }
+      
       setCurrentTheme(newTheme);
     }
   };
-
-
-
 
   // Ajouter un thème personnalisé
   const addCustomTheme = (name: string, colors: Partial<ThemeColors>) => {
-    if (!name || name === "system" || name === "dark" || name === "light") {
-      console.warn("Le nom du thème est invalide ou réservé");
+    const reservedNames = ["system", "dark", "light", "premium", "pastel", "nightshift", "materialYou"];
+    
+    if (!name || reservedNames.includes(name)) {
+      console.warn("Le nom du thème est invalide ou réservé:", name);
       return;
     }
     
-    // Créer un nouveau thème basé sur le thème sombre ou clair par défaut
     const baseTheme = isDark ? defaultThemes.dark : defaultThemes.light;
-    const newTheme = { ...baseTheme, ...colors };
+    const newTheme: ThemeColors = { ...baseTheme, ...colors };
     
-    // Garantir que background est toujours un tableau
+    // Garantir que background est un tableau
     if (colors.background && !Array.isArray(colors.background)) {
-      newTheme.background = [colors.background as unknown as string, colors.background as unknown as string];
+      newTheme.background = [colors.background as string, colors.background as string];
     }
     
     setCustomThemes(prev => ({
       ...prev,
       [name]: newTheme
     }));
+    
+    console.log('Custom theme added:', name);
   };
 
   // Mettre à jour un thème personnalisé
@@ -292,18 +322,18 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
       return;
     }
     
-    // Créer le thème mise à jour
     const updatedTheme = { ...customThemes[name], ...colors };
     
-    // Garantir que background est toujours un tableau
     if (colors.background && !Array.isArray(colors.background)) {
-      updatedTheme.background = [colors.background as unknown as string, colors.background as unknown as string];
+      updatedTheme.background = [colors.background as string, colors.background as string];
     }
     
     setCustomThemes(prev => ({
       ...prev,
       [name]: updatedTheme
     }));
+    
+    console.log('Custom theme updated:', name);
   };
 
   // Supprimer un thème personnalisé
@@ -314,7 +344,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     }
     
     if (currentTheme === name) {
-      // Si le thème actuel est celui qu'on supprime, revenir au thème système
       setCurrentTheme("system");
     }
     
@@ -323,32 +352,33 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
       delete newThemes[name];
       return newThemes;
     });
+    
+    console.log('Custom theme removed:', name);
   };
 
-  // Mise à jour de la configuration du thème
+  // Mise à jour de la configuration
   const setThemeConfig = (config: Partial<ThemeContextType['themeConfig']>) => {
     setThemeConfigState(prev => ({
       ...prev,
       ...config
     }));
+    
+    console.log('Theme config updated:', config);
   };
-
-  // Tous les thèmes disponibles
-  const allThemes = { ...defaultThemes, ...customThemes };
 
   // Valeur du contexte
   const contextValue: ThemeContextType = {
     currentTheme,
+    theme,
+    isDark,
+    isAnimatingTheme,
     toggleTheme,
     setTheme,
-    theme,
     themes: { ...defaultThemes, ...customThemes },
+    customThemes,
     addCustomTheme,
     removeCustomTheme,
     updateCustomTheme,
-    customThemes,
-    isDark,
-    isAnimatingTheme,
     themeConfig,
     setThemeConfig,
   };

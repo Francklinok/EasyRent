@@ -1,17 +1,13 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import 'react-native-reanimated';
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Empêche l'écran de démarrage de se cacher automatiquement avant le chargement des ressources.
+import { ThemeProvider } from '@/components/contexts/theme/themeContext';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   
   // Chargement des polices personnalisées
   const [fontsLoaded] = useFonts({
@@ -34,7 +30,7 @@ export default function RootLayout() {
   };
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider initialTheme="system">
       <Stack screenOptions={screenOptions}>
 
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -43,5 +39,6 @@ export default function RootLayout() {
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
+
   );
 }
