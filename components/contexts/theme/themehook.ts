@@ -14,6 +14,7 @@ export const useTheme = () => {
 };
 
 // Hook pour accéder uniquement aux couleurs du thème actuel
+
 export const useThemeColors = (): ThemeColors => {
   const { theme } = useTheme();
   return theme;

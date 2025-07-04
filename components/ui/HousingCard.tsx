@@ -2,23 +2,23 @@
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
 import { ThemedView } from './ThemedView';
-import { ThemedText } from './ThemedText';
+import { useTheme } from '../contexts/theme/themehook';
 interface HousingCardProps {
   children?: React.ReactNode;
-  title: string;
-  price: number;
   onPress?: () => void;
   className?: string; 
 }
 
-export const HousingCard: React.FC<HousingCardProps> = ({ title, price, onPress, className, children }) => (
+// const  {theme} = useTheme();
+
+export const HousingCard: React.FC<HousingCardProps> = ({ onPress, className, children }) => (
+  
   <TouchableOpacity 
-    className={`bg-white p-4 rounded-xl shadow-md flex-row items-center ${className}`} 
+    className={`p-1 rounded-xl  flex-row items-center border${className}`} 
+    // style = {{borderColor:theme.cardBorder}}
     onPress={onPress}
   >
     <ThemedView className="flex-1">
-      <ThemedText className="text-lg font-bold">{title}</ThemedText>
-      <ThemedText className="text-green-600 text-base">{price} €/month</ThemedText>
       {children}
     </ThemedView>
   </TouchableOpacity>

@@ -10,27 +10,26 @@ import { ThemedText } from '../ui/ThemedText';
 const renderHousingCard = (housing: Housing) => (
     
   <HousingCard 
-    key={housing.id} 
-    title={housing.title}   
-    price={housing.price}   
-    className="mb-2"
-  >
+    key={housing.id}   >
+    <ThemedView className = "flex-row gap-10  items-center">
     <Image 
       source={{ uri: housing.images[0] }} 
-      className="w-28 h-18 rounded-xl mr-2" 
+      // className="w-28 h-6 rounded-xl mr-2" 
+      style = {{ width:100, height:100 , borderRadius:10}}
     />
-    <ThemedView className="flex-1">
+    <ThemedView>
       <ThemedText type = 'caption' intensity='strong'>{housing.title}</ThemedText>
-      <ThemedView className="flex-row justify-between mt-2">
+      <ThemedView className=" align-items-center mt-2">
         <ThemedView>
-          <ThemedText className="text-gray-600">{housing.city}, {housing.country}</ThemedText>
-          <ThemedText className="font-bold text-blue-600">{housing.price}€/month</ThemedText>
-        </ThemedView>
-        <ThemedView className="flex-row items-center">
+           <ThemedView className="flex-row items-center">
           <MaterialCommunityIcons name="home-city" size={20} color="#4B5563" />
           <ThemedText className="ml-1">{housing.type}</ThemedText>
+         </ThemedView>
+          <ThemedText >{housing.city}, {housing.country}</ThemedText>
+          <ThemedText>{housing.price}€/month</ThemedText>
         </ThemedView>
       </ThemedView>
+    </ThemedView>
     </ThemedView>
   </HousingCard>
 );

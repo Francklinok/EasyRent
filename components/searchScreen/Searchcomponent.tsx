@@ -58,7 +58,9 @@ const  {theme} = useTheme()
               healthcare: 4.7,
               shopping: 4.8,
             },
-            images: ['https://example.com/apartment1.jpg'],
+              images: [
+                'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
+              ],
           },
         ];
 

@@ -8,7 +8,7 @@ import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AntDesign} from "@expo/vector-icons";
-import EvilIcons from '@expo/vector-icons/EvilIcons';
+
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -22,7 +22,6 @@ export default function TabLayout() {
         tabBarBackground: TabBarBackground,
         tabBarStyle: Platform.select({
           ios: {
-            // Use a transparent background on iOS to show the blur effect
             position: 'absolute',
           },
           default: {},
@@ -33,7 +32,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={26} name="house.fill" color={color} />,
         }}
       />
       
@@ -41,7 +40,7 @@ export default function TabLayout() {
         name="Search"
         options={{
           title: 'Search',
-          tabBarIcon: ({ color }) => <AntDesign name="search1" size={28} color={color} />,
+          tabBarIcon: ({ color }) => <AntDesign name="search1" size={26} color={color} />,
         }}
       />
 
@@ -49,7 +48,7 @@ export default function TabLayout() {
         name="ChatList"
         options={{
           title: 'ChatList',
-          tabBarIcon: ({ color }) => <AntDesign name="message1" size={28} color={color}/>,
+          tabBarIcon: ({ color }) => <AntDesign name="message1" size={26} color={color}/>,
         }}
       />
       <Tabs.Screen

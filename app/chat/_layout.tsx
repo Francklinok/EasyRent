@@ -1,18 +1,17 @@
-
 import React from 'react';
-import { Stack } from "expo-router";
+import { Stack } from 'expo-router';
 import ChatHeader from '@/components/messages/chat/MessageHeader';
 
 export default function ChatLayout() {
   return (
-    <Stack
-      screenOptions={{
-        headerShown: true,
-        header: () => <ChatHeader />,
-        headerStyle: {
-          backgroundColor: "red",
-        },
-      }}
-    />
+    <Stack>
+      <Stack.Screen
+        name="[chatId]"
+        options={{
+          header: () => <ChatHeader />,
+          headerShown: true,
+        }}
+      />
+    </Stack>
   );
 }

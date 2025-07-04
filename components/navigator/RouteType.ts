@@ -1,5 +1,15 @@
-// navigationTypes.ts
 export type RootStackParamList = {
-  ChatList: undefined; // Pas de paramètres pour ChatList
-  Chat: { id: string; name: string; image: string }; // Paramètres pour l'écran Chat
+  ChatList: undefined;
+  Chat: {
+    chatId: string;    
+    name: string;
+    image: string;
+    status?: string;
+  };
+  ContactInfo: {
+    name: string;
+    image: string;
+    status?: string;
+    chatId: string;
+  };
 };

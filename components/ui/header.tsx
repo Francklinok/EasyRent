@@ -1,12 +1,9 @@
-
-
 import React from "react";
 import { TouchableOpacity, ViewStyle, Platform, StatusBar as RNStatusBar } from "react-native";
 import { SafeAreaView, StatusBar } from "react-native";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Svg, { Text as SvgText, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
 import NotificationBadge from "@/components/utils/Notification";
-// import ThemeToggle from "../ui/ThemeToggle";
 import { ReactNode } from "react";
 import { ThemedView } from "./ThemedView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -52,13 +49,6 @@ const Header = ({
     </Svg>
   );
   
-  // const defaultMainElement = (
-  //   <ThemedView>
-  //     <ThemeToggle />
-  //   </ThemedView>
-  // );
-  
-  // Default right element with notification icon
   const defaultRightElement = (
     <ThemedView className="flex">
       <TouchableOpacity>
@@ -95,15 +85,8 @@ const Header = ({
       >
         <ThemedView className="flex-row items-center justify-between z-8 h-15">
           {leftElement || defaultLeftElement}
-          {/* {mainElement || defaultMainElement} */}
           {rightElement || defaultRightElement}
         </ThemedView>
-
-        {/* <ThemedView className="flex-row items-center justify-between z-10 h-40">
-          {leftElement || defaultLeftElement}ss
-          {mainElement || defaultMainElement}
-          {rightElement || defaultRightElement}
-        </ThemedView> */}
       </ThemedView> 
     </SafeAreaView>
   );
