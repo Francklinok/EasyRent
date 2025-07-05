@@ -6,10 +6,9 @@ export default function ParamsLayout() {
     <Stack
       screenOptions={{
         headerShown: true,
-        headerStyle: {
-          backgroundColor: "red",
-        },
+        headerTintColor: "#fff", // couleur des icônes/texte
       }}
-    />
+    >
+    </Stack>
   );
 }

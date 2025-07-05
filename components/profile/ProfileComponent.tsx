@@ -1,436 +1,462 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Home,
+  User,
+  Settings,
+  Eye,
+  Heart,
+  Key,
+  TrendingUp,
+  DollarSign,
+  MapPin,
+  Calendar,
+  Phone,
+  Mail,
+  Star,
+  Badge,
+  Users,
+  Building,
+  Search,
+  Filter,
+  Bell,
+  MessageCircle,
+  FileText,
+  Camera,
+  Edit3,
+  Plus,
+  Trash2,
+  CheckCircle,
+  XCircle,
+  Clock,
+  BarChart3,
+  Target,
+  Briefcase,
+  Shield,
+  Award,
+  Zap,
+  Sparkles,
+  ChevronRight,
+  ChevronLeft
+} from 'lucide-react-native';
+import { TextInput, TouchableOpacity, Modal, Image, Linking } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import { ThemedView } from '../ui/ThemedView';
+import { ThemedText } from '../ui/ThemedText';
+import { useTheme } from '../contexts/theme/themehook';
 
-import React, { useState } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, Modal, FlatList } from 'react-native';
-import { Calendar } from 'react-native-calendars';
-// Import Lucide React Native icons properly
-import { ChevronRight, Calendar as CalendarIcon, CreditCard, Package, Bell, Shield, Video, Home } from 'lucide-react-native';
-import Services from '../info/servicesFiles';
-import Header from '../../../autre/info/head/HeadFile';
+import { UserProfile, UserRole, BuyerData,SellerData, 
+  RenterData,OwnerData, AgentData,DeveloperData, Property, 
+  UserStatistics,Activity,NotificationPreferences,PrivacySettings,PropertyViewing,
+Offer, RentalHistory, Tenant,MaintenanceRequest, Document, Message,Appointment,demoUser } from '@/types/profileType';
 
-interface PaymentHistory {
-  date: string;
-  amount: number;
-  status: string;
-}
 
-interface ApartmentDetails {
-  address: string;
-  leaseStart: string;
-  leaseEnd: string;
-  monthlyRent: number;
-  nextPaymentDate: string;
-  paymentHistory: PaymentHistory[];
-}
+const ProfileFile = () => {
+  const [user, setUser] = useState<UserProfile>(demoUser);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [newRoleType, setNewRoleType] = useState('');
 
-interface DeliveryAddress {
-  name: string;
-  street: string;
-  city: string;
-  postalCode: string;
-  specialInstructions: string;
-}
+  const { theme } = useTheme();
 
-interface Notification {
-  id: number;
-  date: string;
-  title: string;
-  message: string;
-}
+  // Calculer les rôles actifs
+  const activeRoles = user.roles.filter(role => role.isActive);
+  const inactiveRoles = user.roles.filter(role => !role.isActive);
 
-interface UserProfile {
-  name: string;
-  role: string;
-  profilePic: string;
-  contracts: string[];
-  apartmentDetails: ApartmentDetails;
-  deliveryAddress: DeliveryAddress;
-  notifications: Notification[];
-}
-
-interface Service {
-  id: string;
-  name: string;
-  icon: React.ReactNode;
-  description: string;
-}
-
-// Enhanced user profile with additional information
-const user: UserProfile = {
-  name: 'Jean Dupont',
-  role: 'Locataire',
-  profilePic: 'https://randomuser.me/api/portraits/men/32.jpg',
-  contracts: ['telemedicine', 'insurance'],
-  apartmentDetails: {
-    address: '123 Avenue République, Paris',
-    leaseStart: '2025-01-15',
-    leaseEnd: '2026-01-14',
-    monthlyRent: 1250,
-    nextPaymentDate: '2025-05-05',
-    paymentHistory: [
-      { date: '2025-04-05', amount: 1250, status: 'paid' },
-      { date: '2025-03-05', amount: 1250, status: 'paid' },
-      { date: '2025-02-05', amount: 1250, status: 'paid' },
-    ]
-  },
-  deliveryAddress: {
-    name: 'Jean Dupont',
-    street: '123 Avenue République',
-    city: 'Paris',
-    postalCode: '75011',
-    specialInstructions: 'Code: 1234, Étage 4, Appartement 402'
-  },
-  notifications: [
-    { id: 1, date: '2025-04-01', title: 'Rappel Paiement', message: 'Le paiement de votre loyer est prévu pour le 5 avril.' },
-    { id: 2, date: '2025-03-28', title: 'Inspection Annuelle', message: 'L\'inspection annuelle de l\'appartement est prévue pour le 15 avril.' }
-  ]
-};
-
-// Available services data
-const availableServices: Service[] = [
-  { 
-    id: 'telemedicine', 
-    name: 'Télémédecine', 
-    icon: <Video color="#4F46E5" size={24} />,
-    description: 'Consultations médicales à distance avec nos médecins partenaires'
-  },
-  { 
-    id: 'insurance', 
-    name: 'Assurance Habitation', 
-    icon: <Shield color="#4F46E5" size={24} />,
-    description: 'Protection complète pour votre appartement et vos biens'
-  },
-  { 
-    id: 'delivery', 
-    name: 'Livraison à Domicile', 
-    icon: <Package color="#4F46E5" size={24} />,
-    description: 'Service de livraison prioritaire pour tous vos achats en ligne'
-  },
-  { 
-    id: 'maintenance', 
-    name: 'Service de Maintenance', 
-    icon: <Home color="#4F46E5" size={24} />,
-    description: 'Intervention rapide pour tout problème technique dans votre logement'
-  }
-];
-
-const ProfileFile: React.FC = () => {
-  const [contracts, setContracts] = useState<string[]>(user.contracts);
-  const [showLeaseCalendar, setShowLeaseCalendar] = useState<boolean>(false);
-  const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
-  const [showServicesModal, setShowServicesModal] = useState<boolean>(false);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-
-  // Function to sign a contract and update state
-  const handleSignContract = (serviceKey: string): void => {
-    setContracts(prevContracts => [...prevContracts, serviceKey]);
+  // Fonction pour obtenir l'icône du rôle (lucide-react-native)
+  const getRoleIcon = (roleType: string) => {
+    const icons: any = {
+      buyer: Search,
+      seller: DollarSign,
+      renter: Key,
+      owner: Building,
+      agent: Users,
+      developer: Briefcase
+    };
+    return icons[roleType] || User;
   };
 
-  // Get important lease dates for calendar marking
-  const getMarkedDates = () => {
-    const markedDates: Record<string, any> = {};
-    
-    // Lease start and end dates
-    markedDates[user.apartmentDetails.leaseStart] = { 
-      marked: true, 
-      dotColor: '#4F46E5',
-      selected: true,
-      selectedColor: '#C7D2FE'
+  // Fonction pour obtenir le texte du rôle
+  const getRoleText = (roleType: string) => {
+    const texts: any = {
+      buyer: 'Acheteur',
+      seller: 'Vendeur',
+      renter: 'Locataire',
+      owner: 'Propriétaire',
+      agent: 'Agent',
+      developer: 'Promoteur'
     };
-    
-    markedDates[user.apartmentDetails.leaseEnd] = { 
-      marked: true, 
-      dotColor: '#EF4444',
-      selected: true,
-      selectedColor: '#FEE2E2'
+    return texts[roleType] || roleType;
+  };
+
+  // Fonction pour obtenir le badge de niveau 
+  const getLevelBadge = (level: string) => {
+    const badges: any = {
+      beginner: { color: theme.gray100, textColor: theme.gray600, text: 'Débutant' },
+      intermediate: { color: theme.blue100, textColor: theme.blue600, text: 'Intermédiaire' },
+      expert: { color: theme.green100, textColor: theme.success, text: 'Expert' }, // Changed to theme.success
+      professional: { color: theme.purple100, textColor: theme.purple600, text: 'Professionnel' }
     };
-    
-    // Payment dates
-    markedDates[user.apartmentDetails.nextPaymentDate] = { 
-      marked: true, 
-      dotColor: '#10B981',
-      selected: true,
-      selectedColor: '#D1FAE5'
+    return badges[level] || badges.beginner;
+  };
+
+  // Fonction pour obtenir la couleur du rôle
+  const getRoleColor = (roleType: string) => {
+    const colors: any = {
+      buyer: theme.primary,
+      seller: theme.warning,
+      renter: theme.secondary,
+      owner: theme.info,
+      agent: theme.accent,
+      developer: theme.star, // Using star color for developer
     };
-    
-    // Add past payments
-    user.apartmentDetails.paymentHistory.forEach(payment => {
-      markedDates[payment.date] = { 
-        marked: true, 
-        dotColor: '#10B981',
-        selected: true,
-        selectedColor: '#D1FAE5' 
+    return colors[roleType] || theme.subtext;
+  };
+
+  // Fonction pour basculer l'état d'un rôle
+  const toggleRole = (roleType: string) => {
+    setUser(prev => ({
+      ...prev,
+      roles: prev.roles.map(role =>
+        role.type === roleType
+          ? { ...role, isActive: !role.isActive }
+          : role
+      )
+    }));
+  };
+
+  // Fonction pour ajouter un nouveau rôle
+  const addRole = (roleType: string) => {
+    if (roleType && !user.roles.some(role => role.type === roleType)) {
+      const newRole: UserRole = {
+        type: roleType as any,
+        isActive: true,
+        level: 'beginner',
+        joinDate: new Date().toISOString().split('T')[0],
+        specificData: {}
       };
-    });
-    
-    return markedDates;
+
+      setUser(prev => ({
+        ...prev,
+        roles: [...prev.roles, newRole]
+      }));
+    }
+    setNewRoleType('');
   };
 
-  // Function to get service by ID
-  const getServiceById = (id: string): Service | undefined => {
-    return availableServices.find(service => service.id === id);
+  // Fonction de mise à jour générique pour les préférences de notification
+  const handleNotificationPreferenceChange = (key: keyof NotificationPreferences) => {
+    setUser(prev => ({
+      ...prev,
+      preferences: {
+        ...prev.preferences,
+        notifications: {
+          ...prev.preferences.notifications,
+          [key]: !prev.preferences.notifications[key]
+        }
+      }
+    }));
+  };
+
+  // Fonction de mise à jour générique pour les paramètres de confidentialité
+  const handlePrivacySettingChange = (key: keyof PrivacySettings) => {
+    setUser(prev => ({
+      ...prev,
+      preferences: {
+        ...prev.preferences,
+        privacy: {
+          ...prev.preferences.privacy,
+          [key]: !prev.preferences.privacy[key]
+        }
+      }
+    }));
+  };
+
+  // Composant pour afficher les statistiques de vérification (using ThemedView/Text)
+  const VerificationBadge = () => {
+    const verifiedCount = Object.values(user.verification).filter(value => value === true).length;
+    const totalCount = Object.keys(user.verification).length;
+    const percentage = (verifiedCount / totalCount) * 100;
+
+    return (
+      <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999, backgroundColor: theme.success }}>
+        <Shield size={16} color={theme.white} />
+        <ThemedText style={{ fontSize: 14, fontWeight: '500', color: theme.white }}>
+          {percentage.toFixed(0)}% Vérifié
+        </ThemedText>
+      </ThemedView>
+    );
+  };
+
+  // Composant pour afficher le niveau de confiance 
+  const TrustLevel = () => {
+    const trustScore = Math.round(
+      (user.statistics.averageRating / 5) * 100
+    );
+
+    return (
+      <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999, backgroundColor: theme.info }}>
+        <Award size={16} color={theme.white} />
+        <ThemedText style={{ fontSize: 14, fontWeight: '500', color: theme.white }}>
+          {trustScore}% de confiance
+        </ThemedText>
+      </ThemedView>
+    );
+  };
+
+  // Composant pour les documents 
+  const DocumentsSection = () => {
+    return (
+      <ThemedView style={{ gap: 24 }}>
+        <ThemedText style={{ fontSize: 18, fontWeight: '600', color: theme.text, marginBottom: 16 }}>Mes Documents</ThemedText>
+        {user.documents.length === 0 ? (
+          <ThemedView style={{ textAlign: 'center', paddingVertical: 32, backgroundColor: theme.surfaceVariant, borderRadius: 8 }}>
+            <FileText size={48} color={theme.subtext} style={{ alignSelf: 'center', marginBottom: 16 }} />
+            <ThemedText style={{ color: theme.subtext }}>Aucun document téléchargé pour le moment.</ThemedText>
+            <TouchableOpacity style={{ marginTop: 16, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: theme.primary, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center' }}>
+              <Plus size={16} color={theme.white} />
+              <ThemedText style={{ color: theme.white, fontWeight: '500' }}>
+                Ajouter un document
+              </ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
+        ) : (
+          <ThemedView style={{ borderBottomWidth: 1, borderBottomColor: theme.divider }}>
+            {user.documents.map(doc => (
+              <ThemedView key={doc.id} style={{ paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <FileText size={24} color={theme.onSurface} />
+                  <ThemedView>
+                    <ThemedText style={{ fontWeight: '500', color: theme.text }}>{doc.name}</ThemedText>
+                    <ThemedText style={{ fontSize: 13, color: theme.subtext }}>{doc.type} - Uploadé le {new Date(doc.uploadDate).toLocaleDateString()}</ThemedText>
+                  </ThemedView>
+                </ThemedView>
+                <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <ThemedText style={{ paddingHorizontal: 10, paddingVertical: 2, borderRadius: 999, fontSize: 12, fontWeight: '500', backgroundColor: doc.status === 'approved' ? theme.success : doc.status === 'pending' ? theme.warning : theme.error, color: theme.white }}>
+                    {doc.status}
+                  </ThemedText>
+                  <TouchableOpacity onPress={() => Linking.openURL(doc.url)}>
+                    <ThemedText style={{ color: theme.primary, fontSize: 13, fontWeight: '500' }}>
+                      Voir
+                    </ThemedText>
+                  </TouchableOpacity>
+                  {isEditMode && (
+                    <TouchableOpacity style={{ padding: 4 }}>
+                      <Trash2 size={16} color={theme.error} />
+                    </TouchableOpacity>
+                  )}
+                </ThemedView>
+              </ThemedView>
+            ))}
+          </ThemedView>
+        )}
+      </ThemedView>
+    );
+  };
+
+  // Composant pour la section de vérification 
+  const VerificationSection = () => {
+    return (
+      <ThemedView style={{ gap: 24 }}>
+        <ThemedText style={{ fontSize: 18, fontWeight: '600', color: theme.text, marginBottom: 16 }}>Statut de Vérification</ThemedText>
+        <ThemedView style={{ gap: 12 }}>
+          {Object.entries(user.verification).map(([key, value]) => (
+            <ThemedView key={key} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, backgroundColor: theme.surfaceVariant, borderRadius: 8 }}>
+              <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                {value ? (
+                  <CheckCircle size={20} color={theme.success} />
+                ) : (
+                  <XCircle size={20} color={theme.error} />
+                )}
+                <ThemedText style={{ fontWeight: '500', color: theme.text, textTransform: 'capitalize' }}>
+                  {key.replace(/([A-Z])/g, ' $1').toLowerCase()}
+                </ThemedText>
+              </ThemedView>
+              <ThemedText style={{ fontSize: 13, fontWeight: '600', color: value ? theme.success : theme.error }}>
+                {value ? 'Vérifié' : 'Non vérifié'}
+              </ThemedText>
+            </ThemedView>
+          ))}
+        </ThemedView>
+        {!user.verification.identity && isEditMode && (
+          <TouchableOpacity style={{ marginTop: 16, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: theme.primary, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' }}>
+            <Camera size={16} color={theme.white} />
+            <ThemedText style={{ color: theme.white, fontWeight: '500' }}>
+              Commencer la vérification d'identité
+            </ThemedText>
+          </TouchableOpacity>
+        )}
+      </ThemedView>
+    );
   };
 
   return (
-    <ScrollView className="flex bg-white">
-      <Header />
-      
-      {/* User Profile Section */}
-      <View className="flex items-center mt-6 px-4">
-        <Image
-          source={{ uri: user.profilePic }}
-          className="w-24 h-24 rounded-full border-4 border-indigo-500"
-        />
-        <Text className="text-xl font-bold mt-3">{user.name}</Text>
-        <Text className="text-sm text-gray-500">{user.role}</Text>
-        <Text className="text-sm text-gray-700 mt-2">{user.apartmentDetails.address}</Text>
-      </View>
+    <ThemedView style={{ flex: 1, backgroundColor: theme.surface }}>
+      {/* Header avec profil */}
+      <ThemedView style={{ backgroundColor: theme.primary, shadowColor: theme.shadow.color, shadowOffset: { width: 0, height: 1 }, shadowOpacity: theme.shadow.opacity, shadowRadius: theme.elevation.small, elevation: 1, borderBottomWidth: 1, borderBottomColor: theme.outline }}>
+        <ThemedView style={{ maxWidth: 768, alignSelf: 'center', width: '100%', paddingHorizontal: 16, paddingVertical: 24 }}>
+          <ThemedView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 24 }}>
+              <ThemedView style={{ position: 'relative' }}>
+                <Image
+                  source={{ uri: user.personalInfo.avatar }}
+                  style={{ width: 80, height: 80, borderRadius: 40, borderWidth: 4, borderColor: theme.surface, objectFit: 'cover' }}
+                />
+                <ThemedView style={{ position: 'absolute', bottom: -4, right: -4, width: 24, height: 24, backgroundColor: theme.success, borderRadius: 12, borderWidth: 2, borderColor: theme.surface, alignItems: 'center', justifyContent: 'center' }}>
+                  <CheckCircle size={12} color={theme.white} />
+                </ThemedView>
+              </ThemedView>
 
-      {/* Quick Actions */}
-      <View className="mt-6 px-4 flex flex-row justify-around">
-        <TouchableOpacity 
-          className="items-center" 
-          onPress={() => setShowLeaseCalendar(true)}
-        >
-          <View className="w-12 h-12 bg-indigo-100 rounded-full items-center justify-center">
-            <CalendarIcon color="#4F46E5" size={24} />
-          </View>
-          <Text className="text-xs mt-1 text-gray-700">Calendrier</Text>
-        </TouchableOpacity>
+              <ThemedView>
+                <ThemedText style={{ fontSize: 24, fontWeight: '700', color: theme.surface }}>
+                  {user.personalInfo.firstName} {user.personalInfo.lastName}
+                </ThemedText>
+                <ThemedText style={{ color: theme.surfaceVariant, marginBottom: 8 }}>{user.personalInfo.email}</ThemedText>
+                <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <VerificationBadge />
+                  <TrustLevel />
+                </ThemedView>
+              </ThemedView>
+            </ThemedView>
 
-        <TouchableOpacity 
-          className="items-center"
-          onPress={() => setShowPaymentModal(true)}
-        >
-          <View className="w-12 h-12 bg-green-100 rounded-full items-center justify-center">
-            <CreditCard color="#10B981" size={24} />
-          </View>
-          <Text className="text-xs mt-1 text-gray-700">Paiements</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity className="items-center">
-          <View className="w-12 h-12 bg-blue-100 rounded-full items-center justify-center">
-            <Bell color="#3B82F6" size={24} />
-          </View>
-          <Text className="text-xs mt-1 text-gray-700">Notifications</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          className="items-center"
-          onPress={() => setShowServicesModal(true)}
-        >
-          <View className="w-12 h-12 bg-purple-100 rounded-full items-center justify-center">
-            <Package color="#8B5CF6" size={24} />
-          </View>
-          <Text className="text-xs mt-1 text-gray-700">Services</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Lease Information Card */} 
-
-      <View className="mt-6 mx-4 bg-indigo-500 rounded-xl p-4 shadow-lg">
-        <Text className="text-white font-semibold text-lg mb-2">Contrat de Location</Text>
-        <View className="flex flex-row justify-between items-center mb-2">
-          <Text className="text-indigo-100">Début du bail:</Text>
-          <Text className="text-white font-medium">{user.apartmentDetails.leaseStart}</Text>
-        </View>
-        <View className="flex flex-row justify-between items-center mb-2">
-          <Text className="text-indigo-100">Fin du bail:</Text>
-          <Text className="text-white font-medium">{user.apartmentDetails.leaseEnd}</Text>
-        </View>
-        <View className="flex flex-row justify-between items-center">
-          <Text className="text-indigo-100">Loyer mensuel:</Text>
-          <Text className="text-white font-medium">{user.apartmentDetails.monthlyRent} €</Text>
-        </View>
-        <TouchableOpacity 
-          className="mt-3 bg-white bg-opacity-20 py-2 rounded-lg items-center"
-          onPress={() => setShowLeaseCalendar(true)}
-        >
-          <Text className="text-white font-medium">Voir Calendrier</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Active Services Section */}
-      <View className="mt-6 px-4">
-        <Text className="text-lg font-semibold text-indigo-600 mb-2">Vos Services Actifs</Text>
-        <View className="bg-indigo-50 rounded-lg shadow-sm overflow-hidden">
-          {contracts.length > 0 ? (
-            contracts.map((contractId, index) => {
-              const service = getServiceById(contractId);
-              return service ? (
-                <View key={index} className="flex flex-row items-center p-4 border-b border-indigo-100">
-                  <View className="mr-3">
-                    {service.icon}
-                  </View>
-                  <View className="flex-1">
-                    <Text className="font-medium text-gray-800">{service.name}</Text>
-                    <Text className="text-sm text-gray-600">{service.description}</Text>
-                  </View>
-                  <ChevronRight color="#6B7280" size={20} />
-                </View>
-              ) : null;
-            })
-          ) : (
-            <View className="p-4">
-              <Text className="text-gray-500 text-center">Aucun service actif</Text>
-            </View>
-          )}
-        </View>
-      </View>
-
-      {/* Available Services Button */}
-      <TouchableOpacity 
-        className="mx-4 mt-4 mb-8 bg-indigo-600 py-3 rounded-lg items-center"
-        onPress={() => setShowServicesModal(true)}
-      >
-        <Text className="text-white font-medium">Découvrir Tous les Services</Text>
-      </TouchableOpacity>
-
-      {/* Calendar Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showLeaseCalendar}
-        onRequestClose={() => setShowLeaseCalendar(false)}
-      >
-        <View className="flex-1 justify-end bg-black bg-opacity-50">
-          <View className="bg-white rounded-t-3xl p-5 h-2/3">
-            <View className="flex flex-row justify-between items-center mb-4">
-              <Text className="text-xl font-bold text-gray-800">Calendrier du Bail</Text>
-              <TouchableOpacity onPress={() => setShowLeaseCalendar(false)}>
-                <Text className="text-indigo-600 font-medium">Fermer</Text>
+            <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <TouchableOpacity style={{ padding: 8 }}>
+                <Bell size={20} color={theme.warning} />
               </TouchableOpacity>
-            </View>
-            
-            <Calendar
-              markedDates={getMarkedDates()}
-              theme={{
-                todayTextColor: '#4F46E5',
-                arrowColor: '#4F46E5',
-                dotColor: '#4F46E5',
-                selectedDayBackgroundColor: '#4F46E5',
-              }}
-            />
-            
-            <View className="mt-4">
-              <Text className="font-medium text-gray-800 mb-2">Dates importantes:</Text>
-              <View className="flex flex-row items-center mb-1">
-                <View className="w-3 h-3 rounded-full bg-indigo-600 mr-2" />
-                <Text>Début du bail: {user.apartmentDetails.leaseStart}</Text>
-              </View>
-              <View className="flex flex-row items-center mb-1">
-                <View className="w-3 h-3 rounded-full bg-red-500 mr-2" />
-                <Text>Fin du bail: {user.apartmentDetails.leaseEnd}</Text>
-              </View>
-              <View className="flex flex-row items-center">
-                <View className="w-3 h-3 rounded-full bg-green-500 mr-2" />
-                <Text>Paiements du loyer</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
+              <TouchableOpacity style={{ padding: 8 }}>
+                <MessageCircle size={20} color={theme.warning} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setIsEditMode(!isEditMode)}
+                style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: theme.accent, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              >
+                <Edit3 size={16} color={theme.white} />
+                <ThemedText style={{ color: theme.white, fontWeight: '500' }}>
+                  {isEditMode ? 'Sauvegarder' : 'Modifier'}
+                </ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+          </ThemedView>
+        </ThemedView>
+      </ThemedView>
 
-      {/* Payment Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showPaymentModal}
-        onRequestClose={() => setShowPaymentModal(false)}
-      >
-        <View className="flex-1 justify-end bg-black bg-opacity-50">
-          <View className="bg-white rounded-t-3xl p-5 h-2/3">
-            <View className="flex flex-row justify-between items-center mb-4">
-              <Text className="text-xl font-bold text-gray-800">Paiements</Text>
-              <TouchableOpacity onPress={() => setShowPaymentModal(false)}>
-                <Text className="text-indigo-600 font-medium">Fermer</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <View className="bg-green-50 p-4 rounded-lg mb-4">
-              <Text className="text-sm text-gray-600">Prochain paiement</Text>
-              <Text className="text-lg font-bold text-gray-800">{user.apartmentDetails.monthlyRent} € - {user.apartmentDetails.nextPaymentDate}</Text>
-              <TouchableOpacity className="mt-2 bg-green-600 py-2 rounded-lg items-center">
-                <Text className="text-white font-medium">Payer Maintenant</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <Text className="font-medium text-gray-800 mb-2">Historique des paiements:</Text>
-            <FlatList
-              data={user.apartmentDetails.paymentHistory}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({ item }) => (
-                <View className="flex flex-row justify-between items-center py-3 border-b border-gray-200">
-                  <Text>{item.date}</Text>
-                  <View className="flex flex-row items-center">
-                    <Text className="font-medium mr-2">{item.amount} €</Text>
-                    <View className="px-2 py-1 bg-green-100 rounded">
-                      <Text className="text-xs text-green-800">Payé</Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-            />
-          </View>
-        </View>
-      </Modal>
-
-      {/* Services Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showServicesModal}
-        onRequestClose={() => setShowServicesModal(false)}
-      >
-        <View className="flex-1 justify-end bg-black bg-opacity-50">
-          <View className="bg-white rounded-t-3xl p-5 h-3/4">
-            <View className="flex flex-row justify-between items-center mb-4">
-              <Text className="text-xl font-bold text-gray-800">Tous les Services</Text>
-              <TouchableOpacity onPress={() => setShowServicesModal(false)}>
-                <Text className="text-indigo-600 font-medium">Fermer</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {availableServices.map((service) => {
-              const isActive = contracts.includes(service.id);
-              
-              return (
-                <TouchableOpacity 
-                  key={service.id}
-                  className={`mb-3 p-4 rounded-lg ${isActive ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-gray-200'}`}
-                  onPress={() => {
-                    if (!isActive) {
-                      setSelectedService(service);
-                      setShowServicesModal(false);
-                      // Show confirmation dialog here in a real app
-                      handleSignContract(service.id);
-                    }
-                  }}
+      {/* Rôles actifs */}
+      <ThemedView style={{ maxWidth: 768, alignSelf: 'center', width: '100%', paddingHorizontal: 16, paddingVertical: 24 }}>
+        <ThemedView style={{ backgroundColor: theme.surface, borderRadius: 12, shadowColor: theme.shadow.color, shadowOffset: { width: 0, height: 1 }, shadowOpacity: theme.shadow.opacity, shadowRadius: theme.elevation.small, elevation: 1, padding: 24, marginBottom: 24 }}>
+          <ThemedView style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+            <ThemedText style={{ fontSize: 20, fontWeight: '600', color: theme.text }}>Mes Rôles Actifs</ThemedText>
+            <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Picker
+                selectedValue={newRoleType}
+                onValueChange={(itemValue) => setNewRoleType(itemValue)}
+                style={{ height: 40, width: 150, borderWidth: 1, borderColor: theme.outline, borderRadius: 8, color: theme.text }}
+                itemStyle={{ color: theme.text }} // This style might not apply directly to iOS or older Android. Consider custom picker for full control.
+              >
+                <Picker.Item label="Ajouter un rôle" value="" />
+                {['buyer', 'seller', 'renter', 'owner', 'agent', 'developer']
+                  .filter(type => !user.roles.some(role => role.type === type))
+                  .map(type => (
+                    <Picker.Item key={type} label={getRoleText(type)} value={type} />
+                  ))}
+              </Picker>
+              {newRoleType && (
+                <TouchableOpacity
+                  onPress={() => addRole(newRoleType)}
+                  style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: theme.success, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}
                 >
-                  <View className="flex flex-row items-center">
-                    <View className="mr-3">
-                      {service.icon}
-                    </View>
-                    <View className="flex-1">
-                      <Text className="font-medium text-gray-800">{service.name}</Text>
-                      <Text className="text-sm text-gray-600">{service.description}</Text>
-                    </View>
-                    {isActive ? (
-                      <View className="px-2 py-1 bg-indigo-100 rounded">
-                        <Text className="text-xs text-indigo-800">Actif</Text>
-                      </View>
-                    ) : (
-                      <View className="px-2 py-1 bg-gray-200 rounded">
-                        <Text className="text-xs text-gray-800">Souscrire</Text>
-                      </View>
+                  <Plus size={16} color={theme.white} />
+                  <ThemedText style={{ color: theme.white, fontWeight: '500' }}>
+                    Ajouter
+                  </ThemedText>
+                </TouchableOpacity>
+              )}
+            </ThemedView>
+          </ThemedView>
+
+          <ThemedView style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
+            {activeRoles.map((role) => {
+              const Icon = getRoleIcon(role.type);
+              const levelBadge = getLevelBadge(role.level);
+
+              return (
+                <TouchableOpacity
+                  key={role.type}
+                  style={{ position: 'relative', backgroundColor: theme.surfaceVariant, borderRadius: 8, padding: 16, borderWidth: 1, borderColor: theme.outline, flexBasis: '48%', // Adjust for responsive grid
+                  shadowColor: theme.shadow.color, shadowOffset: { width: 0, height: 2 }, shadowOpacity: theme.shadow.opacity, shadowRadius: theme.elevation.medium, elevation: 2 }}
+                  onPress={() => setSelectedRole(role)}
+                >
+                  <ThemedView style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <ThemedView style={{ width: 48, height: 48, borderRadius: 8, backgroundColor: getRoleColor(role.type), alignItems: 'center', justifyContent: 'center', shadowColor: theme.shadow.color, shadowOffset: { width: 0, height: 2 }, shadowOpacity: theme.shadow.opacity, shadowRadius: theme.elevation.large, elevation: 5 }}>
+                      <Icon size={24} color={theme.white} />
+                    </ThemedView>
+                    <ThemedText style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, fontSize: 12, fontWeight: '500', backgroundColor: levelBadge.color, color: levelBadge.textColor }}>
+                      {levelBadge.text}
+                    </ThemedText>
+                  </ThemedView>
+
+                  <ThemedText style={{ fontWeight: '600', color: theme.text, marginBottom: 4 }}>
+                    {getRoleText(role.type)}
+                  </ThemedText>
+                  <ThemedText style={{ fontSize: 13, color: theme.subtext, marginBottom: 12 }}>
+                    Actif depuis {new Date(role.joinDate).toLocaleDateString()}
+                  </ThemedText>
+
+                  {/* Statistiques spécifiques au rôle */}
+                  <ThemedView style={{ gap: 8 }}>
+                    {role.type === 'buyer' && (
+                      <ThemedView style={{ flexDirection: 'row', justifyContent: 'space-between', fontSize: 13 }}>
+                        <ThemedText style={{ color: theme.subtext }}>Budget:</ThemedText>
+                        <ThemedText style={{ fontWeight: '500', color: theme.text }}>
+                          {(role.specificData as BuyerData).budget?.min.toLocaleString()} - {(role.specificData as BuyerData).budget?.max.toLocaleString()}€
+                        </ThemedText>
+                      </ThemedView>
                     )}
-                  </View>
+
+                    {role.type === 'owner' && (
+                      <ThemedView style={{ flexDirection: 'row', justifyContent: 'space-between', fontSize: 13 }}>
+                        <ThemedText style={{ color: theme.subtext }}>Revenus/mois:</ThemedText>
+                        <ThemedText style={{ fontWeight: '500', color: theme.success }}>
+                          {(role.specificData as OwnerData).rentalIncome?.monthly.toLocaleString()}€
+                        </ThemedText>
+                      </ThemedView>
+                    )}
+                  </ThemedView>
+
+                  <TouchableOpacity
+                    onPress={() => toggleRole(role.type)}
+                    style={{ position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: theme.surface, shadowColor: theme.shadow.color, shadowOffset: { width: 0, height: 1 }, shadowOpacity: theme.shadow.opacity, shadowRadius: theme.elevation.small, elevation: 2, alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <ThemedView style={{ width: 12, height: 12, backgroundColor: theme.success, borderRadius: 6 }}></ThemedView>
+                  </TouchableOpacity>
                 </TouchableOpacity>
               );
             })}
-          </View>
-        </View>
-      </Modal>
-    </ScrollView>
+          </ThemedView>
+        </ThemedView>
+        {/* Verification and Documents sections */}
+        <VerificationSection />
+        <DocumentsSection />
+      </ThemedView>
+      {selectedRole && (
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={!!selectedRole}
+          onRequestClose={() => setSelectedRole(null)}
+        >
+          <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.backdrop }}>
+            <ThemedView style={{ backgroundColor: theme.surface, padding: 20, borderRadius: 10, width: '80%' }}>
+              <ThemedText style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 10, color: theme.text }}>Détails du rôle {getRoleText(selectedRole.type)}</ThemedText>
+²              <ThemedText style={{ color: theme.text }}>Niveau: {selectedRole.level}</ThemedText>
+              <ThemedText style={{ color: theme.text }}>Actif: {selectedRole.isActive ? 'Oui' : 'Non'}</ThemedText>
+              <TouchableOpacity onPress={() => setSelectedRole(null)} style={{ marginTop: 20, backgroundColor: theme.primary, padding: 10, borderRadius: 5 }}>
+                <ThemedText style={{ color: theme.white, textAlign: 'center' }}>Fermer</ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+          </ThemedView>
+        </Modal>
+      )}
+    </ThemedView>
   );
 };
 
