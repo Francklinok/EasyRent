@@ -28,7 +28,7 @@ export const ThemedText: React.FC<ThemedTextProps> = ({
   children,
   variant = 'default',
   intensity = 'normal',
-  type = 'body',
+  type = 'caption',
   fontFamily = 'Poppins_400Regular',
   scaleFactor = 0.0002,
   size,

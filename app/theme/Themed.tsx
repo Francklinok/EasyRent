@@ -44,7 +44,8 @@ import Slider from '@react-native-community/slider';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { ThemeColors } from '@/components/contexts/theme/themeTypes';
-
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BackButton } from '@/components/ui/BackButton';
 // Configuration des animations pour Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -103,6 +104,8 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ color, onColorChange, title }
 
 const ThemeSwitcher = () => {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+  
 
   const { 
     toggleTheme, 
@@ -212,7 +215,7 @@ const ThemeSwitcher = () => {
             {
               flexDirection: 'row',
               alignItems: 'center',
-              padding: 12,
+              padding: 8,
               marginVertical: 4,
               borderRadius: 12,
               borderWidth: 2,
@@ -296,7 +299,6 @@ const ThemeSwitcher = () => {
               <ThemedText style={{ 
                 fontWeight: isActive ? 'bold' : '600',
                 color: theme.text,
-                fontSize: 16
               }}>
                 {themeName.charAt(0).toUpperCase() + themeName.slice(1).replace('_', ' ')}
               </ThemedText>
@@ -312,7 +314,6 @@ const ThemeSwitcher = () => {
             {isActive && (
               <ThemedText style={{ 
                 color: theme.primary, 
-                fontSize: 12,
                 marginTop: 2,
                 fontWeight: '500'
               }}>
@@ -321,7 +322,6 @@ const ThemeSwitcher = () => {
             )}
             <ThemedText style={{ 
               color: theme.subtext, 
-              fontSize: 10,
               marginTop: 1
             }}>
               {isDark ? 'Mode sombre' : 'Mode clair'}
@@ -465,9 +465,7 @@ const ThemeSwitcher = () => {
         <RefreshCw size={20} color={theme.primary} />
         <ThemedText style={{ 
           color: theme.text, 
-          fontSize: 12, 
           marginTop: 4,
-          fontWeight: '500'
         }}>
           Basculer
         </ThemedText>
@@ -485,9 +483,7 @@ const ThemeSwitcher = () => {
         <Plus size={20} color={theme.secondary} />
         <ThemedText style={{ 
           color: theme.text, 
-          fontSize: 12, 
           marginTop: 4,
-          fontWeight: '500'
         }}>
           Créer
         </ThemedText>
@@ -505,9 +501,7 @@ const ThemeSwitcher = () => {
         <Download size={20} color={theme.accent} />
         <ThemedText style={{ 
           color: theme.text, 
-          fontSize: 12, 
           marginTop: 4,
-          fontWeight: '500'
         }}>
           Exporter
         </ThemedText>
@@ -525,9 +519,7 @@ const ThemeSwitcher = () => {
         <Upload size={20} color={theme.info} />
         <ThemedText style={{ 
           color: theme.text, 
-          fontSize: 12, 
           marginTop: 4,
-          fontWeight: '500'
         }}>
           Importer
         </ThemedText>
@@ -540,7 +532,7 @@ const ThemeSwitcher = () => {
       ref={scrollViewRef}
       style={[themedStyles.container]}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 100 }}
+      contentContainerStyle={{ paddingBottom: 100,  paddingTop: insets.top + 4 }}
     >
       {/* Animation d'arrière-plan */}
       <Animated.View 
@@ -557,24 +549,25 @@ const ThemeSwitcher = () => {
           })
         }}
       />
-      
       <ThemedView style={{ padding: 16 }}>
-        <ThemedText style={{ 
-          fontSize: 28, 
-          fontWeight: 'bold',  
+        <ThemedView  className='flex-row  gap-6'>
+      <BackButton />
+
+        <ThemedText  intensity = 'strong' type = "title"  style={{ 
           marginBottom: 8,
-          color: theme.text
+          color: theme.text,
+          marginTop:8
         }}>
           Paramètres d'apparence
         </ThemedText>
-        
+        </ThemedView>
+{/*         
         <ThemedText style={{ 
-          fontSize: 16, 
           color: theme.subtext,
           marginBottom: 24
         }}>
           Thème actuel: {themeDisplayName} {isDark ? '(Sombre)' : '(Clair)'}
-        </ThemedText>
+        </ThemedText> */}
         
         {/* Actions rapides */}
         {renderQuickActions()}
@@ -602,11 +595,9 @@ const ThemeSwitcher = () => {
           activeOpacity={0.7}
         >
           <PaintBucket size={24} color={theme.primary} style={{ marginRight: 12 }} />
-          <ThemedText style={{ 
+          <ThemedText intensity = 'strong'  style={{ 
             flex: 1, 
-            fontWeight: 'bold',
             color: theme.text,
-            fontSize: 16
           }}>
             Apparence
           </ThemedText>
@@ -621,7 +612,7 @@ const ThemeSwitcher = () => {
         
         {isExpanded.appearance && (
           <ThemedView style={[
-            themedStyles.surface,
+            // themedStyles.surface,
             {
               borderRadius: 12,
               padding: 16,
@@ -722,8 +713,6 @@ const ThemeSwitcher = () => {
               <ThemedText style={{ 
                 color: theme.text, 
                 flex: 1,
-                fontSize: 16,
-                fontWeight: '500'
               }}>
                 Basculer le thème
               </ThemedText>
@@ -754,11 +743,9 @@ const ThemeSwitcher = () => {
           activeOpacity={0.7}
         >
           <Palette size={24} color={theme.secondary} style={{ marginRight: 12 }} />
-          <ThemedText style={{ 
+          <ThemedText intensity='strong' style={{ 
             flex: 1, 
-            fontWeight: 'bold',
             color: theme.text,
-            fontSize: 16
           }}>
             Thèmes disponibles
           </ThemedText>
@@ -776,8 +763,8 @@ const ThemeSwitcher = () => {
             themedStyles.surface,
             {
               borderRadius: 12,
-              padding: 16,
-              marginBottom: 16,
+              padding: 10,
+              marginBottom: 14,
               borderWidth: 1,
               borderColor: theme.outline
             }
@@ -811,11 +798,9 @@ const ThemeSwitcher = () => {
           activeOpacity={0.7}
         >
           <PaintBucket size={24} color={theme.accent} style={{ marginRight: 12 }} />
-          <ThemedText style={{ 
+          <ThemedText intensity='strong' style={{ 
             flex: 1, 
-            fontWeight: 'bold',
             color: theme.text,
-            fontSize: 16
           }}>
             Thèmes personnalisés
           </ThemedText>
@@ -829,8 +814,6 @@ const ThemeSwitcher = () => {
             }}>
               <ThemedText style={{ 
                 color: theme.onSurface, 
-                fontSize: 12,
-                fontWeight: 'bold'
               }}>
                 {Object.keys(customThemes).length}
               </ThemedText>
@@ -866,10 +849,9 @@ const ThemeSwitcher = () => {
                 padding: 32 
               }}>
                 <PaintBucket size={48} color={theme.subtext} style={{ marginBottom: 16 }} />
-                <ThemedText style={{ 
+                <ThemedText type = 'subtitle' style={{ 
                   color: theme.subtext,
                   textAlign: 'center',
-                  fontSize: 16,
                   marginBottom: 8
                 }}>
                   Aucun thème personnalisé
@@ -877,7 +859,6 @@ const ThemeSwitcher = () => {
                 <ThemedText style={{ 
                   color: theme.subtext,
                   textAlign: 'center',
-                  fontSize: 14
                 }}>
                   Créez votre premier thème personnalisé
                 </ThemedText>
@@ -901,11 +882,9 @@ const ThemeSwitcher = () => {
               }}
               onPress={createSampleCustomTheme}
             >
-              <Plus size={20} color={theme.onSurface} style={{ marginRight: 8 }} />
-              <ThemedText style={{ 
-                color: theme.onSurface, 
-                fontWeight: 'bold',
-                fontSize: 16
+              <Plus size={20} color={theme.surface} style={{ marginRight: 8 }} />
+              <ThemedText  type = 'normal' style={{ 
+                color: theme.surface, 
               }}>
                 Créer un thème personnalisé
               </ThemedText>
@@ -936,11 +915,9 @@ const ThemeSwitcher = () => {
           activeOpacity={0.7}
         >
           <Settings size={24} color={theme.info} style={{ marginRight: 12 }} />
-          <ThemedText style={{ 
+          <ThemedText intensity = 'strong' style={{ 
             flex: 1, 
-            fontWeight: 'bold',
             color: theme.text,
-            fontSize: 16
           }}>
             Paramètres avancés
           </ThemedText>
@@ -959,7 +936,7 @@ const ThemeSwitcher = () => {
             {
               borderRadius: 12,
               padding: 16,
-              marginBottom: 16,
+              marginBottom: 8,
               borderWidth: 1,
               borderColor: theme.outline
             }
@@ -968,13 +945,11 @@ const ThemeSwitcher = () => {
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              marginBottom: 16,
-              paddingVertical: 8
+              paddingVertical: 2
             }}>
               <ThemedText style={{ 
                 color: theme.text,
-                fontSize: 16,
-                fontWeight: '500'
+                
               }}>
                 Thème système automatique
               </ThemedText>
@@ -991,13 +966,12 @@ const ThemeSwitcher = () => {
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              marginBottom: 16,
-              paddingVertical: 8
+              marginBottom: 14,
+              paddingVertical: 2
             }}>
               <ThemedText style={{ 
                 color: theme.text,
-                fontSize: 16,
-                fontWeight: '500'
+               
               }}>
                 Animations de transition
               </ThemedText>
@@ -1013,8 +987,7 @@ const ThemeSwitcher = () => {
             <ThemedView style={{ marginBottom: 16 }}>
               <ThemedText style={{ 
                 color: theme.text,
-                fontSize: 16,
-                fontWeight: '500',
+             
                 marginBottom: 8
               }}>
                 Durée des animations: {Math.round(animationDuration)}ms
@@ -1037,13 +1010,12 @@ const ThemeSwitcher = () => {
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              marginBottom: 16,
-              paddingVertical: 8
+              marginBottom: 8,
+              paddingVertical: 2
             }}>
               <ThemedText style={{ 
                 color: theme.text,
-                fontSize: 16,
-                fontWeight: '500'
+              
               }}>
                 Thème haute performance
               </ThemedText>
@@ -1061,7 +1033,6 @@ const ThemeSwitcher = () => {
               fontSize: 12,
               fontStyle: 'italic',
               textAlign: 'center',
-              marginTop: 8
             }}>
               Le mode haute performance désactive certaines animations pour améliorer les performances
             </ThemedText>
@@ -1091,11 +1062,9 @@ const ThemeSwitcher = () => {
           activeOpacity={0.7}
         >
           <Eye size={24} color={theme.success} style={{ marginRight: 12 }} />
-          <ThemedText style={{ 
+          <ThemedText intensity='strong' style={{ 
             flex: 1, 
-            fontWeight: 'bold',
             color: theme.text,
-            fontSize: 16
           }}>
             Aperçu du thème
           </ThemedText>
@@ -1157,8 +1126,6 @@ const ThemeSwitcher = () => {
                   }} />
                   <ThemedText style={{
                     color: theme.text,
-                    fontSize: 12,
-                    fontWeight: '500'
                   }}>
                     {label}
                   </ThemedText>
@@ -1172,17 +1139,14 @@ const ThemeSwitcher = () => {
               padding: 16,
               marginTop: 16
             }}>
-              <ThemedText style={{
+              <ThemedText intensity='strong' type = 'normal'  style={{
                 color: theme.text,
-                fontSize: 16,
-                fontWeight: 'bold',
                 marginBottom: 8
               }}>
                 Exemple d'interface
               </ThemedText>
               <ThemedText style={{
                 color: theme.subtext,
-                fontSize: 14,
                 marginBottom: 12
               }}>
                 Voici un aperçu de l'interface avec le thème actuel
@@ -1200,9 +1164,8 @@ const ThemeSwitcher = () => {
                   flex: 1
                 }}>
                   <ThemedText style={{
-                    color: theme.onSurface,
+                    color: theme.surface,
                     textAlign: 'center',
-                    fontWeight: '500'
                   }}>
                     Bouton principal
                   </ThemedText>
@@ -1215,9 +1178,8 @@ const ThemeSwitcher = () => {
                   flex: 1
                 }}>
                   <ThemedText style={{
-                    color: theme.text,
+                    color: theme.surface,
                     textAlign: 'center',
-                    fontWeight: '500'
                   }}>
                     Bouton secondaire
                   </ThemedText>
@@ -1232,14 +1194,12 @@ const ThemeSwitcher = () => {
               }}>
                 <ThemedText style={{
                   color: theme.text,
-                  fontSize: 14,
                   fontWeight: '500'
                 }}>
                   Carte d'exemple
                 </ThemedText>
                 <ThemedText style={{
                   color: theme.subtext,
-                  fontSize: 12,
                   marginTop: 4
                 }}>
                   Contenu de la carte avec le thème appliqué
@@ -1272,11 +1232,9 @@ const ThemeSwitcher = () => {
           activeOpacity={0.7}
         >
           <Download size={24} color={theme.warning} style={{ marginRight: 12 }} />
-          <ThemedText style={{ 
+          <ThemedText intensity = 'strong' style={{ 
             flex: 1, 
-            fontWeight: 'bold',
             color: theme.text,
-            fontSize: 16
           }}>
             Export/Import
           </ThemedText>
@@ -1351,7 +1309,6 @@ const ThemeSwitcher = () => {
                 <Upload size={18} color={theme.onSurface} style={{ marginRight: 8 }} />
                 <ThemedText style={{
                   color: theme.onSurface,
-                  fontWeight: '500'
                 }}>
                   Importer
                 </ThemedText>
@@ -1360,7 +1317,6 @@ const ThemeSwitcher = () => {
             
             <ThemedText style={{
               color: theme.subtext,
-              fontSize: 12,
               textAlign: 'center',
               fontStyle: 'italic'
             }}>
