@@ -1,34 +1,34 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import React from 'react';
+import { TouchableOpacity, Dimensions } from 'react-native';
 import { useTheme } from '../contexts/theme/themehook';
 import { ThemedView } from '@/components/ui/ThemedView';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-
+import { ThemedText } from '../ui/ThemedText';
 
 // Composant pour le plan d'abonnement
 const PlanCard = ({ plan, onSelect, isSelected }) => {
     const { theme } = useTheme();
-    const borderColor = isSelected ? plan.color : 'transparent';
+    const borderColor = isSelected ? theme.outline : 'transparent';
     
     return (
       <ThemedView
-        variant='surface'
+        variant="surfaceVariant"
         // elevated = "medium"
         // elevated={isSelected ? "medium" : "small"}
         style={{
           borderRadius: 12,
           padding: 16,
-          marginHorizontal: 8,
-          borderWidth: 2,
+          marginHorizontal: 2,
+          borderWidth: 1,
           borderColor,
-          width: Dimensions.get('window').width - 64,
-          maxWidth: 300,
+          width: Dimensions.get('window').width - 84,
+          maxWidth: 250,
           alignSelf: 'center',
           marginVertical: 8,
         }}
       >
         {plan.popular && (
-          <View style={{
+          <ThemedView style={{
             position: 'absolute',
             top: -10,
             right: 20,
@@ -38,35 +38,31 @@ const PlanCard = ({ plan, onSelect, isSelected }) => {
             borderRadius: 16,
             zIndex: 1
           }}>
-            <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 12 }}>
+            <ThemedText intensity='strong' style={{ color:theme.surface }}>
               POPULAIRE
-            </Text>
-          </View>
+            </ThemedText>
+          </ThemedView>
         )}
         
-        <Text style={{ 
-          fontSize: 20, 
-          fontWeight: 'bold', 
+        <ThemedText type = 'subtitle' intensity='strong' style={{ 
           color: theme.onSurface,
           marginBottom: 4 
         }}>
           {plan.title}
-        </Text>
+        </ThemedText>
         
-        <Text style={{ 
-          fontSize: 22, 
-          fontWeight: 'bold', 
+        <ThemedText type = "subtitle" style={{ 
           color: plan.color,
           marginBottom: 16 
         }}>
           {plan.price}
-        </Text>
+        </ThemedText>
         
         {/* Liste des fonctionnalités */}
         {plan.features.map((feature, index) => (
-          <ThemedView variant='surface' key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+          <ThemedView variant="surfaceVariant" key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <Icon name="check-circle" size={18} color={plan.color} style={{ marginRight: 8 }} />
-            <Text style={{ color: theme.onSurfaceVariant }}>{feature}</Text>
+            <ThemedText style={{ color: theme.onSurface }}>{feature}</ThemedText>
           </ThemedView>
         ))}
         
@@ -80,12 +76,11 @@ const PlanCard = ({ plan, onSelect, isSelected }) => {
           }}
           onPress={() => onSelect(plan.id)}
         >
-          <Text style={{ 
-            color: isSelected ? '#FFFFFF' : theme.onSurfaceVariant, 
-            fontWeight: 'bold' 
+          <ThemedText type='body' intensity  ="strong" style={{ 
+            color: isSelected ? theme.primary : theme.onSurfaceVariant, 
           }}>
             {isSelected ? 'SÉLECTIONNÉ' : 'CHOISIR'}
-          </Text>
+          </ThemedText>
         </TouchableOpacity>
       </ThemedView>
     );

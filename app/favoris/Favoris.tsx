@@ -65,7 +65,8 @@ const FavoritesScreen = () => {
   };
 
   return (
-    <ThemedView variant="default" style={{ flex: 1, paddingTop: insets.top + 4 }}>
+    <ThemedView variant="default"
+     style={{ flex: 1, paddingTop: insets.top + 4}}>
       <ThemedView style={{ padding: 16 }}>
         <ThemedView style={{ flexDirection: 'row', gap: 12, marginBottom: 16, alignItems: 'center' }}>
           <BackButton />
@@ -91,20 +92,17 @@ const FavoritesScreen = () => {
                 variant="surface"
                 style={{
                   marginBottom: 12,
-                  padding: 12,
-                  borderRadius: 12,
-                  backgroundColor: theme.surface,
-                  shadowColor: '#000',
-                  shadowOpacity: 0.05,
-                  shadowRadius: 4,
-                  elevation: 1,
+                  padding: 4,
                 }}
               >
                 <FavoriteItem item={item} onRemove={removeFavorite} />
               </ThemedView>
             )}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={{ paddingBottom: 16 }}
+            contentContainerStyle={{
+              paddingBottom: insets.bottom + 55, // 
+            }}
+            showsVerticalScrollIndicator = {false}
           />
         ) : (
           <ThemedView

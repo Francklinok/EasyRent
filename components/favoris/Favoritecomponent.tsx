@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, Image, TouchableOpacity } from 'react-native';
-import { useTheme } from '@/components/contexts/theme/themehook';
-import { ThemedView } from '@/components/ui/ThemedView';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import React from 'react';
+import { Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ui/ThemedText';
+import { ThemedView } from '@/components/ui/ThemedView';
+import { useTheme } from '@/components/contexts/theme/themehook';
 
-// Types
 type FavoriteItemType = {
   id: string;
   title: string;
@@ -17,117 +15,103 @@ type FavoriteItemType = {
   imageUrl: string;
 };
 
-// Données simulées
-const DUMMY_FAVORITES: FavoriteItemType[] = [
-  {
-    id: '1',
-    title: 'Villa Moderne',
-    type: 'Maison',
-    location: 'Paris, France',
-    price: '625,000 €',
-    surface: '180 m²',
-    rooms: 5,
-    imageUrl: 'https://example.com/house1.jpg',
-  },
-  {
-    id: '2',
-    title: 'Appartement Centre-Ville',
-    type: 'Appartement',
-    location: 'Lyon, France',
-    price: '320,000 €',
-    surface: '95 m²',
-    rooms: 3,
-    imageUrl: 'https://example.com/apartment1.jpg',
-  },
-  {
-    id: '3',
-    title: 'Terrain Constructible',
-    type: 'Terrain',
-    location: 'Bordeaux, France',
-    price: '185,000 €',
-    surface: '750 m²',
-    rooms: null,
-    imageUrl: 'https://example.com/land1.jpg',
-  },
-];
-
-// Composant d’un favori
-const FavoriteItem = ({
-  item,
-  onRemove,
-}: {
+type Props = {
   item: FavoriteItemType;
   onRemove: (id: string) => void;
-}) => {
+};
+
+const FavoriteItem = ({ item, onRemove }: Props) => {
   const { theme } = useTheme();
 
+  if (!item) return null; // Sécurité
+
+  const onSurface = theme.onSurface as string;
+  const onSurfaceVariant = theme.onSurfaceVariant as string;
+  const primary = theme.primary as string;
+  const error = (theme.error ?? '#ff4444') as string;
+
   return (
-    <ThemedView
-      variant="surface"
-      elevated="small"
-      style={{
-        marginBottom: 10,
-        borderRadius: 12,
-        overflow: 'hidden',
-      }}
-    >
-      <ThemedView style={{ flexDirection: 'row', height: 120 }}>
-        {/* Image */}
-        <ThemedView style={{ width: 120, height: '100%', backgroundColor: theme.surface}}>
-          <Image
-            source={
-              item.imageUrl
-                ? { uri: item.imageUrl }
-                : require('@/assets/images/property.jpg')
-            }
-            style={{ width: '100%', height: '100%' }}
-            resizeMode="cover"
-          />
-        </ThemedView>
+    <ThemedView style={[styles.container, { backgroundColor: theme.surface as string }]}>
+      <Image
+        source={{ uri: item.imageUrl }}
+        style={styles.image}
+        resizeMode="cover"
+      />
+      <ThemedText
+        type="normal"
+        intensity="strong"
+        style={[styles.title, { color: onSurface }]}
+      >
+        {item.title}
+      </ThemedText>
 
-        {/* Détails */}
-        <ThemedView style={{ flex: 1, padding: 12, justifyContent: 'space-between' }}>
-          <ThemedView>
-            <ThemedText style={{ fontWeight: 'bold', fontSize: 16, color: theme.onSurface }}>
-              {item.title}
-            </ThemedText>
-            <ThemedText style={{ fontSize: 14, color: theme.onSurface, marginTop: 2 }}>
-              {item.location}
-            </ThemedText>
-          </ThemedView>
+      <ThemedText >
+        {item.type} - {item.location}
+      </ThemedText>
 
-          <ThemedView
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <ThemedText style={{ fontWeight: 'bold', color: theme.primary, fontSize: 16 }}>
-              {item.price}
-            </ThemedText>
-            <ThemedView style={{ flexDirection: 'row' }}>
-              <ThemedText style={{ color: theme.onSurface, marginRight: 8 }}>
-                {item.surface}
-              </ThemedText>
-              {item.rooms !== null && (
-                <ThemedText style={{ color: theme.onSurface}}>
-                  {item.rooms} pièces
-                </ThemedText>
-              )}
-            </ThemedView>
-          </ThemedView>
-        </ThemedView>
+      <ThemedText style={[ { color: primary }]}>
+        {item.price}
+      </ThemedText>
 
-        {/* Bouton de suppression */}
-        <TouchableOpacity
-          style={{ padding: 10, justifyContent: 'flex-start', alignItems: 'center' }}
-          onPress={() => onRemove(item.id)}
-        >
-          <Icon name="heart" size={24} color={theme.error || '#ED4245'} />
-        </TouchableOpacity>
-      </ThemedView>
+      <ThemedText style={[styles.details, { color: onSurfaceVariant }]}>
+        Surface : {item.surface} {item.rooms !== null ? `• ${item.rooms} pièce(s)` : ''}
+      </ThemedText>
+
+      <TouchableOpacity
+        onPress={() => onRemove(item.id)}
+        style={[styles.removeButton, { backgroundColor: error }]}
+      >
+        <ThemedText intensity="strong" style={styles.removeText}>
+          Supprimer
+        </ThemedText>
+      </TouchableOpacity>
     </ThemedView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    borderRadius: 12,
+    padding: 8,
+    marginBottom: 12,
+    // ombre iOS
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    // elevation Android
+    elevation: 1,
+  },
+  image: {
+    width: '100%',
+    height: 160,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  price: {
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  details: {
+    marginBottom: 8,
+  },
+  removeButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  removeText: {
+    color: '#fff',
+  },
+});
+
 export default FavoriteItem;

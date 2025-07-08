@@ -16,10 +16,11 @@ export function BackButton({ onBack }: { onBack?: () => void }) {
         }
       }}
       style={{
-        borderWidth: 2,
+        borderWidth: 1,
         borderColor: "#b8b8b7",
         borderRadius: 16,
-        padding: 6,
+        padding: 4,
+        maxWidth:45,
       }}
     >
       <MaterialIcons name="keyboard-backspace" size={22} color={"#b8b8b7"} />
