@@ -15,13 +15,6 @@ export function BackButton({ onBack }: { onBack?: () => void }) {
         //   router.replace("/auth");
         }
       }}
-      style={{
-        borderWidth: 1,
-        borderColor: "#b8b8b7",
-        borderRadius: 16,
-        padding: 4,
-        maxWidth:45,
-      }}
     >
       <MaterialIcons name="keyboard-backspace" size={22} color={"#b8b8b7"} />
       {/* <MaterialCommunityIcons name="chevron-left" size={28} color="#111827" /> */}

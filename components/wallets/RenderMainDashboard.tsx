@@ -1,14 +1,13 @@
 import { ScrollView } from "react-native";
 import { ThemedView } from "../ui/ThemedView";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Shield, CreditCard, Wallet, Settings, ArrowRight, ArrowLeft, ChevronDown, ChevronUp, Plus, Lock, BarChart3, History, Send, Download, DollarSign, Bitcoin, Bell } from 'lucide-react-native';
+import {  TouchableOpacity, StyleSheet } from "react-native";
+import { Shield, CreditCard, Settings, ArrowRight, ArrowLeft, ChevronDown, ChevronUp, Plus, Lock, BarChart3, History, Send, Download, DollarSign, Bitcoin, Bell } from 'lucide-react-native';
 import _ from 'lodash';
 import { useTheme } from "../contexts/theme/themehook";
 import { ThemedScrollView } from "../ui/ScrolleView";
 import { ThemedText } from "../ui/ThemedText";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BackButton } from "../ui/BackButton";
-import { Positions } from "react-native-calendars/src/expandableCalendar";
 
 type WalletData = {
   balance: number;
@@ -72,7 +71,7 @@ const RenderMainDashboard: React.FC<Props> = ({
   
 
   return (
-    <ThemedView variant = 'default'
+    <ThemedView  className = "px-2"
       style={{ flex: 1, paddingTop: insets.top + 4  }}
     >
       <ThemedScrollView className="w-full h-full">
@@ -102,7 +101,7 @@ const RenderMainDashboard: React.FC<Props> = ({
             </ThemedText>
           )}
           
-          <ThemedView variant = "surface" style={styles.quickActions}>
+          <ThemedView variant = "surfaceVariant" style={styles.quickActions}>
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: theme.primary }]}
               onPress={() => setCurrentSection('send')}
@@ -138,9 +137,9 @@ const RenderMainDashboard: React.FC<Props> = ({
             style={styles.sectionHeader} 
             onPress={() => toggleExpand('crypto')}
           >
-            <ThemedView variant  = "surface" style={styles.sectionTitleContainer}>
+            <ThemedView variant  = "surface" className="px-4" style={styles.sectionTitleContainer}>
               <Bitcoin size={20} color={theme.accent} />
-              <ThemedText  style={[styles.sectionTitle , {color:theme.onSurface}]}>Portefeuille Crypto</ThemedText>
+              <ThemedText className="pl-4" style={{color:theme.onSurface}}>Portefeuille Crypto</ThemedText>
             </ThemedView>
             {expanded.crypto ? 
               <ChevronUp size={20} color={theme.onSurface} /> : 
@@ -149,14 +148,22 @@ const RenderMainDashboard: React.FC<Props> = ({
           </TouchableOpacity>
           
           {expanded.crypto && (
-            <ThemedView variant = 'surfaceVariant'  style={styles.cryptoContainer}>
+            <ThemedView  className = "px-8"  style={styles.cryptoContainer}>
               {walletData.cryptoBalances.map((crypto, index) => (
                 <TouchableOpacity
                   key={index}
-                  style={styles.cryptoItem}
+                  style={{ flex:1,
+                  flexDirection:"row",
+                  padding:10,
+                  borderRadius:10,
+                  marginBottom:8,
+                  alignItems:"center",
+                  justifyContent: "center",
+                  gap:8,
+                  backgroundColor:theme.surfaceVariant}}
                   onPress={() => setCurrentSection(`crypto-detail-${crypto.currency}`)}
                 >
-                  <ThemedView variant = 'surfaceVariant' style={styles.cryptoInfo}>
+                  <ThemedView variant = 'surfaceVariant' className = "px-6" style={styles.cryptoInfo}>
                     <ThemedText intensity="strong"  style={styles.cryptoSymbol}>{crypto.currency}</ThemedText>
                     <ThemedText intensity="strong" variant="secondary">
                       {crypto.amount} {crypto.currency}
@@ -169,10 +176,20 @@ const RenderMainDashboard: React.FC<Props> = ({
               ))}
               
               <TouchableOpacity 
-                style={[styles.viewAllButton]}
+                style={{ flex:1,
+                  flexDirection:"row",
+                  borderWidth:1,
+                  borderColor:theme.outline,
+                  padding:10,
+                  borderRadius:20,
+                  marginBottom:8,
+                  alignItems:"center",
+                  justifyContent: "center",
+                  gap:8,
+                  backgroundColor:theme.surfaceVariant}}
                 onPress={() => setCurrentSection('crypto')}
               >
-                <ThemedText type = "normal"  variant="primary" intensity="strong">Gérer le portefeuille crypto</ThemedText>
+                <ThemedText>Gérer le portefeuille crypto</ThemedText>
                 <ArrowRight size={16} color={theme.primary} />
               </TouchableOpacity>
             </ThemedView>
@@ -184,14 +201,15 @@ const RenderMainDashboard: React.FC<Props> = ({
           variant="surface" 
           style={styles.sectionContainer}
           bordered
+          className="px-2 mb-4"
         >
           <TouchableOpacity 
             style={styles.sectionHeader} 
             onPress={() => toggleExpand('payment')}
           >
-            <ThemedView variant = "surface" style={styles.sectionTitleContainer}>
+            <ThemedView variant = "surface" className="px-4" style={styles.sectionTitleContainer}>
               <CreditCard size={20} color={theme.primary} />
-              <ThemedText style={[styles.sectionTitle, {color:theme.onSurface}]}>Moyens de paiement</ThemedText>
+              <ThemedText className="pl-4"  style={ {color:theme.onSurface}}>Moyens de paiement</ThemedText>
             </ThemedView>
             {expanded.payment ? 
               <ChevronUp size={20} color={theme.surfaceVariant} /> : 
@@ -200,22 +218,21 @@ const RenderMainDashboard: React.FC<Props> = ({
           </TouchableOpacity>
           
           {expanded.payment && (
-            <ThemedView variant = "surface" style={styles.paymentMethodsContainer}>
+            <ThemedView className="px-4">
               {walletData.paymentMethods.map((method, index) => (
                 <TouchableOpacity 
                   key={index}
-                  style={styles.paymentMethodItem}
                   onPress={() => setCurrentSection(`payment-detail-${method.id}`)}
                 >
-                  <ThemedView variant = "surface" style={styles.paymentMethodInfo}>
+                  <ThemedView  variant = "surfaceVariant"  className=" flex-1 flex-row items-center  p-2 rounded-2xl">
                     {method.type === 'card' ? (
                       <CreditCard size={24} color={theme.primary} />
                     ) : (
                       <DollarSign size={24} color={theme.secondary} />
                     )}
-                    <ThemedView variant = "surface" style={styles.paymentMethodDetails}>
-                      <ThemedText variant="primary" style={styles.paymentMethodName}>{method.name}</ThemedText>
-                      <ThemedText variant="secondary" style={styles.paymentMethodNumber}>
+                    <ThemedView variant = "surfaceVariant"style={styles.paymentMethodDetails}>
+                      <ThemedText  type = "normal" variant= "default" intensity="strong" style={styles.paymentMethodName}>{method.name}</ThemedText>
+                      <ThemedText type = "normal" variant= "default" intensity="strong" style={styles.paymentMethodNumber}>
                         {method.type === 'card' ? `•••• ${method.last4}` : `•••• ${method.last4}`}
                       </ThemedText>
                     </ThemedView>
@@ -225,11 +242,26 @@ const RenderMainDashboard: React.FC<Props> = ({
               ))}
               
               <TouchableOpacity 
-                style={[styles.addPaymentMethod]}
-                onPress={() => setCurrentSection('add-payment')}
-              >
-                <Plus size={18} color={theme.primary} />
-                <ThemedText variant="primary" style={styles.addPaymentText}>Ajouter un moyen de paiement</ThemedText>
+                style = {{
+                  flex:1,
+                  flexDirection:"row",
+                  borderWidth:1,
+                  borderColor:theme.outline,
+                  padding:10,
+                  borderRadius:20,
+                  marginBottom:8,
+                  alignItems:"center",
+                  justifyContent: "center",
+                  gap:8,
+                  backgroundColor:theme.surfaceVariant
+
+                }}
+                onPress={() => setCurrentSection('add-payment')}>
+
+                <Plus size={18} color={theme.text} />
+                <ThemedText variant="default" >
+                  Ajouter un moyen de paiement
+                </ThemedText>
               </TouchableOpacity>
             </ThemedView>
           )}
@@ -245,9 +277,9 @@ const RenderMainDashboard: React.FC<Props> = ({
             style={styles.sectionHeader} 
             onPress={() => toggleExpand('transactions')}
           >
-            <ThemedView variant = "surface" style={styles.sectionTitleContainer}>
+            <ThemedView variant = "surface" className="px-4" style={styles.sectionTitleContainer}>
               <History size={20} color={theme.secondary} />
-              <ThemedText style={[styles.sectionTitle, {color:theme.onSurface}]}>Transactions récentes</ThemedText>
+              <ThemedText className="pl-4" style={{color:theme.onSurface}}>Transactions récentes</ThemedText>
             </ThemedView>
             {expanded.transactions ? 
               <ChevronUp size={20} color={theme.surfaceVariant} /> : 
@@ -256,39 +288,50 @@ const RenderMainDashboard: React.FC<Props> = ({
           </TouchableOpacity>
           
           {expanded.transactions && (
-            <ThemedView variant = "surface" style={styles.transactionsContainer}>
+            <ThemedView variant = "surface" className="px-4" >
               {transactionHistory.slice(0, 5).map((transaction, index) => (
                 <TouchableOpacity 
                   key={transaction.id}
-                  style={styles.transactionItem}
+                  style = {{
+                    left:1,
+                    flexDirection:'row',
+                    padding:6,
+                  }}
                   onPress={() => setCurrentSection(`transaction-detail-${transaction.id}`)}
                 >
                   <ThemedView variant = "surface" style={styles.transactionInfo}>
                     <ThemedView variant={transaction.type === 'received' ? 'accent' : 
                       transaction.type === 'crypto' ? 'secondary' : 'primary'} 
-                      style={styles.transactionIcon}>
+                      style = {{
+                        padding:6,
+                        borderRadius:20,
+                        alignItems:"center"
+
+                      }}
+                      >
                       {transaction.type === 'received' ? (
-                        <Download size={14} color={theme.onSurface} />
+                        <Download size={14} color={theme.surface} />
                       ) : transaction.type === 'crypto' ? (
-                        <Bitcoin size={14} color={theme.onSurface} />
+                        <Bitcoin size={14} color={theme.surface} />
                       ) : (
-                        <Send size={14} color={theme.onSurface} />
+                        <Send size={14} color={theme.surface} />
                       )}
                     </ThemedView>
-                    <ThemedView variant = "surface" style={styles.transactionDetails}>
-                      <ThemedText variant="primary" style={styles.transactionDesc}>
+                    <ThemedView variant = "surface" className="px-4">
+                      <ThemedText intensity="normal" variant="default" type= "body">
                         {transaction.description}
                       </ThemedText>
-                      <ThemedText variant="secondary" style={styles.transactionDate}>
+                      <ThemedText variant="default" intensity="light">
                         {transaction.date}
                       </ThemedText>
                     </ThemedView>
                   </ThemedView>
                   <ThemedView variant = "surface" style={styles.transactionAmountContainer}>
-                    <ThemedText 
-                      variant={transaction.type === 'received' ? 'success' : 
-                        transaction.type === 'crypto' ? 'accent' : 'primary'} 
-                      style={styles.transactionAmount}
+                    <ThemedText  intensity="strong"
+                      style={{
+                        color:transaction.type === 'received'? theme.success: 
+                         transaction.type === 'crypto' ? 'accent' : 'primary'
+                      }}
                     >
                       {transaction.type === 'received' ? '+' : transaction.type === 'crypto' ? '' : '-'} 
                       {transaction.type === 'crypto' 
@@ -304,11 +347,21 @@ const RenderMainDashboard: React.FC<Props> = ({
               ))}
               
               <TouchableOpacity 
-                style={styles.viewAllButton}
+                style={{ flex:1,
+                  flexDirection:"row",
+                  borderWidth:1,
+                  borderColor:theme.outline,
+                  padding:10,
+                  borderRadius:20,
+                  marginBottom:8,
+                  alignItems:"center",
+                  justifyContent: "center",
+                  gap:8,
+                  backgroundColor:theme.surfaceVariant}}
                 onPress={() => setCurrentSection('transactions')}
               >
-                <ThemedText variant="primary" style={styles.viewAllText}>Voir toutes les transactions</ThemedText>
-                <ArrowRight size={16} color={theme.primary} />
+                <ThemedText>Voir toutes les transactions</ThemedText>
+                <ArrowRight size={16} color={theme.text} />
               </TouchableOpacity>
             </ThemedView>
           )}
@@ -317,16 +370,18 @@ const RenderMainDashboard: React.FC<Props> = ({
         {/* Paramètres */}
         <ThemedView 
           variant="surface" 
-          style={styles.sectionContainer}
           bordered
+          className="px-4"
+          style={styles.sectionContainer}
+
         >
           <TouchableOpacity 
             style={styles.sectionHeader} 
             onPress={() => toggleExpand('settings')}
           >
-            <ThemedView variant = "surface" style={styles.sectionTitleContainer}>
-              <Settings size={20} color={theme.surfaceVariant} />
-              <ThemedText variant="primary" style={[styles.sectionTitle, {color:theme.onSurface}]}>Paramètres du portefeuille</ThemedText>
+            <ThemedView variant = "surface" className="flex-row">
+              <Settings size={20} color={theme.error} />
+              <ThemedText className="pl-4" style={{color:theme.onSurface}}>Paramètres du portefeuille</ThemedText>
             </ThemedView>
             {expanded.settings ? 
               <ChevronUp size={20} color={theme.surfaceVariant} /> : 
@@ -341,7 +396,7 @@ const RenderMainDashboard: React.FC<Props> = ({
                 onPress={() => setCurrentSection('security-settings')}
               >
                 <Shield size={20} color={theme.primary} />
-                <ThemedText variant="primary" style={styles.settingsText}>Sécurité et authentification</ThemedText>
+                <ThemedText className="pl-4">Sécurité et authentification</ThemedText>
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -349,7 +404,7 @@ const RenderMainDashboard: React.FC<Props> = ({
                 onPress={() => setCurrentSection('currency-settings')}
               >
                 <DollarSign size={20} color={theme.secondary} />
-                <ThemedText variant="primary" style={styles.settingsText}>Devise et préférences</ThemedText>
+                <ThemedText className="pl-4" >Devise et préférences</ThemedText>
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -357,7 +412,7 @@ const RenderMainDashboard: React.FC<Props> = ({
                 onPress={() => setCurrentSection('notification-settings')}
               >
                 <Bell size={20} color={theme.accent} />
-                <ThemedText variant="primary" style={styles.settingsText}>Notifications</ThemedText>
+                <ThemedText className="pl-4">Notifications</ThemedText>
               </TouchableOpacity>
             </ThemedView>
           )}
@@ -412,7 +467,7 @@ const styles = StyleSheet.create({
   },
   sectionContainer: {
     borderRadius: 12,
-    marginHorizontal: 6,
+    marginHorizontal:2,
     marginBottom: 16,
     overflow: 'hidden',
   },
@@ -421,16 +476,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
+
   },
   sectionTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 10,
-  },
+ 
   cryptoContainer: {
     paddingHorizontal: 16,
     paddingBottom: 16,
@@ -468,17 +520,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginRight: 8,
   },
+
+
   paymentMethodsContainer: {
-    paddingHorizontal: 16,
     paddingBottom: 16,
   },
-  paymentMethodItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
+
   paymentMethodInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -488,8 +535,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   paymentMethodName: {
-    fontSize: 16,
-    fontWeight: '500',
     marginBottom: 4,
   },
   paymentMethodNumber: {
@@ -503,11 +548,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     borderRadius: 8,
     borderWidth: 1,
-  },
-  addPaymentText: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 8,
   },
   transactionsContainer: {
     paddingHorizontal: 16,
@@ -555,14 +595,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   settingsContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 40,
     paddingBottom: 16,
   },
   settingsItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
-    borderBottomWidth: 1,
+    
   },
   settingsText: {
     fontSize: 16,
