@@ -71,12 +71,12 @@ const RenderMainDashboard: React.FC<Props> = ({
   
 
   return (
-    <ThemedView  className = "px-2"
+    <ThemedView  className = "px-3"
       style={{ flex: 1, paddingTop: insets.top + 4  }}
     >
       <ThemedScrollView className="w-full h-full">
         {/* Balance Card - Using elevated for better visual hierarchy */}
-        <ThemedView className="px-2 ">
+        <ThemedView className="px-4 ">
            <BackButton />
         </ThemedView>
         <ThemedView 

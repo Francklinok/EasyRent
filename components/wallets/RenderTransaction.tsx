@@ -29,34 +29,34 @@ const RenderTransactions: React.FC<Props> = ({ setCurrentSection,formatAmount,tr
   const {theme} = useTheme();
   
   return (
-    <ThemedScrollView className="w-full h-full">
-      <ThemedView variant="default" style={styles.sectionContainer}>
+    <ThemedScrollView className="w-full h-full pt-10">
+      <ThemedView style={styles.sectionContainer}>
         <ThemedView style={styles.sectionHeader}>
           <TouchableOpacity onPress={() => setCurrentSection('main')} style={styles.backButton}>
             <ArrowLeft size={20} color={theme.onSurface} />
           </TouchableOpacity>
-          <ThemedText type = "title" style={[styles.sectionHeaderTitle, { color: theme.onSurface }]}>Historique des transactions</ThemedText>
+          <ThemedText type = "subtitle" style={{ color: theme.onSurface }}>Historique des transactions</ThemedText>
         </ThemedView>
         
         <ThemedView style={styles.transactionFilterContainer}>
-          <ThemedText style={[styles.filterLabel, { color: theme.onSurface }]}>Filtrer par</ThemedText>
-          <ThemedView style={styles.filterOptions}>
+          <ThemedText  className="px-2 py-4" style={ { color: theme.onSurface }}>Filtrer par</ThemedText>
+          <ThemedView className="px-2" style={styles.filterOptions}>
             <TouchableOpacity style={[styles.filterOption, { borderColor: theme.surface, backgroundColor: theme.surfaceVariant }]}>
-              <ThemedText style={[styles.filterOptionText, { color: theme.text }]}>Tout</ThemedText>
+              <ThemedText style={{ color: theme.text }}>Tout</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.filterOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
-              <ThemedText style={[styles.filterOptionText, { color: theme.text }]}>Envoyés</ThemedText>
+              <ThemedText style={ { color: theme.text }}>Envoyés</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.filterOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
-              <ThemedText style={[styles.filterOptionText, { color: theme.text }]}>Reçus</ThemedText>
+              <ThemedText style={ { color: theme.text }}>Reçus</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.filterOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
-              <ThemedText style={[styles.filterOptionText, { color: theme.text }]}>Crypto</ThemedText>
+              <ThemedText style={ { color: theme.text }}>Crypto</ThemedText>
             </TouchableOpacity>
           </ThemedView>
         </ThemedView>
         
-        <ThemedView style={styles.transactionsListContainer}>
+        <ThemedView className="px-2" >
           {transactionHistory.map((transaction, index) => (
             <TouchableOpacity 
               key={transaction.id}
@@ -66,35 +66,35 @@ const RenderTransactions: React.FC<Props> = ({ setCurrentSection,formatAmount,tr
               <ThemedView style={styles.transactionInfoLarge}>
                 <ThemedView style={[styles.transactionIconLarge, { 
                   backgroundColor: transaction.type === 'received' ? theme.accent : 
-                                   transaction.type === 'crypto' ? '#f7931a' : theme.secondary 
+                                   transaction.type === 'crypto' ? theme.warning : theme.secondary 
                 }]}>
                   {transaction.type === 'received' ? (
-                    <Download size={18} color="#fff" />
+                    <Download size={18} color= {theme.surface}/>
                   ) : transaction.type === 'crypto' ? (
-                    <Bitcoin size={18} color="#fff" />
+                    <Bitcoin size={18} color={theme.surface} />
                   ) : (
-                    <Send size={18} color="#fff" />
+                    <Send size={18} color={theme.surface} />
                   )}
                 </ThemedView>
                 <ThemedView style={styles.transactionDetailsLarge}>
-                  <ThemedText style={[styles.transactionDescLarge, { color: theme.onSurface }]}>
+                  <ThemedText style={ { color: theme.onSurface }}>
                     {transaction.description}
                   </ThemedText>
-                  <ThemedText style={[styles.transactionDateLarge, { color: theme.onSurface }]}>
+                  <ThemedText style={ { color: theme.onSurface }}>
                     {transaction.date}
                   </ThemedText>
                   {transaction.status === 'pending' && (
                     <ThemedView style={[styles.statusBadge, { backgroundColor: theme.surfaceVariant }]}>
-                      <ThemedText style={[styles.statusBadgeText, { color: theme.onSurface }]}>En attente</ThemedText>
+                      <ThemedText style={ { color: theme.onSurface }}>En attente</ThemedText>
                     </ThemedView>
                   )}
                 </ThemedView>
               </ThemedView>
               <ThemedView style={styles.transactionAmountContainerLarge}>
-                <ThemedText style={[styles.transactionAmountLarge, { 
+                <ThemedText intensity="strong" style={ { 
                   color: transaction.type === 'received' ? '#4caf50' : 
                          transaction.type === 'crypto' ? '#f7931a' : theme.onSurface 
-                }]}>
+                }}>
                   {transaction.type === 'received' ? '+' : transaction.type === 'crypto' ? '' : '-'} 
                   {transaction.type === 'crypto' 
                     ? `${transaction.amount} ${transaction.cryptoCurrency}`
@@ -142,27 +142,23 @@ const styles = StyleSheet.create({
   },
   filterOptions: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 8,
   },
   filterOption: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
     marginRight: 8,
     marginBottom: 8,
   },
-  filterOptionText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  transactionsListContainer: {
+nsactionsListContainer: {
     marginTop: 8,
   },
   transactionItemLarge: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   transactionInfoLarge: {

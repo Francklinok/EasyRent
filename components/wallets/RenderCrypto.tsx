@@ -6,6 +6,7 @@ import { ArrowLeft, ChevronDown, Bitcoin } from 'lucide-react-native';
 import { useTheme } from "../contexts/theme/themehook";
 import _ from 'lodash';
 import { ThemedText } from "../ui/ThemedText";
+import { BackButton } from "../ui/BackButton";
 type WalletData = {
   balance: number;
   pendingBalance: number;
@@ -49,12 +50,11 @@ const RenderCrypto: React.FC<Props> = ({
   const {theme} = useTheme();
   
   return (
-    <ScrollView>
-      <ThemedView className="flex-1 px-2 py-7">
-        <ThemedView style={styles.sectionHeader}>
-          <TouchableOpacity onPress={() => setCurrentSection('main')} style={styles.backButton}>
-            <ArrowLeft size={20} color={theme.onSurface} />
-          </TouchableOpacity>
+    <ThemedView className="h-full">
+    <ScrollView  contentContainerStyle={{ paddingTop: 40, paddingBottom: 40, height:'100%' }}>
+      <ThemedView className=" flex-1 px-3">
+        <ThemedView className="gap-4" style={styles.sectionHeader}>
+          <BackButton/>
           <ThemedText  type = "title" style={{color:theme.onSurface }}>Portefeuille Crypto</ThemedText>
         </ThemedView>
         
@@ -296,6 +296,7 @@ const RenderCrypto: React.FC<Props> = ({
         )}
       </ThemedView>
     </ScrollView>
+    </ThemedView>
   );
 };
 

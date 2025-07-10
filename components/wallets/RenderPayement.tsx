@@ -1,10 +1,11 @@
 
 import { CreditCard, ArrowLeft, DollarSign } from 'lucide-react-native';
 import { ThemedView } from '../ui/ThemedView';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
+import { ScrollView, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
 import { useTheme } from '../contexts/theme/themehook';
 import _ from 'lodash';
 import { ThemedText } from '../ui/ThemedText';
+import { BackButton } from '../ui/BackButton';
 
 type WalletData = {
   balance: number;
@@ -36,17 +37,19 @@ const RenderSendPayment: React.FC<Props> = ({ setCurrentSection, handleNewPaymen
   const {theme} = useTheme();
 
   return (
-    <ScrollView className="w-full h-full">
-      <ThemedView variant="surface" style={styles.sectionContainer}>
-        <ThemedView style={styles.sectionHeader}>
-          <TouchableOpacity onPress={() => setCurrentSection('main')} style={styles.backButton}>
-            <ArrowLeft size={20} color={theme.onSurface} />
-          </TouchableOpacity>
-          <ThemedText style={[styles.sectionHeaderTitle, { color: theme.onSurface }]}>Envoyer un paiement</ThemedText>
+    <ThemedView className = "h-full">
+    <ScrollView className=" px-3"
+    contentContainerStyle={{ paddingTop: 40 }}>
+
+      <ThemedView variant="surface" className = "h-full"style={styles.sectionContainer}>
+        <ThemedView className = "gap-4 "style={styles.sectionHeader}>
+         <BackButton/>
+
+          <ThemedText type = "subtitle" style={ { color: theme.onSurface }}>Envoyer un paiement</ThemedText>
         </ThemedView>
         
-        <ThemedView variant = "surface" style={styles.formContainer}>
-          <ThemedText style={[styles.formLabel, { color: theme.onSurface }]}>Montant</ThemedText>
+        <ThemedView  style={styles.formContainer}>
+          <ThemedText className='py-4' style={ { color: theme.onSurface }}>Montant</ThemedText>
           <TextInput
             placeholder="0.00"
             keyboardType="numeric"
@@ -54,21 +57,21 @@ const RenderSendPayment: React.FC<Props> = ({ setCurrentSection, handleNewPaymen
             placeholderTextColor={theme.onSurface}
           />
           
-          <ThemedText style={[styles.formLabel, { color: theme.onSurface}]}>Description</ThemedText>
+          <ThemedText className='py-4' style = {{ color: theme.onSurface}}>Description</ThemedText>
           <TextInput
             placeholder="Description du paiement"
             style={[styles.formInput, { borderColor: theme.outline, color: theme.onSurface }]}
             placeholderTextColor={theme.onSurface}
           />
           
-          <ThemedText style={[styles.formLabel, { color: theme.onSurface}]}>Destinataire</ThemedText>
+          <ThemedText  className='py-4' style = {{ color: theme.onSurface}}>Destinataire</ThemedText>
           <TextInput
             placeholder="Email ou identifiant"
             style={[styles.formInput, { borderColor: theme.outline, color: theme.onSurface }]}
             placeholderTextColor={theme.onSurface}
           />
           
-          <ThemedText style={[styles.formLabel, { color: theme.onSurface }]}>Méthode de paiement</ThemedText>
+          <ThemedText  className='py-4' style={ { color: theme.onSurface }}>Méthode de paiement</ThemedText>
           <ThemedView style={styles.paymentMethodsContainer}>
             {walletData.paymentMethods.map((method, index) => (
               <TouchableOpacity 
@@ -102,11 +105,12 @@ const RenderSendPayment: React.FC<Props> = ({ setCurrentSection, handleNewPaymen
             style={[styles.primaryButton, { backgroundColor: theme.primary }]}
             onPress={() => handleNewPayment(250, 'Test paiement', walletData.paymentMethods[0].id.toString())}
           >
-            <ThemedText style={styles.primaryButtonText}>Confirmer le paiement</ThemedText>
+            <ThemedText style = {{color:theme.surface}}>Confirmer le paiement</ThemedText>
           </TouchableOpacity>
         </ThemedView>
       </ThemedView>
     </ScrollView>
+    </ThemedView>
   );
 };
 
@@ -114,7 +118,7 @@ const RenderSendPayment: React.FC<Props> = ({ setCurrentSection, handleNewPaymen
 const styles = StyleSheet.create({
   sectionContainer: {
     padding: 16,
-    flex: 1,
+    // flex: 1,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -144,7 +148,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 16,
     paddingHorizontal: 12,
-    fontSize: 16,
+    fontSize: 12,
   },
   paymentMethodsContainer: {
     marginBottom: 24,
@@ -163,12 +167,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   paymentMethodName: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '500',
     marginLeft: 12,
   },
   paymentMethodNumber: {
-    fontSize: 14,
+    fontSize: 12,
     marginLeft: 12,
   },
   radioButton: {

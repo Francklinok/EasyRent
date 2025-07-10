@@ -233,11 +233,11 @@ return (
       <ThemedView variant="surface" style={styles.bottomNavigation}>
         <TouchableOpacity style={styles.navItem} onPress={() => setCurrentSection('main')}>
           <Home size={24} color={theme.primary} />
-          <ThemedText style={[styles.navText, { color: theme.primary }]}>Accueil</ThemedText>
+          <ThemedText style={ { color: theme.primary }}>Accueil</ThemedText>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => setCurrentSection('crypto')}>
           <Bitcoin size={24} color={theme.onSurface} />
-          <ThemedText style={[styles.navText, { color: theme.onSurface }]}>Crypto</ThemedText>
+          <ThemedText style={ { color: theme.onSurface }}>Crypto</ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.mainAction, { backgroundColor: theme.primary }]}
@@ -254,11 +254,11 @@ return (
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => setCurrentSection('transactions')}>
           <Clock size={24} color={theme.onSurface} />
-          <Text style={[styles.navText, { color: theme.onSurface }]}>Activité</Text>
+          <ThemedText style={ { color: theme.onSurface }}>Activité</ThemedText>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => setCurrentSection('security')}>
           <Settings size={24} color={theme.onSurface} />
-          <Text style={[styles.navText, { color: theme.onSurface}]}>Paramètres</Text>
+          <ThemedText style={ { color: theme.onSurface}}>Paramètres</ThemedText>
         </TouchableOpacity>
       </ThemedView>
     )}

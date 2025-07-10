@@ -4,6 +4,8 @@ import { useTheme } from '@/components/contexts/theme/themehook';
 import { ThemedView } from "../ui/ThemedView";
 import _ from 'lodash';
 import { ThemedText } from "../ui/ThemedText";
+import { BackButton } from "../ui/BackButton";
+
 type Props = {
   setCurrentSection: (section: string) => void;
 }
@@ -12,29 +14,30 @@ const RenderReceivePayment: React.FC<Props> = ({ setCurrentSection }) => {
   const {theme} = useTheme();
   
   return (
-    <ScrollView className="w-full h-full">
-      <ThemedView variant="surface" style={styles.sectionContainer}>
-        <ThemedView style={styles.sectionHeader}>
-          <TouchableOpacity onPress={() => setCurrentSection('main')} style={styles.backButton}>
-            <ArrowLeft size={20} color={theme.onSurface} />
-          </TouchableOpacity>
-          <ThemedText style={[styles.sectionHeaderTitle, { color: theme.onSurface }]}>Recevoir un paiement</ThemedText>
+<ThemedView className="h-full">
+    <ScrollView 
+     showsVerticalScrollIndicator={false}
+     contentContainerStyle={{ paddingTop: 40, paddingBottom: 40 }}>
+      <ThemedView style={styles.sectionContainer}>
+        <ThemedView className="gap-4" style={styles.sectionHeader}>
+          <BackButton/>
+          <ThemedText  type = "subtitle" style={ { color: theme.onSurface }}>Recevoir un paiement</ThemedText>
         </ThemedView>
         
         <ThemedView style={styles.receiveContainer}>
           <ThemedView style={[styles.qrCodeContainer, { borderColor: theme.outline }]}>
             <ThemedView style={styles.qrCodePlaceholder}>
               {/* Ici serait le QR code généré avec l'adresse de réception */}
-              <ThemedView style={[styles.qrCode, { borderColor: theme.outline }]} />
+              {/* <ThemedView style={[styles.qrCode, { borderColor: theme.outline }]} /> */}
             </ThemedView>
           </ThemedView>
           
-          <ThemedText type = "body" style={[styles.receiveInfoText, { color: theme.onSurface}]}>
+          <ThemedText className="px-10 py-4 " style={ { color: theme.onSurface}}>
             Partagez ce QR code ou votre identifiant pour recevoir un paiement
           </ThemedText>
           
           <ThemedView style={[styles.receiveIdContainer, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
-            <ThemedText style={[styles.receiveId, { color: theme.onSurface }]}>wallet-immo-42586</ThemedText>
+            <ThemedText style={ { color: theme.onSurface }}>wallet-immo-42586</ThemedText>
             <TouchableOpacity 
               style={[styles.copyButton, { backgroundColor: theme.primary }]}
               onPress={() => {
@@ -42,29 +45,29 @@ const RenderReceivePayment: React.FC<Props> = ({ setCurrentSection }) => {
                 Alert.alert('Copié', 'Identifiant copié dans le presse-papier');
               }}
             >
-              <Copy size={16} color="#fff" />
+              <Copy size={16} color= {theme.surface} />
             </TouchableOpacity>
           </ThemedView>
           
-          <ThemedText style={[styles.formLabel, { color: theme.onSurface}]}>Méthode de réception</ThemedText>
+          <ThemedText className = "pb-2" style={ { color: theme.onSurface}}>Méthode de réception</ThemedText>
           <ThemedView style={styles.receiveMethodsContainer}>
             <TouchableOpacity 
               style={[styles.receiveMethodOption, { borderColor: theme.primary, backgroundColor: theme.surfaceVariant }]}
             >
               <DollarSign size={20} color={theme.primary} />
-              <ThemedText style={[styles.receiveMethodText, { color: theme.onSurface }]}>Monnaie fiduciaire</ThemedText>
+              <ThemedText style={ { color: theme.onSurface }}>Monnaie fiduciaire</ThemedText>
             </TouchableOpacity>
             
             <TouchableOpacity 
               style={[styles.receiveMethodOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}
             >
               <Bitcoin size={20} color={theme.accent} />
-              <ThemedText style={[styles.receiveMethodText, { color: theme.onSurface }]}>Crypto-monnaie</ThemedText>
+              <ThemedText style={ { color: theme.onSurface }}>Crypto-monnaie</ThemedText>
             </TouchableOpacity>
           </ThemedView>
           
           <ThemedView style={styles.receiveFormContainer}>
-            <ThemedText style={[styles.formLabel, { color: theme.onSurface }]}>Montant à demander (optionnel)</ThemedText>
+            <ThemedText className="pb-2" style={{ color: theme.onSurface }}>Montant à demander (optionnel)</ThemedText>
             <TextInput
               placeholder="0.00"
               keyboardType="numeric"
@@ -72,7 +75,7 @@ const RenderReceivePayment: React.FC<Props> = ({ setCurrentSection }) => {
               placeholderTextColor={theme.onSurface}
             />
             
-            <ThemedText style={[styles.formLabel, { color: theme.onSurface }]}>Description (optionnel)</ThemedText>
+            <ThemedText className = "py-2" style={ { color: theme.onSurface }}>Description (optionnel)</ThemedText>
             <TextInput
               placeholder="Description du paiement demandé"
               style={[styles.formInput, { borderColor: theme.outline, color: theme.onSurface }]}
@@ -86,49 +89,46 @@ const RenderReceivePayment: React.FC<Props> = ({ setCurrentSection }) => {
                 Alert.alert('Demande générée', 'Votre demande de paiement a été générée avec succès.');
               }}
             >
-              <ThemedText style={styles.primaryButtonText}>Générer une demande de paiement</ThemedText>
+              <ThemedText style = {{color:theme.surface}}>Générer une demande de paiement</ThemedText>
             </TouchableOpacity>
           </ThemedView>
         </ThemedView>
       </ThemedView>
     </ScrollView>
+    </ThemedView>
   );
 };
 
 const styles = StyleSheet.create({
   sectionContainer: {
-    flex: 1,
     padding: 16,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   backButton: {
     padding: 8,
     marginRight: 16,
   },
-  sectionHeaderTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
+ 
   receiveContainer: {
     width: '100%',
     alignItems: 'center',
     paddingHorizontal: 8,
   },
   qrCodeContainer: {
-    padding: 16,
+    padding: 1,
     borderWidth: 1,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   qrCodePlaceholder: {
-    width: 200,
-    height: 200,
+    width: 160,
+    height: 160,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
+    fontSize: 14,
     marginBottom: 16,
   },
   primaryButton: {
@@ -207,6 +207,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
+    
   },
   primaryButtonText: {
     color: '#ffffff',
