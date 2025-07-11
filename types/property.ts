@@ -1,36 +1,47 @@
-import { ItemType, FeatureIcon } from "@/types/ItemType";
 
+export type PropertyType = 'house' | 'apartment' | 'land' | 'commercial';
+export type PropertyStatus = 'available' | 'rented' | 'sold' | 'pending';
 
-// Fichier: types.ts
-export interface Property {
-    id: string;
-    title: string;
-    description: string;
+export type PropertyItem = {
+  id: string;
+  name: string;
+  type: PropertyType;
+  status: PropertyStatus;
+  surface: number;
+  location: {
     address: string;
-    monthlyRent: number;
-    depositAmount: number;
-    maxOccupants: number;
-    bedrooms: number;
-    bathrooms: number;
-    area: number;
-    ownerId: string;
-    images?: string[];
-    amenities?: string[];
-    availableFrom: Date;
-    createdAt: Date;
+    city: string;
+    postalCode: string;
+    country: string;
+    coordinates?: {
+      latitude: number;
+      longitude: number;
+    }
+  };
+  price: {
+    sale?: number;
+    rent?: number;
+    rentPeriod?: 'monthly' | 'yearly';
+  };
+  features: {
+    bedrooms?: number;
+    bathrooms?: number;
+    floors?: number;
+    garages?: number;
+    yearBuilt?: number;
+    additionalFeatures: string[];
+  };
+  media: {
+    thumbnailUrl: string;
+    images: string[];
+    videos?: string[];
+    virtualTour?: string;
+  };
+  documents: {
+    title: string;
+    url: string;
     type: string;
-    surface: number;
-    rooms: number;
-  }
-  export  interface ExtendedItemType extends ItemType {
-    features: FeatureIcon[];
-    energyScore: number;
-    virtualTourAvailable: boolean;
-    distanceToAmenities?: {
-      schools: number;
-      healthcare: number;
-      shopping: number;
-      transport: number;
-    };
-    aiRecommendation: string;
-  }
+  }[];
+  createdAt: string;
+  updatedAt: string;
+};

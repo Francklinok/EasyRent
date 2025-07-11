@@ -27,53 +27,10 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '@/components/contexts/theme/themehook';
 
-// Types pour l'inventaire
-export type PropertyType = 'house' | 'apartment' | 'land' | 'commercial';
-export type PropertyStatus = 'available' | 'rented' | 'sold' | 'pending';
-
-export type PropertyItem = {
-  id: string;
-  name: string;
-  type: PropertyType;
-  status: PropertyStatus;
-  surface: number;
-  location: {
-    address: string;
-    city: string;
-    postalCode: string;
-    country: string;
-    coordinates?: {
-      latitude: number;
-      longitude: number;
-    }
-  };
-  price: {
-    sale?: number;
-    rent?: number;
-    rentPeriod?: 'monthly' | 'yearly';
-  };
-  features: {
-    bedrooms?: number;
-    bathrooms?: number;
-    floors?: number;
-    garages?: number;
-    yearBuilt?: number;
-    additionalFeatures: string[];
-  };
-  media: {
-    thumbnailUrl: string;
-    images: string[];
-    videos?: string[];
-    virtualTour?: string;
-  };
-  documents: {
-    title: string;
-    url: string;
-    type: string;
-  }[];
-  createdAt: string;
-  updatedAt: string;
-};
+import { PropertyItem } from '@/types/property';
+import { getStatusColor, getStatusLabel, getPropertyTypeIcon, formatAmount } from '@/utils/inventory';
+import { QuickView } from '@/components/inventory/QuickView';
+import { PropertyCard } from '@/components/inventory/PropertyCard';
 
 // Exemple de données pour l'inventaire
 const sampleInventory: PropertyItem[] = [
@@ -185,637 +142,50 @@ const sampleInventory: PropertyItem[] = [
 // Composant principal pour la gestion de l'inventaire immobilier
 const RenderInventoryManagement = () => {
   const { theme } = useTheme();
-  const [inventory] = useState<PropertyItem[]>(sampleInventory);
-  const [currentSection, setCurrentSection] = useState('main');
-  const [viewMode, setViewMode] = useState('grid');
-  const [filtersPanelVisible, setFiltersPanelVisible] = useState(false);
-  const [activeFilters, setActiveFilters] = useState({
-    status: [],
-    type: [],
-    price: []
-  });
-  const [selectedProperty, setSelectedProperty] = useState<PropertyItem | null>(null);
-  const [quickViewVisible, setQuickViewVisible] = useState(false);
+  const {
+    inventory,
+    currentSection,
+    setCurrentSection,
+    viewMode,
+    setViewMode,
+    filtersPanelVisible,
+    setFiltersPanelVisible,
+    activeFilters,
+    toggleFilter,
+    clearAllFilters,
+    selectedProperty,
+    quickViewVisible,
+    openQuickView,
+    closeQuickView,
+    filteredInventory,
+    inventoryByType,
+    currency
+  } = useInventory(sampleInventory);
 
-  const currency = 'EUR';
+  
 
-  const formatAmount = (amount) => {
-    if (currency === 'EUR') return `${amount.toLocaleString()} €`;
-    if (currency === 'USD') return `$${amount.toLocaleString()}`;
-    return `${amount.toLocaleString()} ${currency}`;
-  };
+  
 
-  // Fonction pour obtenir la couleur en fonction du statut
-  const getStatusColor = (status: PropertyStatus) => {
-    switch (status) {
-      case 'available':
-        return theme.success;
-      case 'rented':
-        return theme.warning;
-      case 'sold':
-        return theme.error;
-      case 'pending':
-        return theme.accent;
-      default:
-        return theme.primary;
-    }
-  };
+  {/* Panneau de filtres */}
+      <FilterPanel 
+        visible={filtersPanelVisible} 
+        onClose={() => setFiltersPanelVisible(false)} 
+        activeFilters={activeFilters} 
+        toggleFilter={toggleFilter} 
+        clearAllFilters={clearAllFilters} 
+      />
 
-  // Fonction pour obtenir le libellé du statut en français
-  const getStatusLabel = (status: PropertyStatus) => {
-    switch (status) {
-      case 'available':
-        return 'Disponible';
-      case 'rented':
-        return 'Loué';
-      case 'sold':
-        return 'Vendu';
-      case 'pending':
-        return 'En attente';
-      default:
-        return status;
-    }
-  };
+  {/* Vue rapide */}
+      <QuickView 
+        visible={quickViewVisible} 
+        onClose={closeQuickView} 
+        property={selectedProperty} 
+        onEdit={() => setCurrentSection(`edit-property-${selectedProperty?.id}`)} 
+        onShare={() => setCurrentSection(`share-property-${selectedProperty?.id}`)} 
+        onViewDetails={() => setCurrentSection(`property-detail-${selectedProperty?.id}`)} 
+      />
 
-  // Fonction pour obtenir l'icône du type de propriété
-  const getPropertyTypeIcon = (type: PropertyType) => {
-    switch (type) {
-      case 'house':
-        return <Home size={18} color={theme.primary} />;
-      case 'apartment':
-        return <Home size={18} color={theme.secondary} />;
-      case 'land':
-        return <Map size={18} color={theme.accent} />;
-      case 'commercial':
-        return <DollarSign size={18} color={theme.onSurfaceVariant} />;
-      default:
-        return <Home size={18} color={theme.primary} />;
-    }
-  };
-
-  // Fonction pour filtrer l'inventaire en fonction des filtres actifs
-  const filteredInventory = inventory.filter(item => {
-    // Filtre par statut
-    if (activeFilters.status.length > 0 && !activeFilters.status.includes(item.status)) {
-      return false;
-    }
-    
-    // Filtre par type
-    if (activeFilters.type.length > 0 && !activeFilters.type.includes(item.type)) {
-      return false;
-    }
-    
-    // Filtre par prix
-    if (activeFilters.price.length > 0) {
-      const price = item.price.sale || 0;
-      if (!activeFilters.price.some(range => {
-        if (range === 'low' && price < 250000) return true;
-        if (range === 'medium' && price >= 250000 && price < 500000) return true;
-        if (range === 'high' && price >= 500000) return true;
-        return false;
-      })) {
-        return false;
-      }
-    }
-    
-    return true;
-  });
-
-  // Fonction pour regrouper l'inventaire par type de propriété
-  const inventoryByType = {
-    house: filteredInventory.filter(item => item.type === 'house'),
-    apartment: filteredInventory.filter(item => item.type === 'apartment'),
-    land: filteredInventory.filter(item => item.type === 'land'),
-    commercial: filteredInventory.filter(item => item.type === 'commercial')
-  };
-
-  // Fonction pour ouvrir la vue rapide d'une propriété
-  const openQuickView = (property) => {
-    setSelectedProperty(property);
-    setQuickViewVisible(true);
-  };
-
-  // Fonction pour fermer la vue rapide
-  const closeQuickView = () => {
-    setQuickViewVisible(false);
-    setTimeout(() => setSelectedProperty(null), 300); // Attendre l'animation de fermeture
-  };
-
-  // Fonction pour ajouter ou supprimer un filtre
-  const toggleFilter = (category, value) => {
-    setActiveFilters(prev => {
-      const filters = [...prev[category]];
-      const index = filters.indexOf(value);
-      
-      if (index === -1) {
-        filters.push(value);
-      } else {
-        filters.splice(index, 1);
-      }
-      
-      return {
-        ...prev,
-        [category]: filters
-      };
-    });
-  };
-
-  // Fonction pour effacer tous les filtres
-  const clearAllFilters = () => {
-    setActiveFilters({
-      status: [],
-      type: [],
-      price: []
-    });
-  };
-
-  // Rendu du panneau de filtres
-  const renderFiltersPanel = () => {
-    return (
-      <ThemedView 
-        style={[
-          styles.filtersPanel, 
-          { transform: [{ translateX: filtersPanelVisible ? 0 : -300 }] }
-        ]}
-        variant="default"
-      >
-        <ThemedView style={styles.filtersPanelHeader}>
-          <ThemedText variant="default" style={styles.filtersPanelTitle}>Filtres</ThemedText>
-          <TouchableOpacity 
-            style={styles.closeButton}
-            onPress={() => setFiltersPanelVisible(false)}
-          >
-            <X size={20} color={theme.onSurface} />
-          </TouchableOpacity>
-        </ThemedView>
-        
-        <ThemedScrollView style={styles.filtersPanelContent}>
-          {/* Filtre par statut */}
-          <ThemedView style={styles.filterCategory}>
-            <ThemedText variant="default" style={styles.filterCategoryTitle}>Statut</ThemedText>
-            
-            <ThemedView style={styles.filterOptions}>
-              {['available', 'rented', 'sold', 'pending'].map(status => (
-                <TouchableOpacity 
-                  key={status}
-                  style={[
-                    styles.filterChip,
-                    activeFilters.status.includes(status) && { 
-                      backgroundColor: getStatusColor(status),
-                      borderColor: getStatusColor(status)
-                    }
-                  ]}
-                  onPress={() => toggleFilter('status', status)}
-                >
-                  <ThemedText 
-                    style={[
-                      styles.filterChipText,
-                      activeFilters.status.includes(status) && { color: '#fff' }
-                    ]}
-                  >
-                    {getStatusLabel(status)}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </ThemedView>
-          </ThemedView>
-          
-          {/* Filtre par type */}
-          <ThemedView style={styles.filterCategory}>
-            <ThemedText variant="default" style={styles.filterCategoryTitle}>Type</ThemedText>
-            
-            <ThemedView style={styles.filterOptions}>
-              <TouchableOpacity 
-                style={[
-                  styles.filterChip,
-                  activeFilters.type.includes('house') && { 
-                    backgroundColor: theme.primary,
-                    borderColor: theme.primary
-                  }
-                ]}
-                onPress={() => toggleFilter('type', 'house')}
-              >
-                <Home size={16} color={activeFilters.type.includes('house') ? '#fff' : theme.primary} />
-                <ThemedText 
-                  style={[
-                    styles.filterChipText,
-                    activeFilters.type.includes('house') && { color: '#fff' }
-                  ]}
-                >
-                  Maisons
-                </ThemedText>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[
-                  styles.filterChip,
-                  activeFilters.type.includes('apartment') && { 
-                    backgroundColor: theme.secondary,
-                    borderColor: theme.secondary
-                  }
-                ]}
-                onPress={() => toggleFilter('type', 'apartment')}
-              >
-                <Home size={16} color={activeFilters.type.includes('apartment') ? '#fff' : theme.secondary} />
-                <ThemedText 
-                  style={[
-                    styles.filterChipText,
-                    activeFilters.type.includes('apartment') && { color: '#fff' }
-                  ]}
-                >
-                  Appartements
-                </ThemedText>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[
-                  styles.filterChip,
-                  activeFilters.type.includes('land') && { 
-                    backgroundColor: theme.accent,
-                    borderColor: theme.accent
-                  }
-                ]}
-                onPress={() => toggleFilter('type', 'land')}
-              >
-                <Map size={16} color={activeFilters.type.includes('land') ? '#fff' : theme.accent} />
-                <ThemedText 
-                  style={[
-                    styles.filterChipText,
-                    activeFilters.type.includes('land') && { color: '#fff' }
-                  ]}
-                >
-                  Terrains
-                </ThemedText>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[
-                  styles.filterChip,
-                  activeFilters.type.includes('commercial') && { 
-                    backgroundColor: theme.onSurface,
-                    borderColor: theme.onSurface
-                  }
-                ]}
-                onPress={() => toggleFilter('type', 'commercial')}
-              >
-                <DollarSign size={16} color={activeFilters.type.includes('commercial') ? '#fff' : theme.onSurface} />
-                <ThemedText 
-                  style={[
-                    styles.filterChipText,
-                    activeFilters.type.includes('commercial') && { color: '#fff' }
-                  ]}
-                >
-                  Commercial
-                </ThemedText>
-              </TouchableOpacity>
-            </ThemedView>
-          </ThemedView>
-          
-          {/* Filtre par prix */}
-          <ThemedView style={styles.filterCategory}>
-            <ThemedText variant="default" style={styles.filterCategoryTitle}>Prix</ThemedText>
-            
-            <ThemedView style={styles.filterOptions}>
-              <TouchableOpacity 
-                style={[
-                  styles.filterChip,
-                  activeFilters.price.includes('low') && { 
-                    backgroundColor: theme.primary,
-                    borderColor: theme.primary
-                  }
-                ]}
-                onPress={() => toggleFilter('price', 'low')}
-              >
-                <Tag size={16} color={activeFilters.price.includes('low') ? '#fff' : theme.primary} />
-                <ThemedText 
-                  style={[
-                    styles.filterChipText,
-                    activeFilters.price.includes('low') && { color: '#fff' }
-                  ]}
-                >
-                  - 250k€
-                </ThemedText>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[
-                  styles.filterChip,
-                  activeFilters.price.includes('medium') && { 
-                    backgroundColor: theme.secondary,
-                    borderColor: theme.secondary
-                  }
-                ]}
-                onPress={() => toggleFilter('price', 'medium')}
-              >
-                <Tag size={16} color={activeFilters.price.includes('medium') ? '#fff' : theme.secondary} />
-                <ThemedText 
-                  style={[
-                    styles.filterChipText,
-                    activeFilters.price.includes('medium') && { color: '#fff' }
-                  ]}
-                >
-                  250k€ - 500k€
-                </ThemedText>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[
-                  styles.filterChip,
-                  activeFilters.price.includes('high') && { 
-                    backgroundColor: theme.accent,
-                    borderColor: theme.accent
-                  }
-                ]}
-                onPress={() => toggleFilter('price', 'high')}
-              >
-                <Tag size={16} color={activeFilters.price.includes('high') ? '#fff' : theme.accent} />
-                <ThemedText 
-                  style={[
-                    styles.filterChipText,
-                    activeFilters.price.includes('high') && { color: '#fff' }
-                  ]}
-                >
-                  500k€ +
-                </ThemedText>
-              </TouchableOpacity>
-            </ThemedView>
-          </ThemedView>
-        </ThemedScrollView>
-        
-        <ThemedView style={styles.filtersPanelFooter}>
-          <TouchableOpacity 
-            style={styles.clearFiltersButton}
-            onPress={clearAllFilters}
-          >
-            <ThemedText variant="primary" style={styles.clearFiltersText}>
-              Effacer les filtres
-            </ThemedText>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.applyFiltersButton}
-            onPress={() => setFiltersPanelVisible(false)}
-          >
-            <ThemedText style={styles.applyFiltersText}>
-              Appliquer
-            </ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
-      </ThemedView>
-    );
-  };
-
-  // Rendu de la vue rapide d'une propriété
-  const renderQuickView = () => {
-    if (!selectedProperty) return null;
-    
-    return (
-      <ThemedView variant = "default"
-        style={[
-          styles.quickView, 
-          { transform: [{ translateX: quickViewVisible ? 0 : 400 }] }
-        ]}
-      >
-        <ThemedView style={styles.quickViewHeader}>
-          <TouchableOpacity 
-            style={styles.closeButton}
-            onPress={closeQuickView}
-          >
-            <X size={20} color={theme.onSurface} />
-          </TouchableOpacity>
-          <ThemedText variant="default" style={styles.quickViewTitle}>
-            {selectedProperty.name}
-          </ThemedText>
-        </ThemedView>
-        
-        <ThemedScrollView style={styles.quickViewContent}>
-          {/* Image et statut */}
-          <ThemedView style={styles.quickViewImageContainer}>
-            <View style={styles.quickViewImagePlaceholder}>
-              <ImageIcon size={32} color={theme.onSurface} />
-            </View>
-            <View 
-              style={[
-                styles.quickViewStatusBadge, 
-                { backgroundColor: getStatusColor(selectedProperty.status) }
-              ]}
-            >
-              <ThemedText style={styles.quickViewStatusText}>
-                {getStatusLabel(selectedProperty.status)}
-              </ThemedText>
-            </View>
-          </ThemedView>
-          
-          {/* Détails principaux */}
-          <ThemedView style={styles.quickViewSection}>
-            <ThemedView style={styles.quickViewProperty}>
-              <ThemedText variant="secondary" style={styles.quickViewLabel}>Type</ThemedText>
-              <ThemedView style={styles.quickViewValue}>
-                {getPropertyTypeIcon(selectedProperty.type)}
-                <ThemedText variant="default" style={styles.quickViewValueText}>
-                  {selectedProperty.type === 'house' ? 'Maison' : 
-                   selectedProperty.type === 'apartment' ? 'Appartement' : 
-                   selectedProperty.type === 'land' ? 'Terrain' : 'Commercial'}
-                </ThemedText>
-              </ThemedView>
-            </ThemedView>
-            
-            <ThemedView style={styles.quickViewProperty}>
-              <ThemedText variant="secondary" style={styles.quickViewLabel}>Adresse</ThemedText>
-              <ThemedText variant="default" style={styles.quickViewValueText}>
-                {selectedProperty.location.address}
-              </ThemedText>
-              <ThemedText variant="default" style={styles.quickViewValueText}>
-                {selectedProperty.location.postalCode} {selectedProperty.location.city}
-              </ThemedText>
-            </ThemedView>
-            
-            <ThemedView style={styles.quickViewProperty}>
-              <ThemedText variant="secondary" style={styles.quickViewLabel}>Prix</ThemedText>
-              <ThemedView style={styles.priceContainer}>
-                {selectedProperty.price.sale && (
-                  <ThemedText variant="accent" style={styles.quickViewPrice}>
-                    Vente: {formatAmount(selectedProperty.price.sale)}
-                  </ThemedText>
-                )}
-                
-                {selectedProperty.price.rent && (
-                  <ThemedText variant="accent" style={styles.quickViewPrice}>
-                    Location: {formatAmount(selectedProperty.price.rent)}/mois
-                  </ThemedText>
-                )}
-              </ThemedView>
-            </ThemedView>
-            
-            <ThemedView style={styles.quickViewProperty}>
-              <ThemedText variant="secondary" style={styles.quickViewLabel}>Surface</ThemedText>
-              <ThemedText variant="default" style={styles.quickViewValueText}>
-                {selectedProperty.surface} m²
-              </ThemedText>
-            </ThemedView>
-            
-            {(selectedProperty.features.bedrooms || selectedProperty.features.bathrooms) && (
-              <ThemedView style={styles.quickViewProperty}>
-                <ThemedText variant="secondary" style={styles.quickViewLabel}>Caractéristiques</ThemedText>
-                <ThemedView style={styles.quickViewFeatures}>
-                  {selectedProperty.features.bedrooms && (
-                    <ThemedText variant="default" style={styles.quickViewFeature}>
-                      {selectedProperty.features.bedrooms} chambres
-                    </ThemedText>
-                  )}
-                  
-                  {selectedProperty.features.bathrooms && (
-                    <ThemedText variant="default" style={styles.quickViewFeature}>
-                      {selectedProperty.features.bathrooms} salles de bain
-                    </ThemedText>
-                  )}
-                  
-                  {selectedProperty.features.floors && (
-                    <ThemedText variant="default" style={styles.quickViewFeature}>
-                      {selectedProperty.features.floors} étages
-                    </ThemedText>
-                  )}
-                </ThemedView>
-              </ThemedView>
-            )}
-            
-            {selectedProperty.features.additionalFeatures.length > 0 && (
-              <ThemedView style={styles.quickViewProperty}>
-                <ThemedText variant="secondary" style={styles.quickViewLabel}>
-                  Equipements
-                </ThemedText>
-                <ThemedView style={styles.quickViewFeaturesList}>
-                  {selectedProperty.features.additionalFeatures.map((feature, index) => (
-                    <ThemedView key={index} style={styles.featureTag}>
-                      <ThemedText style={styles.featureTagText}>{feature}</ThemedText>
-                    </ThemedView>
-                  ))}
-                </ThemedView>
-              </ThemedView>
-            )}
-          </ThemedView>
-        </ThemedScrollView>
-        
-        <ThemedView style={styles.quickViewFooter}>
-          <TouchableOpacity 
-            style={styles.quickViewActionButton}
-            onPress={() => setCurrentSection(`edit-property-${selectedProperty.id}`)}
-          >
-            <Edit size={18} color={theme.primary} />
-            <ThemedText variant="primary" style={styles.quickViewActionText}>
-              Modifier
-            </ThemedText>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.quickViewActionButton}
-            onPress={() => setCurrentSection(`share-property-${selectedProperty.id}`)}
-          >
-            <Share2 size={18} color={theme.secondary} />
-            <ThemedText variant="secondary" style={styles.quickViewActionText}>
-              Partager
-            </ThemedText>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.quickViewMainButton, { backgroundColor: theme.primary }]}
-            onPress={() => setCurrentSection(`property-detail-${selectedProperty.id}`)}
-          >
-            <ThemedText style={styles.quickViewMainButtonText}>
-              Détails complets
-            </ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
-      </ThemedView>
-    );
-  };
-
-  // Rendu d'une carte propriété pour la vue grille
-  const renderPropertyCard = (property) => {
-    return (
-      <TouchableOpacity
-        key={property.id}
-        style={styles.propertyCard}
-        onPress={() => openQuickView(property)}
-      >
-        <ThemedView
-          variant="surface"
-          style={styles.propertyCardContainer}
-          bordered
-        >
-          <ThemedView style={styles.thumbnailContainer}>
-            <View 
-              style={[
-                styles.statusBadge, 
-                { backgroundColor: getStatusColor(property.status) }
-              ]}
-            >
-              <ThemedText style={styles.statusText}>
-                {getStatusLabel(property.status)}
-              </ThemedText>
-            </View>
-            <View style={styles.thumbnailPlaceholder}>
-              <ImageIcon size={32} color={theme.onSurface} />
-            </View>
-          </ThemedView>
-          
-          <ThemedView style={styles.cardContent}>
-            <ThemedText variant='default' style={styles.propertyName} numberOfLines={1}>
-              {property.name}
-            </ThemedText>
-            
-            <ThemedView style={styles.propertyMeta}>
-              {getPropertyTypeIcon(property.type)}
-              <ThemedText variant="secondary" style={styles.propertyLocation} numberOfLines={1}>
-                {property.location.city}
-              </ThemedText>
-            </ThemedView>
-            
-            <ThemedView style={styles.propertyDetails}>
-              <ThemedText variant="accent" style={styles.propertyPrice}>
-                {property.price.sale ? formatAmount(property.price.sale) : ''}
-              </ThemedText>
-              
-              <ThemedText variant="secondary" style={styles.propertySurface}>
-                {property.surface} m²
-              </ThemedText>
-            </ThemedView>
-            
-            {property.features.bedrooms && (
-              <ThemedView style={styles.propertyFeatures}>
-                <ThemedText variant="secondary" style={styles.featureText}>
-                  {property.features.bedrooms} ch • {property.features.bathrooms} sdb
-                </ThemedText>
-              </ThemedView>
-            )}
-          </ThemedView>
-          
-          <ThemedView style={styles.cardQuickActions}>
-            <TouchableOpacity 
-              style={styles.quickActionButton}
-              onPress={() => setCurrentSection(`edit-property-${property.id}`)}
-            >
-              <Edit size={16} color={theme.primary} />
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.quickActionButton}
-              onPress={() => setCurrentSection(`share-property-${property.id}`)}
-            >
-              <Share2 size={16} color={theme.secondary} />
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.quickActionButton, styles.infoButton]}
-              onPress={() => openQuickView(property)}
-            >
-              <Info size={16} color="#fff" />
-            </TouchableOpacity>
-          </ThemedView>
-        </ThemedView>
-      </TouchableOpacity>
-    );
-  };
+  
 
   // Rendu du contenu principal pour la vue grille
   const renderGridView = () => {
@@ -837,7 +207,7 @@ const RenderInventoryManagement = () => {
               style={styles.horizontalScroll}
               contentContainerStyle={styles.horizontalScrollContent}
             >
-              {inventoryByType.house.map(property => renderPropertyCard(property))}
+              {inventoryByType.house.map(property => <PropertyCard key={property.id} property={property} onPress={() => openQuickView(property)} onEdit={() => setCurrentSection(`edit-property-${property.id}`)} onShare={() => setCurrentSection(`share-property-${property.id}`)} />)}
             </ThemedScrollView>
           </ThemedView>
         )}
@@ -857,7 +227,7 @@ const RenderInventoryManagement = () => {
               style={styles.horizontalScroll}
               contentContainerStyle={styles.horizontalScrollContent}
             >
-              {inventoryByType.apartment.map(property => renderPropertyCard(property))}
+              {inventoryByType.apartment.map(property => <PropertyCard key={property.id} property={property} onPress={() => openQuickView(property)} onEdit={() => setCurrentSection(`edit-property-${property.id}`)} onShare={() => setCurrentSection(`share-property-${property.id}`)} />)}
             </ThemedScrollView>
           </ThemedView>
         )}
@@ -878,7 +248,7 @@ const RenderInventoryManagement = () => {
               style={styles.horizontalScroll}
               contentContainerStyle={styles.horizontalScrollContent}
             >
-              {inventoryByType.land.map(property => renderPropertyCard(property))}
+              {inventoryByType.land.map(property => <PropertyCard key={property.id} property={property} onPress={() => openQuickView(property)} onEdit={() => setCurrentSection(`edit-property-${property.id}`)} onShare={() => setCurrentSection(`share-property-${property.id}`)} />)}
             </ThemedScrollView>
           </ThemedView>
         )}
@@ -899,7 +269,7 @@ const RenderInventoryManagement = () => {
               style={styles.horizontalScroll}
               contentContainerStyle={styles.horizontalScrollContent}
             >
-              {inventoryByType.commercial.map(property => renderPropertyCard(property))}
+              {inventoryByType.commercial.map(property => <PropertyCard key={property.id} property={property} onPress={() => openQuickView(property)} onEdit={() => setCurrentSection(`edit-property-${property.id}`)} onShare={() => setCurrentSection(`share-property-${property.id}`)} />)}
             </ThemedScrollView>
           </ThemedView>
         )}
