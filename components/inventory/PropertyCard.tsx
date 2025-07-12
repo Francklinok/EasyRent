@@ -109,7 +109,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             className="w-8 h-8 rounded-full items-center justify-center ml-2 bg-blue-500"
             onPress={onPress}
           >
-            <Info size={16} color="#fff" />
+            <Info size={16} color={theme.surface} />
           </TouchableOpacity>
         </ThemedView>
       </ThemedView>

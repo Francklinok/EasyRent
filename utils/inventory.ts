@@ -2,7 +2,7 @@ import React from 'react';
 import { PropertyType, PropertyStatus } from '@/types/property';
 
 // Import des icônes avec des alias pour éviter les conflits de types
-import { Home, Map, DollarSign } from 'lucide-react-native';
+import { Home as HomeIcon, Map as MapIcon, DollarSign as DollarIcon } from 'lucide-react-native';
 
 // Types pour les thèmes
 interface Theme {
@@ -46,30 +46,27 @@ export const getStatusLabel = (status: PropertyStatus): string => {
   }
 };
 
-export const getPropertyTypeIcon = (type: PropertyType, theme: Theme): React.ReactElement => {
+// Ici on change React.ReactElement en React.ReactNode pour plus de souplesse
+export const getPropertyTypeIcon = (type: PropertyType, theme: Theme): React.ReactNode => {
   const iconSize = 18;
-  
   switch (type) {
     case 'house':
-      // return <Home size={iconSize} color={theme.primary || '#007bff'} />;
+      return <HomeIcon size={iconSize} color={theme.primary || '#007bff'} />;
     case 'apartment':
-      // return <Home size={iconSize} color={theme.secondary || '#6c757d'} />;
+      return <HomeIcon size={iconSize} color={theme.secondary || '#6c757d'} />;
     case 'land':
-      // return <Map size={iconSize} color={theme.accent || '#6f42c1'} />;
+      return <MapIcon size={iconSize} color={theme.accent || '#6f42c1'} />;
     case 'commercial':
-      // return <DollarSign size={iconSize} color={theme.onSurfaceVariant || theme.onSurface || '#495057'} />;
+      return <DollarIcon size={iconSize} color={theme.onSurfaceVariant || theme.onSurface || '#495057'} />;
     default:
-      // return <Home size={iconSize} color={theme.primary || '#007bff'} />;
+      return <HomeIcon size={iconSize} color={theme.primary || '#007bff'} />;
   }
 };
 
 export const formatAmount = (amount: number, currency: string): string => {
-  // Vérification si amount est un nombre valide
   if (typeof amount !== 'number' || isNaN(amount)) {
     return '0 €';
   }
-
-  // Formatage selon la devise
   switch (currency) {
     case 'EUR':
       return `${amount.toLocaleString('fr-FR')} €`;
@@ -82,7 +79,6 @@ export const formatAmount = (amount: number, currency: string): string => {
   }
 };
 
-// Fonction utilitaire pour obtenir le type d'icône comme string (si nécessaire)
 export const getPropertyTypeIconName = (type: PropertyType): string => {
   switch (type) {
     case 'house':
@@ -97,7 +93,6 @@ export const getPropertyTypeIconName = (type: PropertyType): string => {
   }
 };
 
-// Fonction utilitaire pour obtenir la couleur du type de propriété
 export const getPropertyTypeColor = (type: PropertyType, theme: Theme): string => {
   switch (type) {
     case 'house':
