@@ -7,6 +7,9 @@ import { ThemedScrollView } from '@/components/ui/ScrolleView';
 import {
   X,
   Home as HomeIcon,
+  Map as MapIcon,
+  DollarSign as DollarSignIcon,
+  Tag as TagIcon
 } from 'lucide-react-native';
 import { useTheme } from '@/components/contexts/theme/themehook';
 import { getStatusColor, getStatusLabel } from '@/utils/inventory';
@@ -30,16 +33,13 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   const { theme } = useTheme();
 
   return (
-    <ThemedView
-      className={`absolute top-0 left-0 w-[300px] h-full z-[100] border-r border-gray-200 ${
+    
+  <ThemedView
+      className={`absolute top-0 left-0 w-[300px] h-full z-[100] border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${
         visible ? 'translate-x-0' : '-translate-x-[300px]'
-      }`}
-      style={{ 
-        transform: [{ translateX: visible ? 0 : -300 }],
-        transition: 'transform 0.3s ease-in-out'
-      }}
+      }`} 
       variant="default"
-    >
+    >  
       <ThemedView className="flex-row justify-between items-center p-4 border-b border-gray-200">
         <ThemedText variant="default" className="text-lg font-bold">
           Filtres
@@ -71,8 +71,8 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                 style={
                   activeFilters.status.includes(status) 
                     ? {
-                        backgroundColor: getStatusColor(status, theme),
-                        borderColor: getStatusColor(status, theme)
+                        backgroundColor: getStatusColor(status),
+                        borderColor: getStatusColor(status)
                       }
                     : {}
                 }
@@ -115,7 +115,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             >
               <HomeIcon 
                 size={16} 
-                color={activeFilters.type.includes('house') ? '#fff' : theme.primary} 
+                color={activeFilters.type.includes('house') ?  theme.surface : theme.primary} 
               />
               <ThemedText
                 className={`text-sm ml-1.5 ${
@@ -144,7 +144,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             >
               <HomeIcon 
                 size={16} 
-                color={activeFilters.type.includes('apartment') ? '#fff' : theme.secondary} 
+                color={activeFilters.type.includes('apartment') ? theme.surface : theme.secondary} 
               />
               <ThemedText
                 className={`text-sm ml-1.5 ${
@@ -171,9 +171,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               }
               onPress={() => toggleFilter('type', 'land')}
             >
-              <Map 
+              <MapIcon 
                 size={16} 
-                color={activeFilters.type.includes('land') ? '#fff' : theme.accent} 
+                color={activeFilters.type.includes('land') ?  theme.surface : theme.accent} 
               />
               <ThemedText
                 className={`text-sm ml-1.5 ${
@@ -200,9 +200,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               }
               onPress={() => toggleFilter('type', 'commercial')}
             >
-              <DollarSign 
+              <DollarSignIcon 
                 size={16} 
-                color={activeFilters.type.includes('commercial') ? '#fff' : theme.onSurface} 
+                color={activeFilters.type.includes('commercial') ?  theme.surface : theme.onSurface} 
               />
               <ThemedText
                 className={`text-sm ml-1.5 ${
@@ -238,9 +238,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               }
               onPress={() => toggleFilter('price', 'low')}
             >
-              <Tag 
+              <TagIcon 
                 size={16} 
-                color={activeFilters.price.includes('low') ? '#fff' : theme.primary} 
+                color={activeFilters.price.includes('low') ?  theme.surface : theme.primary} 
               />
               <ThemedText
                 className={`text-sm ml-1.5 ${
@@ -267,9 +267,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               }
               onPress={() => toggleFilter('price', 'medium')}
             >
-              <Tag 
+              <TagIcon
                 size={16} 
-                color={activeFilters.price.includes('medium') ? '#fff' : theme.secondary} 
+                color={activeFilters.price.includes('medium') ? theme.surface : theme.secondary} 
               />
               <ThemedText
                 className={`text-sm ml-1.5 ${
@@ -296,9 +296,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               }
               onPress={() => toggleFilter('price', 'high')}
             >
-              <Tag 
+              <TagIcon
                 size={16} 
-                color={activeFilters.price.includes('high') ? '#fff' : theme.accent} 
+                color={activeFilters.price.includes('high') ? theme.surface : theme.accent} 
               />
               <ThemedText
                 className={`text-sm ml-1.5 ${

@@ -36,13 +36,10 @@ export const QuickView: React.FC<QuickViewProps> = ({
 
   return (
     <ThemedView
-      className={`absolute top-0 right-0 w-[380px] h-full z-[100] border-l border-gray-200 ${
-        visible ? 'translate-x-0' : 'translate-x-[400px]'
+     className={`absolute top-0 left-0 w-[300px] h-full z-[100] border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${
+      visible ? 'translate-x-0' : '-translate-x-[300px]'
       }`}
-      style={{ 
-        transform: [{ translateX: visible ? 0 : 400 }],
-        transition: 'transform 0.3s ease-in-out'
-      }}
+     
       variant="default"
     >
       <ThemedView className="flex-row items-center p-4 border-b border-gray-200">
@@ -68,7 +65,7 @@ export const QuickView: React.FC<QuickViewProps> = ({
           </View>
           <View
             className="absolute top-4 right-4 py-1.5 px-3 rounded z-10"
-            style={{ backgroundColor: getStatusColor(property.status, theme) }}
+            style={{ backgroundColor: getStatusColor(property.status) }}
           >
             <ThemedText className="text-white text-sm font-medium">
               {getStatusLabel(property.status)}
@@ -83,7 +80,7 @@ export const QuickView: React.FC<QuickViewProps> = ({
               Type
             </ThemedText>
             <ThemedView className="flex-row items-center">
-              {getPropertyTypeIcon(property.type, theme)}
+              {getPropertyTypeIcon(property.type)}
               <ThemedText variant="default" className="text-base ml-2">
                 {property.type === 'house' ? 'Maison' :
                   property.type === 'apartment' ? 'Appartement' :

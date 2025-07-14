@@ -1,22 +1,14 @@
 import React from 'react';
 import { PropertyType, PropertyStatus } from '@/types/property';
-
-// Import des icônes avec des alias pour éviter les conflits de types
 import { Home as HomeIcon, Map as MapIcon, DollarSign as DollarIcon } from 'lucide-react-native';
+import { useTheme } from '@/components/contexts/theme/themehook';
 
-// Types pour les thèmes
-interface Theme {
-  primary: string;
-  secondary: string;
-  accent: string;
-  success: string;
-  warning: string;
-  error: string;
-  onSurface: string;
-  onSurfaceVariant: string;
-}
 
-export const getStatusColor = (status: PropertyStatus, theme: Theme): string => {
+
+
+export const getStatusColor = (status: PropertyStatus): string => {
+  const  {theme} = useTheme()
+
   switch (status) {
     case 'available':
       return theme.success || '#28a745';
@@ -47,7 +39,9 @@ export const getStatusLabel = (status: PropertyStatus): string => {
 };
 
 // Ici on change React.ReactElement en React.ReactNode pour plus de souplesse
-export const getPropertyTypeIcon = (type: PropertyType, theme: Theme): React.ReactNode => {
+export const getPropertyTypeIcon = (type: PropertyType): React.ReactNode => {
+    const  {theme} = useTheme()
+
   const iconSize = 18;
   switch (type) {
     case 'house':
@@ -57,7 +51,7 @@ export const getPropertyTypeIcon = (type: PropertyType, theme: Theme): React.Rea
     case 'land':
       return <MapIcon size={iconSize} color={theme.accent || '#6f42c1'} />;
     case 'commercial':
-      return <DollarIcon size={iconSize} color={theme.onSurfaceVariant || theme.onSurface || '#495057'} />;
+      return <DollarIcon size={iconSize} color={theme.surfaceVariant || theme.onSurface || '#495057'} />;
     default:
       return <HomeIcon size={iconSize} color={theme.primary || '#007bff'} />;
   }
@@ -93,7 +87,9 @@ export const getPropertyTypeIconName = (type: PropertyType): string => {
   }
 };
 
-export const getPropertyTypeColor = (type: PropertyType, theme: Theme): string => {
+export const getPropertyTypeColor = (type: PropertyType): string => {  
+  const  {theme} = useTheme()
+
   switch (type) {
     case 'house':
       return theme.primary || '#007bff';
@@ -102,7 +98,7 @@ export const getPropertyTypeColor = (type: PropertyType, theme: Theme): string =
     case 'land':
       return theme.accent || '#6f42c1';
     case 'commercial':
-      return theme.onSurfaceVariant || theme.onSurface || '#495057';
+      return theme.surfaceVariant || theme.onSurface || '#495057';
     default:
       return theme.primary || '#007bff';
   }

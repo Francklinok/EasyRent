@@ -40,7 +40,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         <ThemedView className="h-40 bg-gray-200 items-center justify-center relative">
           <View
             className="absolute top-3 right-3 py-1 px-2 rounded z-10"
-            style={{ backgroundColor: getStatusColor(property.status, theme) }}
+            style={{ backgroundColor: getStatusColor(property.status) }}
           >
             <ThemedText className="text-white text-xs font-medium">
               {getStatusLabel(property.status)}
@@ -61,7 +61,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           </ThemedText>
 
           <ThemedView className="flex-row items-center mb-2">
-            {getPropertyTypeIcon(property.type, theme)}
+            {getPropertyTypeIcon(property.type)}
             <ThemedText 
               variant="secondary" 
               className="ml-2 text-sm"

@@ -25,13 +25,13 @@ import {
   X,
   Info
 } from 'lucide-react-native';
+import { useInventory } from '@/hooks/useInventory';
 import { useTheme } from '@/components/contexts/theme/themehook';
-
 import { PropertyItem } from '@/types/property';
 import { getStatusColor, getStatusLabel, getPropertyTypeIcon, formatAmount } from '@/utils/inventory';
 import { QuickView } from '@/components/inventory/QuickView';
 import { PropertyCard } from '@/components/inventory/PropertyCard';
-
+import { FilterPanel } from '@/components/inventory/FilterPanel';
 // Exemple de données pour l'inventaire
 const sampleInventory: PropertyItem[] = [
   {
@@ -346,12 +346,12 @@ const RenderInventoryManagement = () => {
                     
                     <ThemedView style={styles.listItemPrice}>
                       <ThemedText variant="accent" style={styles.listItemPriceText}>
-                        {property.price.sale ? formatAmount(property.price.sale) : ''}
+                        {property.price.sale ? formatAmount(property.price.sale, 'EURO') : ''}
                       </ThemedText>
                       
                       {property.price.rent && (
                         <ThemedText variant="secondary" style={styles.listItemRentText}>
-                          {formatAmount(property.price.rent)}/mois
+                          {formatAmount(property.price.rent, 'EURO')}/mois
                         </ThemedText>
                       )}
                     </ThemedView>
@@ -524,11 +524,11 @@ const RenderInventoryManagement = () => {
         {viewMode === 'grid' ? renderGridView() : renderListView()}
       </ThemedView>
       
-      {/* Panneau de filtres */}
+      {/* Panneau de filtres
       {renderFiltersPanel()}
       
-      {/* Vue rapide */}
-      {renderQuickView()}
+      //vue  rapide
+      {renderQuickView()} */}
     </ThemedView>
   );
 };
