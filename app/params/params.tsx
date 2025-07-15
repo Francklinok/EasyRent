@@ -56,7 +56,7 @@ const ParamsScreen = () => {
           <ThemedText type = "caption" className="text-xs font-bold text-[#B9BBBE] tracking-wide">PARAMÈTRES DE L'APP</ThemedText>
         </ThemedView>
         <ThemedView variant="surface" bordered className="mx-1 p-2 mb-4 rounded-lg overflow-hidden">
-          <SettingsItem showArrow="on" label="Paramètres" icon="settings" iconColor="#B9BBBE" onPress={() => router.navigate('/parameters/PConfidentiality')} />
+          {/* <SettingsItem showArrow="on" label="Paramètres" icon="settings" iconColor="#B9BBBE" onPress={() => router.navigate('/parameters/PConfidentiality')} /> */}
           <SettingsItem showArrow="on" label="Compte" icon="shield" iconColor="#B9BBBE" onPress={() => router.navigate('/account/Account')} />
           <SettingsItem showArrow="on" label="IA Assistant" icon="brain" iconColor="#5865F2" onPress={() => router.navigate('/profile/AssistantAI')} />
           <SettingsItem showArrow="on" label="Scanner" icon="qrcode-scan" iconColor="#3BA55D" onPress={() => router.navigate('/ar/Scanner')} />

@@ -32,6 +32,8 @@ import { getStatusColor, getStatusLabel, getPropertyTypeIcon, formatAmount } fro
 import { QuickView } from '@/components/inventory/QuickView';
 import { PropertyCard } from '@/components/inventory/PropertyCard';
 import { FilterPanel } from '@/components/inventory/FilterPanel';
+import { BackButton } from '@/components/ui/BackButton';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Exemple de données pour l'inventaire
 const sampleInventory: PropertyItem[] = [
   {
@@ -142,6 +144,8 @@ const sampleInventory: PropertyItem[] = [
 // Composant principal pour la gestion de l'inventaire immobilier
 const RenderInventoryManagement = () => {
   const { theme } = useTheme();
+    const insets = useSafeAreaInsets();
+  
   const {
     inventory,
     currentSection,
@@ -161,10 +165,6 @@ const RenderInventoryManagement = () => {
     inventoryByType,
     currency
   } = useInventory(sampleInventory);
-
-  
-
-  
 
   {/* Panneau de filtres */}
       <FilterPanel 
@@ -403,40 +403,43 @@ const RenderInventoryManagement = () => {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView className = "px-2" style={{ flex: 1, paddingTop: insets.top + 4  }}
+>
       {/* En-tête */}
       <ThemedView style={styles.header}>
         <ThemedView style={styles.headerLeft}>
+          <BackButton/>
+
           <TouchableOpacity 
             style={styles.filterToggleButton}
             onPress={() => setFiltersPanelVisible(!filtersPanelVisible)}
           >
-            <Sliders size={20} color={filtersPanelVisible ? theme.primary : theme.onSurface} />
+            <Sliders size={16} color={filtersPanelVisible ? theme.primary : theme.onSurface} />
           </TouchableOpacity>
           
-          <ThemedText variant="primary" style={styles.headerTitle}>
+          <ThemedText type = "body">
             Inventaire Immobilier
           </ThemedText>
         </ThemedView>
         
         <ThemedView style={styles.headerRight}>
           <TouchableOpacity style={styles.viewToggleButton} onPress={() => setViewMode('grid')}>
-            <Grid size={20} color={viewMode === 'grid' ? theme.primary : theme.onSurface} />
+            <Grid size={16} color={viewMode === 'grid' ? theme.primary : theme.onSurface} />
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.viewToggleButton} onPress={() => setViewMode('list')}>
-            <ListIcon size={20} color={viewMode === 'list' ? theme.primary : theme.onSurface} />
+            <ListIcon size={16} color={viewMode === 'list' ? theme.primary : theme.onSurface} />
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.searchButton}>
-            <Search size={20} color={theme.onSurface} />
+          {/* <TouchableOpacity style={styles.searchButton}>
+            <Search size={16} color={theme.onSurface} />
           </TouchableOpacity>
-          
+           */}
           <TouchableOpacity 
             style={styles.addButton} 
             onPress={() => setCurrentSection('add-property')}
           >
-            <Plus size={20} color="#fff" />
+            <Plus size={16} color= {theme.surface} />
           </TouchableOpacity>
         </ThemedView>
       </ThemedView>
@@ -457,7 +460,7 @@ const RenderInventoryManagement = () => {
             <ThemedText style={styles.activeFilterChipText}>
               {getStatusLabel(status)}
             </ThemedText>
-            <X size={14} color="#fff" />
+            <X size={14} color={theme.surface} />
           </TouchableOpacity>
         ))}
         
@@ -480,7 +483,7 @@ const RenderInventoryManagement = () => {
                type === 'apartment' ? 'Appartement' : 
                type === 'land' ? 'Terrain' : 'Commercial'}
             </ThemedText>
-            <X size={14} color="#fff" />
+            <X size={14} color={theme.surface}  />
           </TouchableOpacity>
         ))}
         
@@ -501,7 +504,7 @@ const RenderInventoryManagement = () => {
               {price === 'low' ? '< 250k€' : 
                price === 'medium' ? '250k€ - 500k€' : '> 500k€'}
             </ThemedText>
-            <X size={14} color="#fff" />
+            <X size={14} color={theme.surface} />
           </TouchableOpacity>
         ))}
         
@@ -524,51 +527,38 @@ const RenderInventoryManagement = () => {
         {viewMode === 'grid' ? renderGridView() : renderListView()}
       </ThemedView>
       
-      {/* Panneau de filtres
-      {renderFiltersPanel()}
-      
-      //vue  rapide
-      {renderQuickView()} */}
     </ThemedView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f8f8',
-  },
+
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    height: 64,
-    borderBottomWidth: 1,
+    paddingHorizontal: 2,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   filterToggleButton: {
-    width: 40,
-    height: 40,
+    width: 20,
+    height: 20,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
+  
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   viewToggleButton: {
-    width: 40,
-    height: 40,
+    width: 20,
+    height: 20,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
@@ -582,8 +572,8 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   addButton: {
-    width: 40,
-    height: 40,
+    width: 20,
+    height: 20,
     borderRadius: 20,
     backgroundColor: '#007bff',
     alignItems: 'center',

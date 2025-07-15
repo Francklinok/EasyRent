@@ -35,7 +35,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   return (
     
   <ThemedView
-      className={`absolute top-0 left-0 w-[300px] h-full z-[100] border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${
+      className={`absolute top-0 left-0 w-[300px]  z-[100] border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${
         visible ? 'translate-x-0' : '-translate-x-[300px]'
       }`} 
       variant="default"

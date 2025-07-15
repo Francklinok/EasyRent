@@ -36,12 +36,10 @@ export const QuickView: React.FC<QuickViewProps> = ({
 
   return (
     <ThemedView
-     className={`absolute top-0 left-0 w-[300px] h-full z-[100] border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${
+     className={`absolute top-0 left-0 w-[300px] h-full z-[100] border-r border-gray-200 transform transition-transform duration-300 ease-in-out${
       visible ? 'translate-x-0' : '-translate-x-[300px]'
       }`}
-     
-      variant="default"
-    >
+         >
       <ThemedView className="flex-row items-center p-4 border-b border-gray-200">
         <TouchableOpacity
           className="w-9 h-9 rounded-full items-center justify-center"
