@@ -17,7 +17,7 @@ interface Props {
     return (
     <ThemedView>
         <ThemedView className="flex-row justify-between items-center">
-          <ThemedView className="flex-1">
+          <ThemedView className="flex-1 px-2">
                <RenderCategoryTabs/>
           </ThemedView>
         </ThemedView>

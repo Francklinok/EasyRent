@@ -28,7 +28,7 @@ export default function ChatList() {
 
   return (
     <ThemedView className="flex-1">
-      <Header />
+      <Header rightElement={null} />
 
       {/* 🔍 Barre de recherche */}
       <ThemedView

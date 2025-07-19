@@ -14,9 +14,39 @@ import RenderFilterModal from "./home/renderFilterModal";
 import RenderItem from "./home/renderItem";
 import RenderGridItem from "./home/renderGridItem";
 import enrichItems from "../utils/homeUtils/extendData";
-
+import RenderCategoryTabs from "./home/renderCategory";
 
 const { width, height } = Dimensions.get('window');
+
+
+type PropertyType =
+  | "All"
+  | "Villa"
+  | "Appartement"
+  | "Maison"
+  | "Penthouse"
+  | "Studio"
+  | "Loft"
+  | "Bureau"
+  | "Chalet"
+  | "Hôtel"
+  | "Terrain"
+  | "Commercial";
+
+const propertyLabels: Record<PropertyType, string> = {
+  All: "Tous",
+  Villa: "Villa",
+  Appartement: "Appartement",
+  Maison: "Maison",
+  Penthouse: "Penthouse",
+  Studio: "Studio",
+  Loft: "Loft",
+  Bureau: "Bureau",
+  Chalet: "Chalet",
+  Hôtel: "Hôtel",
+  Terrain: "Terrain",
+  Commercial: "Commercial",
+};
 
 const RenHouseAcceuil = () => {
   const router = useRouter();
@@ -27,7 +57,8 @@ const RenHouseAcceuil = () => {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [showAIRecommendations, setShowAIRecommendations] = useState(true);
   const [animatingElement, setAnimatingElement] = useState<string | null>(null);
-  
+  const [selectedCategory, setSelectedCategory] = useState<PropertyType>("All"); // <-- ajouté
+
   // Animations refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const lottieRef = useRef(null);
@@ -76,6 +107,13 @@ const RenHouseAcceuil = () => {
   
 const extendedData =  enrichItems(data)
 
+  // **Filtrage des données**
+  const filteredData =
+    selectedCategory === "All"
+      ? extendedData
+      : extendedData.filter((item) => item.type === selectedCategory);
+
+
   return (
     <ThemedView variant="default" className="flex">
       <StatusBar barStyle={ "light-content"} />
@@ -85,12 +123,16 @@ const extendedData =  enrichItems(data)
       >
         {/* Header Component */}
         
-        <RenderHeader
+        {/* <RenderHeader
         viewType = {viewType}
         setViewType = {setViewType}
         setFilterModalVisible = {setFilterModalVisible}
         scrollY={scrollY}
-        />
+        /> */}
+
+         <RenderCategoryTabs
+                    onChange={(category) => setSelectedCategory(category)}
+                  />
         
         {/* Main Content */}
         <Animated.View 
@@ -101,7 +143,7 @@ const extendedData =  enrichItems(data)
         >
           {viewType === "list" ? (
             <Animated.FlatList
-              data={extendedData}
+              data={filteredData}
               keyExtractor={(item) => item.id}
               renderItem={({ item, index }) => (
                 <RenderItem

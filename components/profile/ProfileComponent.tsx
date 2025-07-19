@@ -101,7 +101,7 @@ const VerificationStatus: React.FC<{ user: UserProfile; isEditMode: boolean }> =
   const percentage = Math.round((verifiedCount / totalCount) * 100);
 
   return (
-    <ThemedView variant='surfaceVariant' className="bg-surface rounded-2xl p-5 mb-5 shadow-sm  px-4">
+    <ThemedView variant='surfaceVariant' className=" rounded-2xl p-4  px-4">
       <TouchableOpacity 
         onPress={() => setIsExpanded(!isExpanded)}
         className="flex-row items-center justify-between"
@@ -326,7 +326,7 @@ const DocumentsSection: React.FC<{ user: UserProfile; isEditMode: boolean }> = (
   };
 
   return (
-    <ThemedView variant = "surfaceVariant" className="bg-surface rounded-2xl p-5 mb-5 shadow-sm">
+    <ThemedView variant = "surfaceVariant" className="bg-surface rounded-2xl p-3 mb-5 shadow-sm ">
       <ThemedText className="text-lg font-semibold text-on-surface mb-4">
         Mes Documents
       </ThemedText>
@@ -334,7 +334,7 @@ const DocumentsSection: React.FC<{ user: UserProfile; isEditMode: boolean }> = (
       {user.documents.length === 0 ? (
         <ThemedView variant = "surfaceVariant" className="py-10 px-5 bg-surface-variant rounded-xl items-center">
           <FileText size={48} color={theme.outline} />
-          <ThemedText className="text-on-surface-variant text-center mb-4 mt-2">
+          <ThemedText className="px-4">
             Aucun document téléchargé pour le moment.
           </ThemedText>
           <TouchableOpacity className="flex-row items-center gap-1 px-4 py-3 bg-primary rounded-lg">
@@ -354,7 +354,7 @@ const DocumentsSection: React.FC<{ user: UserProfile; isEditMode: boolean }> = (
                   <ThemedText className="text-base font-medium text-on-surface">
                     {doc.name}
                   </ThemedText>
-                  <ThemedText className="text-xs text-on-surface-variant mt-0.5">
+                  <ThemedText >
                     {getDocumentTypeText(doc.type)} - {new Date(doc.uploadDate).toLocaleDateString('fr-FR')}
                   </ThemedText>
                 </ThemedView>
@@ -609,18 +609,18 @@ const ProfileScreen: React.FC = () => {
   
 
   return (
-    <SafeAreaView style={{ paddingTop: insets.top + 4  }}
+    <SafeAreaView style={{ paddingTop: insets.top + 4, paddingHorizontal:1 }}
 >
-      <ScrollView className=" px-2">
+      <ScrollView >
         {/* Header Section */}
-        <ThemedView variant = 'primary' className="flex-row items-center  gap-6  p-2">
+        <ThemedView variant  = "primary"  className="flex-row items-center  gap-6  p-4  px-0">
           <BackButton/>
-          <ThemedView variant = "primary" className="flex-row items-center gap-4">
+          <ThemedView variant  = "primary" className="flex-row items-center gap-4">
             <Image
               source={{ uri: user.profilePictureUrl || 'https://via.placeholder.com/150' }}
               className="w-16 h-16 rounded-full border-2 border-primary"
             />
-            <ThemedView variant = "primary">
+            <ThemedView variant  = "primary">
               <ThemedText type= 'body'>
                 {user.name}
               </ThemedText>
@@ -635,18 +635,22 @@ const ProfileScreen: React.FC = () => {
           >
             <Edit3 size={24} color = {theme.surface} />
           </TouchableOpacity>
-        </ThemedView>
 
-        {/* User Badges */}
-        <ThemedView variant = 'primary' className="items-center rounded-b-3xl mb-4">
+            {/* User Badges */}
+       
+        </ThemedView>
+        <ThemedView variant  = "primary" className="items-center rounded-b-3xl mb-4">
           <UserBadges user={user} />
         </ThemedView>
         {/* Verification Status */}
-        <ThemedView  className = "px-2">
+       
+      
+        <ThemedView  className="px-3  pb-12">
+
+        <ThemedView >
           <VerificationStatus user={user} isEditMode={isEditMode} />
         </ThemedView>
-
-        {/* Role Management */}
+        
         <RoleManagement
           user={user}
           setUser={setUser}
@@ -656,7 +660,7 @@ const ProfileScreen: React.FC = () => {
         />
 
         {/* Role-Specific Content */}
-        <ThemedView variant = "surfaceVariant" className="bg-surface rounded-2xl p-1 px-4">
+        <ThemedView variant = "surfaceVariant" className="bg-surface rounded-2xl p-2 px-4">
           <ThemedText >
             Contenu spécifique au rôle
           </ThemedText>
@@ -669,7 +673,7 @@ const ProfileScreen: React.FC = () => {
             Mes Statistiques
           </ThemedText>
           <ThemedView variant = "surfaceVariant" className="flex-row justify-between">
-            <ThemedView  className="flex-1 items-center p-3 bg-surface-variant rounded-lg mr-2">
+            <ThemedView variant = "surfaceVariant" className="flex-1 items-center p-3 bg-surface-variant rounded-lg mr-2">
               <ThemedText className="text-2xl font-bold text-primary">
                 {user.statistics.totalViews || 0}
               </ThemedText>
@@ -677,7 +681,7 @@ const ProfileScreen: React.FC = () => {
                 Vues du profil
               </ThemedText>
             </ThemedView>
-            <ThemedView className="flex-1 items-center p-3 bg-surface-variant rounded-lg mx-1">
+            <ThemedView variant = "surfaceVariant" className="flex-1 items-center p-3 bg-surface-variant rounded-lg mx-1">
               <ThemedText >
                 {user.statistics.totalTransactions || 0}
               </ThemedText>
@@ -685,7 +689,7 @@ const ProfileScreen: React.FC = () => {
                 Transactions
               </ThemedText>
             </ThemedView>
-            <ThemedView className="flex-1 items-center p-3 bg-surface-variant rounded-lg ml-2">
+            <ThemedView variant = "surfaceVariant" className="flex-1 items-center p-3 bg-surface-variant rounded-lg ml-2">
               <ThemedText className="text-2xl font-bold text-success">
                 {user.statistics.averageRating?.toFixed(1) || '0.0'}
               </ThemedText>
@@ -736,33 +740,36 @@ const ProfileScreen: React.FC = () => {
         </ThemedView>
 
         {/* Documents Section */}
+        <ThemedView >
         <DocumentsSection user={user} isEditMode={isEditMode} />
+
+        </ThemedView>
 
       
 
         {/* Contact Information */}
-        <ThemedView className="bg-surface rounded-2xl p-5 mb-5 shadow-sm">
-          <ThemedText className="text-lg font-semibold text-on-surface mb-4">
+        <ThemedView variant  = "surfaceVariant" className=" rounded-2xl p-4 mb-5 shadow-sm ">
+          <ThemedText>
             Informations de contact
           </ThemedText>
           
-          <ThemedView className="flex-row items-center gap-3 py-3 border-b border-outline">
+          <ThemedView variant  = "surfaceVariant" className="flex-row items-center gap-3 py-3 border-b border-outline">
             <Mail size={20} className="text-on-surface-variant" />
-            <ThemedText className="text-base text-on-surface">
+            <ThemedText className="px-4">
               {user.email}
             </ThemedText>
           </ThemedView>
 
-          <ThemedView className="flex-row items-center gap-3 py-3 border-b border-outline">
+          <ThemedView variant  = "surfaceVariant" className="flex-row items-center gap-3 py-3 border-b border-outline">
             <Phone size={20} className="text-on-surface-variant" />
-            <ThemedText className="text-base text-on-surface">
+            <ThemedText className="px-4">
               {user.phone}
             </ThemedText>
           </ThemedView>
 
-          <ThemedView className="flex-row items-center gap-3 py-3">
+          <ThemedView variant  = "surfaceVariant" className="flex-row items-center gap-3 py-3">
             <MapPin size={20} className="text-on-surface-variant" />
-            <ThemedText className="text-base text-on-surface">
+            <ThemedText className="px-4">
               {user.location}
             </ThemedText>
           </ThemedView>
@@ -770,20 +777,20 @@ const ProfileScreen: React.FC = () => {
 
         {/* Professional Info (if agent or developer) */}
         {(activePersona === 'agent' || activePersona === 'developer') && (
-          <ThemedView className="bg-surface rounded-2xl p-5 mb-5 shadow-sm">
+          <ThemedView variant  = "surfaceVariant" className="bg-surface rounded-2xl p-5 mb-5 shadow-sm">
             <ThemedText className="text-lg font-semibold text-on-surface mb-4">
               Informations professionnelles
             </ThemedText>
             
             {activePersona === 'agent' && (
-              <ThemedView>
-                <ThemedView className="flex-row items-center gap-3 py-3 border-b border-outline">
+              <ThemedView variant  = "surfaceVariant">
+                <ThemedView variant  = "surfaceVariant" className="flex-row items-center gap-3 py-3 border-b border-outline">
                   <Building size={20} className="text-on-surface-variant" />
                   <ThemedText className="text-base text-on-surface">
                     Agence immobilière
                   </ThemedText>
                 </ThemedView>
-                <ThemedView className="flex-row items-center gap-3 py-3 border-b border-outline">
+                <ThemedView variant  = "surfaceVariant" className="flex-row items-center gap-3 py-3 border-b border-outline">
                   <Badge size={20} className="text-on-surface-variant" />
                   <ThemedText className="text-base text-on-surface">
                     Carte professionnelle: T123456789
@@ -793,14 +800,14 @@ const ProfileScreen: React.FC = () => {
             )}
 
             {activePersona === 'developer' && (
-              <ThemedView>
-                <ThemedView className="flex-row items-center gap-3 py-3 border-b border-outline">
+              <ThemedView variant  = "surfaceVariant">
+                <ThemedView variant  = "surfaceVariant" className="flex-row items-center gap-3 py-3 border-b border-outline">
                   <Briefcase size={20} className="text-on-surface-variant" />
                   <ThemedText className="text-base text-on-surface">
                     Entreprise de promotion
                   </ThemedText>
                 </ThemedView>
-                <ThemedView className="flex-row items-center gap-3 py-3">
+                <ThemedView variant  = "surfaceVariant" className="flex-row items-center gap-3 py-3">
                   <Award size={20} className="text-on-surface-variant" />
                   <ThemedText className="text-base text-on-surface">
                     Certifications: ISO 9001, HQE
@@ -810,23 +817,8 @@ const ProfileScreen: React.FC = () => {
             )}
           </ThemedView>
         )}
-
-        {/* Bottom Action Buttons */}
-        <ThemedView className="flex-row gap-3 mb-10">
-          <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-4 bg-primary rounded-xl">
-            <MessageCircle size={20} className="text-on-primary" />
-            <ThemedText className="text-on-primary font-semibold">
-              Contacter
-            </ThemedText>
-          </TouchableOpacity>
-          
-          <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-4 bg-secondary rounded-xl">
-            <Star size={20} className="text-on-secondary" />
-            <ThemedText className="text-on-secondary font-semibold">
-              Évaluer
-            </ThemedText>
-          </TouchableOpacity>
         </ThemedView>
+
       </ScrollView>
 
       {/* Add Role Modal */}
