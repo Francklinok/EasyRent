@@ -1,9 +1,9 @@
-import getFeaturesByLocation from "./getFutureByLocation";
 import getEnergyScore from "./energieScore";
-import { ItemType, FeatureIcon } from "@/types/ItemType";
-
+import { ItemType, Feature, FeatureIcon } from "@/types/ItemType";
+import getFeaturesByLocation from "./getFutureByLocation";
 export interface ExtendedItemType extends ItemType {
-  features: FeatureIcon[];
+  // features reste Feature[] (pas FeatureIcon[])
+  features: Feature[];
   energyScore: number;
   virtualTourAvailable: boolean;
   distanceToAmenities: {
@@ -19,21 +19,23 @@ function getDistanceToAmenities(location: string) {
     schools: Math.floor(Math.random() * 5) + 1,
     healthcare: Math.floor(Math.random() * 8) + 1,
     shopping: Math.floor(Math.random() * 4) + 1,
-    transport: Math.floor(Math.random() * 3) + 1
+    transport: Math.floor(Math.random() * 3) + 1,
   };
 }
 
 const enrichItems = (data: ItemType[]): ExtendedItemType[] => {
-  return data.map(item => {
+  return data.map((item) => {
     const energyScore = getEnergyScore(item.location);
     const virtualTourAvailable = Math.random() > 0.3;
 
+    const features: Feature[] = getFeaturesByLocation(item.location);
+
     return {
-      ...item,
-      features: getFeaturesByLocation(item.location),
+      ...item, // propriétés originales
+      features, // ajout des propriétés étendues
       energyScore,
       virtualTourAvailable,
-      distanceToAmenities: getDistanceToAmenities(item.location)
+      distanceToAmenities: getDistanceToAmenities(item.location),
     };
   });
 };

@@ -23,6 +23,7 @@
     "@react-native-picker/picker": "^2.11.1",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/native": "^7.1.6",
+    "@shopify/flash-list": "^1.8.3",
     "assert": "^1.1.1",
     "babel-preset-expo": "13.0.0",
     "buffer": "^4.9.1",

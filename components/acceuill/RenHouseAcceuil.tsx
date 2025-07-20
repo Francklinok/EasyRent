@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { TouchableOpacity, Dimensions, Animated, StatusBar } from "react-native";
-import {  MaterialIcons} from "@expo/vector-icons";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { TouchableOpacity, Dimensions, Animated, StatusBar, InteractionManager } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { BlurView } from "expo-blur";
+import { FlashList } from "@shopify/flash-list";
 import data from "@/assets/data/data";
 import { ItemType, FeatureIcon } from "@/types/ItemType";
 import { useTheme } from "../contexts/theme/themehook";
@@ -15,9 +16,12 @@ import RenderItem from "./home/renderItem";
 import RenderGridItem from "./home/renderGridItem";
 import enrichItems from "../utils/homeUtils/extendData";
 import RenderCategoryTabs from "./home/renderCategory";
-
+import OptimizedFlashList from "./home/optimizedFlashList";
 const { width, height } = Dimensions.get('window');
 
+// Configuration optimisée pour FlashList
+const ITEM_HEIGHT = 300;
+const GRID_ITEM_HEIGHT = 250;
 
 type PropertyType =
   | "All"
@@ -33,41 +37,43 @@ type PropertyType =
   | "Terrain"
   | "Commercial";
 
-const propertyLabels: Record<PropertyType, string> = {
-  All: "Tous",
-  Villa: "Villa",
-  Appartement: "Appartement",
-  Maison: "Maison",
-  Penthouse: "Penthouse",
-  Studio: "Studio",
-  Loft: "Loft",
-  Bureau: "Bureau",
-  Chalet: "Chalet",
-  Hôtel: "Hôtel",
-  Terrain: "Terrain",
-  Commercial: "Commercial",
-};
-
 const RenHouseAcceuil = () => {
   const router = useRouter();
-  // const [selectedCategory, setSelectedCategory] = useState("All");
+  const { theme } = useTheme();
+  
+  // States optimisés
   const [scrollY] = useState(new Animated.Value(0));
   const [favorites, setFavorites] = useState<string[]>([]);
   const [viewType, setViewType] = useState<"grid" | "list">("list");
   const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [showAIRecommendations, setShowAIRecommendations] = useState(true);
   const [animatingElement, setAnimatingElement] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<PropertyType>("All"); // <-- ajouté
+  const [selectedCategory, setSelectedCategory] = useState<PropertyType>("All");
+  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Animations refs
+  // Refs optimisés
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const lottieRef = useRef(null);
-  
-
-  const  {theme} = useTheme()  
-  // Animation for pulsation effect
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  
+
+  // Données enrichies memorizées
+  const extendedData = useMemo(() => {
+    const enrichedData = enrichItems(data);
+    console.log("Extended data length:", enrichedData?.length);
+    console.log("First item:", enrichedData?.[0]);
+    return enrichedData;
+  }, []);
+
+  // Données filtrées memoizées
+  const filteredData = useMemo(() => {
+    const filtered = selectedCategory === "All"
+      ? extendedData
+      : extendedData.filter((item) => item.type === selectedCategory);
+    console.log("Filtered data length:", filtered?.length);
+    return filtered;
+  }, [selectedCategory, extendedData]);
+
+  // Animation de pulsation optimisée
   const pulsate = useCallback(() => {
     Animated.sequence([
       Animated.timing(pulseAnim, {
@@ -80,13 +86,69 @@ const RenHouseAcceuil = () => {
         duration: 800,
         useNativeDriver: true
       })
-    ]).start(() => pulsate());
+    ]).start(() => {
+      InteractionManager.runAfterInteractions(pulsate);
+    });
   }, [pulseAnim]);
-  
+
+  // Navigation optimisée vers les détails
+  const navigateToInfo = useCallback((item: ItemType) => {
+    console.log("Navigating to item:", item.id);
+    InteractionManager.runAfterInteractions(() => {
+      router.push(`/property/${item.id}`);
+    });
+  }, [router]);
+
+  // Pull to refresh optimisé
+  const onRefresh = useCallback(() => {
+    console.log("Refreshing...");
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  }, []);
+
+  // Pagination optimisée
+  const onEndReached = useCallback(() => {
+    if (!loading) {
+      console.log("Loading more...");
+      setLoading(true);
+      setTimeout(() => {
+        setLoading(false);
+      }, 1000);
+    }
+  }, [loading]);
+
+  // Fonction de rendu pour la grille (fallback si besoin)
+  const renderGridItem = useCallback(({ item, index }: { item: ItemType; index: number }) => (
+    <RenderGridItem
+      item={item}
+      index={index}
+      width={width}
+      lottieRef={lottieRef}
+      setAnimatingElement={setAnimatingElement}
+      favorites={favorites}
+      setFavorites={setFavorites}
+      navigateToInfo={navigateToInfo}
+    />
+  ), [favorites, navigateToInfo]);
+
+  // Key extractor pour le mode grille
+  const keyExtractor = useCallback((item: ItemType, index: number) => `${item.id}-${index}`, []);
+
+  // Header Component memoizé (optionnel)
+  // const ListHeaderComponent = useMemo(() => (
+  //   <ThemedView style={{ paddingBottom: 10 }}>
+  //     <ThemedText style={{ textAlign: 'center', padding: 10 }}>
+  //       {filteredData.length} propriétés trouvées
+  //     </ThemedText>
+  //   </ThemedView>
+  // ), [filteredData.length]);
+
+  // Initialisation des animations
   useEffect(() => {
     pulsate();
     
-    // Fade in the component
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 1000,
@@ -104,150 +166,92 @@ const RenHouseAcceuil = () => {
       fadeAnim.setValue(0);
     };
   }, [pulsate, fadeAnim]);
-  
-const extendedData =  enrichItems(data)
 
-  // **Filtrage des données**
-  const filteredData =
-    selectedCategory === "All"
-      ? extendedData
-      : extendedData.filter((item) => item.type === selectedCategory);
-
+  // Gestion du scroll optimisée
+  const onScroll = useMemo(() => 
+    Animated.event(
+      [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+      { useNativeDriver: true }
+    ), [scrollY]
+  );
 
   return (
-    <ThemedView variant="default" className="flex">
-      <StatusBar barStyle={ "light-content"} />
-      <LinearGradient
-        colors={theme.background}
-        className="flex"
-      >
+    <ThemedView  >
+      <StatusBar barStyle={ "light-content"}  />
+      <LinearGradient colors={theme.background} >
+        
         {/* Header Component */}
+        <RenderCategoryTabs
+          onChange={(category) => {
+            console.log("Category changed:", category);
+            setSelectedCategory(category);
+          }}
+        />
         
-        {/* <RenderHeader
-        viewType = {viewType}
-        setViewType = {setViewType}
-        setFilterModalVisible = {setFilterModalVisible}
-        scrollY={scrollY}
-        /> */}
-
-         <RenderCategoryTabs
-                    onChange={(category) => setSelectedCategory(category)}
-                  />
+        {/* Debug Info */}
+        {/* <ThemedView style={{ padding: 10, backgroundColor: 'rgba(255,0,0,0.1)' }}>
+          <ThemedText>Data: {extendedData?.length} | Filtered: {filteredData?.length}</ThemedText>
+        </ThemedView> */}
         
-        {/* Main Content */}
+        {/* Main Content avec FlashList optimisé */}
         <Animated.View 
           style={{ 
-            // flex: 1,
+            flex: 1,
             opacity: fadeAnim,
           }}
         >
-          {viewType === "list" ? (
-            <Animated.FlatList
-              data={filteredData}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item, index }) => (
-                <RenderItem
-                  item={item}
-                  index={index}
-                  lottieRef={lottieRef}
-                  favorites={favorites}
-                  animatingElement={animatingElement}
-                  setAnimatingElement={setAnimatingElement}
-                />)}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingTop: 1, paddingBottom: 30 }}
-              ListHeaderComponent={
-                <>
-                                  
-              
-                  {/* <RenderAIRecommendation
-                  showAIRecommendations= {showAIRecommendations}
-                  setShowAIRecommendations = {setShowAIRecommendations}
-                  /> */}
+          
 
-                </>
-              }
-              onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                { useNativeDriver: true }
-              )}
+          {viewType === "list" ? (
+            <OptimizedFlashList
+              data={filteredData}
+              lottieRef={lottieRef}
+              favorites={favorites}
+              setFavorites={setFavorites}
+              animatingElement={animatingElement}
+              setAnimatingElement={setAnimatingElement}
+              navigateToInfo={navigateToInfo}
+              onScroll={onScroll}
+              onRefresh={onRefresh}
+              refreshing={refreshing}
+              onEndReached={onEndReached}
+              // ListHeaderComponent={ListHeaderComponent}
             />
+           
           ) : (
-            <Animated.FlatList
-              data={extendedData}
-              keyExtractor={(item) => item.id}
-              renderItem = { ({item, index}) =>(
-              <RenderGridItem
-                item={item}
-                index={index}
-                width={width}
-                lottieRef={lottieRef}
-                setAnimatingElement={setAnimatingElement}
-                favorites={favorites}
-                setFavorites={setFavorites}
-              />)
-              }
-              showsVerticalScrollIndicator={false}
+            // Mode grille - FlashList standard pour éviter les complications
+            <FlashList
+              data={filteredData}
+              keyExtractor={keyExtractor}
+              renderItem={renderGridItem}
               numColumns={2}
-              contentContainerStyle={{ paddingTop: 120, paddingBottom: 30 }}
-              ListHeaderComponent={
-                <>
-                  {/* <RenderCategoryTabs
-                  /> */}
-                  
-                  {/* <RenderAIRecommendation
-                  showAIRecommendations= {showAIRecommendations}
-                  setShowAIRecommendations = {setShowAIRecommendations}
-                  /> */}
-                
-                </>
-              }
-              onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                { useNativeDriver: true }
-              )}
+              estimatedItemSize={GRID_ITEM_HEIGHT}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ 
+                paddingTop: 8, 
+                paddingBottom: 100, 
+ }}
+              // ListHeaderComponent={ListHeaderComponent}
+              onScroll={onScroll}
+              onRefresh={onRefresh}
+              refreshing={refreshing}
+              onEndReached={onEndReached}
+              onEndReachedThreshold={0.5}
+              directionalLockEnabled={true}
+              bounces={true}
             />
           )}
         </Animated.View>
 
+        {/* Modal de filtre */}
         <RenderFilterModal
-        fadeAnim = {fadeAnim}
-        filterModalVisible = {filterModalVisible}
-        setFilterModalVisible = {setFilterModalVisible}
+          fadeAnim={fadeAnim}
+          filterModalVisible={filterModalVisible}
+          setFilterModalVisible={setFilterModalVisible}
         />
-        
-        {/* Bottom Navigation Bar */}
-        <BlurView
-          intensity={ 40 }
-          tint={ "dark" }
-          className="absolute bottom-0 left-0 right-0 border-t"
-          style={{ borderColor: 'rgba(255,255,255,0.1)' }}
-        >
-          <ThemedView className="flex-row justify-around py-4" style={{ backgroundColor: 'transparent' }}>
-            <TouchableOpacity className="items-center">
-              <MaterialIcons name="home" size={24} color={ '#3b82f6'} />
-              <ThemedText style={{ fontSize: 12, color:'#3b82f6', marginTop: 2 }}>Accueil</ThemedText>
-            </TouchableOpacity>
-            
-            <TouchableOpacity className="items-center">
-              <MaterialIcons name="search" size={24} color={theme.subtext} />
-              <ThemedText style={{ fontSize: 12, color: theme.subtext, marginTop: 2 }}>Recherche</ThemedText>
-            </TouchableOpacity>
-            
-            <TouchableOpacity className="items-center">
-              <MaterialIcons name="favorite-border" size={24} color={theme.subtext} />
-              <ThemedText style={{ fontSize: 12, color: theme.subtext, marginTop: 2 }}>Favoris</ThemedText>
-            </TouchableOpacity>
-            
-            <TouchableOpacity className="items-center">
-              <MaterialIcons name="person-outline" size={24} color={theme.subtext} />
-              <ThemedText style={{ fontSize: 12, color: theme.subtext, marginTop: 2 }}>Profil</ThemedText>
-            </TouchableOpacity>
-          </ThemedView>
-        </BlurView>
       </LinearGradient>
     </ThemedView>
   );
 };
 
-export default RenHouseAcceuil;
+export default React.memo(RenHouseAcceuil);

@@ -4,7 +4,7 @@ const data: ItemType[] = [
   // === VILLAS ===
   {
     id: "villa_1",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/10939532127561869708_0",
+    avatar: "https://i.imgur.com/villa1.jpg",
     price: "2500$",
     availibility: "available",
     stars: 5,
@@ -12,7 +12,7 @@ const data: ItemType[] = [
     review: "Villa exceptionnelle avec vue mer, service haut de gamme ! ✨",
     type: "Villa",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "swimming-pool", name: "Piscine privée" },
       { icon: "car", name: "Garage" },
       { icon: "umbrella-beach", name: "Plage privée" },
@@ -21,7 +21,7 @@ const data: ItemType[] = [
   },
   {
     id: "villa_2",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/10988673832593707750_0",
+    avatar: "https://i.imgur.com/villa2.jpg",
     price: "1800$",
     availibility: "available",
     stars: 4,
@@ -29,23 +29,23 @@ const data: ItemType[] = [
     review: "Magnifique villa avec jardin tropical, très paisible 🌺",
     type: "Villa",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "tree", name: "Jardin tropical" },
       { icon: "hot-tub", name: "Jacuzzi" },
-      { icon: "shield-alt", name: "Sécurité 24h" }
+      { icon: "shield-alt", name: "Sécurité 24h" }
     ]
   },
   {
     id: "villa_3",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/15475773575473773381_0",
+    avatar: "https://i.imgur.com/villa3.jpg",
     price: "3200$",
     availibility: "not available",
     stars: 5,
-    location: "Saint-Tropez",
+    location: "Saint‑Tropez",
     review: "Villa de luxe incroyable, parfaite pour les vacances ! 🏖️",
     type: "Villa",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "swimming-pool", name: "Piscine infinity" },
       { icon: "wine-glass", name: "Cave à vin" },
       { icon: "mountain", name: "Vue panoramique" }
@@ -53,7 +53,7 @@ const data: ItemType[] = [
   },
   {
     id: "villa_4",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/376976537715212659_0",
+    avatar: "https://i.imgur.com/villa4.jpg",
     price: "2100$",
     availibility: "available",
     stars: 4,
@@ -61,7 +61,7 @@ const data: ItemType[] = [
     review: "Villa moderne avec terrasse spacieuse, très confortable 🌟",
     type: "Villa",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "snowflake", name: "Climatisation" },
       { icon: "dumbbell", name: "Salle de sport" },
       { icon: "parking", name: "Parking privé" }
@@ -71,15 +71,15 @@ const data: ItemType[] = [
   // === APPARTEMENTS ===
   {
     id: "apt_1",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/2539376670525203021_0",
+    avatar: "https://i.imgur.com/apt1.jpg",
     price: "850$",
     availibility: "available",
     stars: 4,
-    location: "Paris 16ème",
+    location: "Paris 16ème",
     review: "Appartement moderne en plein cœur de Paris ! 🗼",
     type: "Appartement",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "elevator", name: "Ascenseur" },
       { icon: "subway", name: "Métro proche" },
       { icon: "shopping-cart", name: "Commerces" }
@@ -87,15 +87,15 @@ const data: ItemType[] = [
   },
   {
     id: "apt_2",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/8461669723175923763_0",
+    avatar: "https://i.imgur.com/apt2.jpg",
     price: "1200$",
     availibility: "available",
     stars: 5,
-    location: "Lyon Part-Dieu",
+    location: "Lyon Part‑Dieu",
     review: "Appartement haut standing avec vue sur la ville 🌆",
     type: "Appartement",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "snowflake", name: "Climatisation" },
       { icon: "concierge-bell", name: "Conciergerie" },
       { icon: "parking", name: "Parking souterrain" }
@@ -103,15 +103,15 @@ const data: ItemType[] = [
   },
   {
     id: "apt_3",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/10037853504073340740_0",
+    avatar: "https://i.imgur.com/apt3.jpg",
     price: "950$",
     availibility: "not available",
     stars: 4,
-    location: "Marseille Vieux-Port",
+    location: "Marseille Vieux‑Port",
     review: "Superbe appartement avec vue sur le port ! ⛵",
     type: "Appartement",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "balcony", name: "Balcon" },
       { icon: "anchor", name: "Vue port" },
       { icon: "utensils", name: "Restaurants" }
@@ -121,7 +121,7 @@ const data: ItemType[] = [
   // === MAISONS ===
   {
     id: "house_1",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/12268530381852002230_0",
+    avatar: "https://i.imgur.com/house1.jpg",
     price: "1400$",
     availibility: "available",
     stars: 4,
@@ -129,7 +129,7 @@ const data: ItemType[] = [
     review: "Maison familiale charmante avec grand jardin 🏡",
     type: "Maison",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "tree", name: "Grand jardin" },
       { icon: "fire", name: "Cheminée" },
       { icon: "parking", name: "Garage double" }
@@ -137,7 +137,7 @@ const data: ItemType[] = [
   },
   {
     id: "house_2",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/2580137789122596246_0",
+    avatar: "https://i.imgur.com/house2.jpg",
     price: "1100$",
     availibility: "available",
     stars: 3,
@@ -145,7 +145,7 @@ const data: ItemType[] = [
     review: "Maison traditionnelle bien située, calme et agréable 🌳",
     type: "Maison",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "home", name: "3 chambres" },
       { icon: "car", name: "Parking" },
       { icon: "playground", name: "Aire de jeux" }
@@ -153,7 +153,7 @@ const data: ItemType[] = [
   },
   {
     id: "house_3",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/3074469939646803983_0",
+    avatar: "https://i.imgur.com/house3.jpg",
     price: "1650$",
     availibility: "available",
     stars: 5,
@@ -161,7 +161,7 @@ const data: ItemType[] = [
     review: "Maison d'architecte exceptionnelle, design moderne ! 🎨",
     type: "Maison",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "lightbulb", name: "Domotique" },
       { icon: "leaf", name: "Écologique" },
       { icon: "solar-panel", name: "Panneaux solaires" }
@@ -171,7 +171,7 @@ const data: ItemType[] = [
   // === PENTHOUSES ===
   {
     id: "pent_1",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/8411369785669641642_0",
+    avatar: "https://i.imgur.com/pent1.jpg",
     price: "4500$",
     availibility: "available",
     stars: 5,
@@ -179,23 +179,23 @@ const data: ItemType[] = [
     review: "Penthouse de luxe avec terrasse panoramique ! 🏙️",
     type: "Penthouse",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
-      { icon: "city", name: "Vue 360°" },
+      { icon: "wifi", name: "Wi‑Fi" },
+      { icon: "city", name: "Vue 360°" },
       { icon: "hot-tub", name: "Jacuzzi terrasse" },
       { icon: "concierge-bell", name: "Conciergerie VIP" }
     ]
   },
   {
     id: "pent_2",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/11834009563185896930_0",
+    avatar: "https://i.imgur.com/pent2.jpg",
     price: "3800$",
     availibility: "not available",
     stars: 5,
-    location: "Monaco Monte-Carlo",
+    location: "Monaco Monte‑Carlo",
     review: "Penthouse exceptionnel face au casino ! 🎰",
     type: "Penthouse",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "gem", name: "Finitions luxe" },
       { icon: "champagne-glasses", name: "Bar privé" },
       { icon: "valet-parking", name: "Voiturier" }
@@ -203,7 +203,7 @@ const data: ItemType[] = [
   },
   {
     id: "pent_3",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/4465858121247400679_0",
+    avatar: "https://i.imgur.com/pent3.jpg",
     price: "5200$",
     availibility: "available",
     stars: 5,
@@ -211,7 +211,7 @@ const data: ItemType[] = [
     review: "Penthouse face à la mer, absolument magique ! 🌊",
     type: "Penthouse",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "umbrella-beach", name: "Plage privée" },
       { icon: "helicopter", name: "Héliport" },
       { icon: "spa", name: "Spa privé" }
@@ -221,7 +221,7 @@ const data: ItemType[] = [
   // === STUDIOS ===
   {
     id: "studio_1",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/6907908755788859053_0",
+    avatar: "https://i.imgur.com/studio1.jpg",
     price: "580$",
     availibility: "available",
     stars: 3,
@@ -229,15 +229,15 @@ const data: ItemType[] = [
     review: "Studio moderne et fonctionnel, parfait pour étudiants ! 📚",
     type: "Studio",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "bed", name: "Lit escamotable" },
-      { icon: "subway", name: "Métro 2min" },
+      { icon: "subway", name: "Métro 2 min" },
       { icon: "coffee", name: "Cafés proches" }
     ]
   },
   {
     id: "studio_2",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/17859932747377814431_0",
+    avatar: "https://i.imgur.com/studio2.jpg",
     price: "650$",
     availibility: "available",
     stars: 4,
@@ -245,15 +245,15 @@ const data: ItemType[] = [
     review: "Joli studio rénové, très bien équipé 🛏️",
     type: "Studio",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "kitchen", name: "Kitchenette" },
-      { icon: "washer", name: "Lave-linge" },
-      { icon: "store", name: "Centre-ville" }
+      { icon: "washer", name: "Lave‑linge" },
+      { icon: "store", name: "Centre‑ville" }
     ]
   },
   {
     id: "studio_3",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/10070368541943641704_0",
+    avatar: "https://i.imgur.com/studio3.jpg",
     price: "720$",
     availibility: "not available",
     stars: 4,
@@ -261,9 +261,9 @@ const data: ItemType[] = [
     review: "Studio avec balcon, proche de tout ! ☀️",
     type: "Studio",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "balcony", name: "Balcon" },
-      { icon: "beach", name: "Plage 5min" },
+      { icon: "beach", name: "Plage 5 min" },
       { icon: "tram", name: "Tram proche" }
     ]
   },
@@ -271,7 +271,7 @@ const data: ItemType[] = [
   // === LOFTS ===
   {
     id: "loft_1",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/6638432744866290863_0",
+    avatar: "https://i.imgur.com/loft1.jpg",
     price: "1900$",
     availibility: "available",
     stars: 5,
@@ -279,7 +279,7 @@ const data: ItemType[] = [
     review: "Loft industriel magnifique, caractère unique ! 🏭",
     type: "Loft",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "stairs", name: "Mezzanine" },
       { icon: "palette", name: "Style industriel" },
       { icon: "lightbulb", name: "Éclairage design" }
@@ -287,7 +287,7 @@ const data: ItemType[] = [
   },
   {
     id: "loft_2",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/2277579195738512833_0",
+    avatar: "https://i.imgur.com/loft2.jpg",
     price: "1650$",
     availibility: "available",
     stars: 4,
@@ -295,7 +295,7 @@ const data: ItemType[] = [
     review: "Loft d'artiste avec verrière, très lumineux ! 🎨",
     type: "Loft",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "sun", name: "Verrière" },
       { icon: "paint-brush", name: "Atelier" },
       { icon: "music", name: "Insonorisé" }
@@ -303,7 +303,7 @@ const data: ItemType[] = [
   },
   {
     id: "loft_3",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/5601976637739570381_0",
+    avatar: "https://i.imgur.com/loft3.jpg",
     price: "2200$",
     availibility: "available",
     stars: 5,
@@ -311,7 +311,7 @@ const data: ItemType[] = [
     review: "Loft contemporain avec vue sur Rhône ! 🌊",
     type: "Loft",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "water", name: "Vue fleuve" },
       { icon: "cube", name: "Design moderne" },
       { icon: "elevator", name: "Ascenseur privé" }
@@ -321,7 +321,7 @@ const data: ItemType[] = [
   // === BUREAUX ===
   {
     id: "office_1",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/1358083255822510208_0",
+    avatar: "https://i.imgur.com/office1.jpg",
     price: "1200$",
     availibility: "available",
     stars: 4,
@@ -329,7 +329,7 @@ const data: ItemType[] = [
     review: "Bureau moderne dans tour, parfait pour entreprise ! 🏢",
     type: "Bureau",
     features: [
-      { icon: "wifi", name: "Wi-Fi pro" },
+      { icon: "wifi", name: "Wi‑Fi pro" },
       { icon: "phone", name: "Téléphonie" },
       { icon: "printer", name: "Imprimantes" },
       { icon: "meeting-room", name: "Salle réunion" }
@@ -337,15 +337,15 @@ const data: ItemType[] = [
   },
   {
     id: "office_2",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/351231639025811087_0",
+    avatar: "https://i.imgur.com/office2.jpg",
     price: "850$",
     availibility: "available",
     stars: 3,
-    location: "Lyon Part-Dieu",
-    review: "Espace de travail flexible, bon rapport qualité-prix 💼",
+    location: "Lyon Part‑Dieu",
+    review: "Espace de travail flexible, bon rapport qualité‑prix 💼",
     type: "Bureau",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "coffee", name: "Espace café" },
       { icon: "parking", name: "Parking" },
       { icon: "subway", name: "Métro proche" }
@@ -353,7 +353,7 @@ const data: ItemType[] = [
   },
   {
     id: "office_3",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/14754712175660795185_0",
+    avatar: "https://i.imgur.com/office3.jpg",
     price: "1500$",
     availibility: "not available",
     stars: 5,
@@ -371,15 +371,15 @@ const data: ItemType[] = [
   // === CHALETS ===
   {
     id: "chalet_1",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/12705209402833337432_0",
+    avatar: "https://i.imgur.com/chalet1.jpg",
     price: "2800$",
     availibility: "available",
     stars: 5,
     location: "Chamonix",
-    review: "Chalet authentique face au Mont-Blanc ! ⛷️",
+    review: "Chalet authentique face au Mont‑Blanc ! ⛷️",
     type: "Chalet",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "fire", name: "Cheminée" },
       { icon: "skiing", name: "Pistes à pied" },
       { icon: "hot-tub", name: "Sauna" }
@@ -387,7 +387,7 @@ const data: ItemType[] = [
   },
   {
     id: "chalet_2",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/15788520824795481796_0",
+    avatar: "https://i.imgur.com/chalet2.jpg",
     price: "2200$",
     availibility: "available",
     stars: 4,
@@ -395,15 +395,15 @@ const data: ItemType[] = [
     review: "Chalet cosy avec vue magnifique sur les Alpes ! 🏔️",
     type: "Chalet",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
-      { icon: "snowflake", name: "Ski-in/out" },
+      { icon: "wifi", name: "Wi‑Fi" },
+      { icon: "snowflake", name: "Ski‑in/out" },
       { icon: "hot-tub", name: "Jacuzzi" },
       { icon: "utensils", name: "Chef à domicile" }
     ]
   },
   {
     id: "chalet_3",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/16870117687110986998_0",
+    avatar: "https://i.imgur.com/chalet3.jpg",
     price: "1800$",
     availibility: "available",
     stars: 4,
@@ -411,7 +411,7 @@ const data: ItemType[] = [
     review: "Chalet traditionnel familial, très chaleureux ! 👨‍👩‍👧‍👦",
     type: "Chalet",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "tree", name: "Jardin" },
       { icon: "playground", name: "Aire de jeux" },
       { icon: "parking", name: "Garage" }
@@ -421,15 +421,15 @@ const data: ItemType[] = [
   // === HÔTELS ===
   {
     id: "hotel_1",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/8198998468814765848_0",
+    avatar: "https://i.imgur.com/hotel1.jpg",
     price: "450$",
     availibility: "available",
     stars: 5,
-    location: "Paris Champs-Élysées",
+    location: "Paris Champs‑Élysées",
     review: "Hôtel de luxe, service exceptionnel ! 🎩",
     type: "Hôtel",
     features: [
-      { icon: "wifi", name: "Wi-Fi gratuit" },
+      { icon: "wifi", name: "Wi‑Fi gratuit" },
       { icon: "concierge-bell", name: "Conciergerie" },
       { icon: "spa", name: "Spa" },
       { icon: "utensils", name: "Restaurant étoilé" }
@@ -437,7 +437,7 @@ const data: ItemType[] = [
   },
   {
     id: "hotel_2",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/12222481016559989262_0",
+    avatar: "https://i.imgur.com/hotel2.jpg",
     price: "280$",
     availibility: "available",
     stars: 4,
@@ -445,7 +445,7 @@ const data: ItemType[] = [
     review: "Hôtel face à la mer, parfait pour vacances ! 🏖️",
     type: "Hôtel",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "swimming-pool", name: "Piscine" },
       { icon: "umbrella-beach", name: "Plage privée" },
       { icon: "cocktail", name: "Bar" }
@@ -453,7 +453,7 @@ const data: ItemType[] = [
   },
   {
     id: "hotel_3",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/2419842217751766953_0",
+    avatar: "https://i.imgur.com/hotel3.jpg",
     price: "320$",
     availibility: "not available",
     stars: 4,
@@ -461,7 +461,7 @@ const data: ItemType[] = [
     review: "Hôtel boutique design, très moderne ! 🎨",
     type: "Hôtel",
     features: [
-      { icon: "wifi", name: "Wi-Fi" },
+      { icon: "wifi", name: "Wi‑Fi" },
       { icon: "dumbbell", name: "Fitness" },
       { icon: "coffee", name: "Bar lounge" },
       { icon: "car", name: "Voiturier" }
@@ -471,14 +471,13 @@ const data: ItemType[] = [
   // === TERRAINS ===
   {
     id: "land_1",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/13391605841836178352_0",
+    avatar: "https://i.imgur.com/land1.jpg",
     price: "180$",
     availibility: "available",
     stars: 3,
     location: "Provence",
     review: "Beau terrain avec vue, idéal pour construire ! 🏗️",
-    type: "Terrain",
-    features: [
+    type: "Terrain",features: [
       { icon: "tree", name: "Arboré" },
       { icon: "mountain", name: "Vue montagne" },
       { icon: "road", name: "Accès facile" },
@@ -487,7 +486,7 @@ const data: ItemType[] = [
   },
   {
     id: "land_2",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/10731810103363802751_0",
+    avatar: "https://i.imgur.com/land2.jpg",
     price: "350$",
     availibility: "available",
     stars: 4,
@@ -503,7 +502,7 @@ const data: ItemType[] = [
   },
   {
     id: "land_3",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/15475773575473771222_0",
+    avatar: "https://i.imgur.com/land3.jpg",
     price: "120$",
     availibility: "available",
     stars: 3,
@@ -521,7 +520,7 @@ const data: ItemType[] = [
   // === COMMERCIAL ===
   {
     id: "com_1",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/14110616675660951222_0",
+    avatar: "https://i.imgur.com/com1.jpg",
     price: "2500$",
     availibility: "available",
     stars: 4,
@@ -537,7 +536,7 @@ const data: ItemType[] = [
   },
   {
     id: "com_2",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/421213592723646738_0",
+    avatar: "https://i.imgur.com/com2.jpg",
     price: "1800$",
     availibility: "available",
     stars: 4,
@@ -553,7 +552,7 @@ const data: ItemType[] = [
   },
   {
     id: "com_3",
-    avatar: "http://googleusercontent.com/image_collection/image_retrieval/729384539155721259_0",
+    avatar: "https://i.imgur.com/com3.jpg",
     price: "3200$",
     availibility: "not available",
     stars: 5,
