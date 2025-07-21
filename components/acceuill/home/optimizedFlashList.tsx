@@ -1,5 +1,6 @@
-import React, { useCallback, useMemo, useRef } from "react";
-import { FlashList, FlashListProps } from "@shopify/flash-list";
+// OptimizedFlashList.tsx
+import React, { useCallback, useMemo, useRef, useEffect } from "react";
+import { FlashList } from "@shopify/flash-list";
 import { Dimensions } from "react-native";
 import RenderItem from "./renderItem";
 import { ItemType } from "@/types/ItemType";
@@ -7,149 +8,175 @@ import { MutableRefObject } from "react";
 import { ThemedView } from "@/components/ui/ThemedView";
 import { ThemedText } from "@/components/ui/ThemedText";
 import LottieView from "lottie-react-native";
-
-const { height: screenHeight, width: screenWidth } = Dimensions.get("window");
-
-const ITEM_HEIGHT = 300; // Hauteur estimée de chaque item
+import FastImage from 'react-native-fast-image'; // Import FastImage
+import { ExtendedItemTypes } from "@/types/ItemType";
+const { width: screenWidth } = Dimensions.get("window");
 
 type OptimizedFlashListProps = {
-  data: ItemType[];
-  lottieRef: MutableRefObject<LottieView | null>;
-  favorites: string[];
-  setFavorites: React.Dispatch<React.SetStateAction<string[]>>;
-  animatingElement: string | null;
-  setAnimatingElement: (id: string | null) => void;
-  navigateToInfo: (item: ItemType) => void;
-  refreshing?: boolean;
-  onRefresh?: () => void;
-  onEndReached?: () => void;
-  onScroll?: any;
-  ListHeaderComponent?: React.ReactElement | null;
-  ListFooterComponent?: React.ReactElement | null;
-  contentContainerStyle?: any;
+  data: ExtendedItemTypes[];
+  lottieRef: MutableRefObject<LottieView | null>;
+  favorites: string[];
+  setFavorites: React.Dispatch<React.SetStateAction<string[]>>;
+  animatingElement: string | null;
+  setAnimatingElement: (id: string | null) => void;
+  navigateToInfo: (item: ExtendedItemTypes) => void;
+  refreshing?: boolean;
+  onRefresh?: () => void;
+  onEndReached?: () => void;
+  onScroll?: any;
+  ListHeaderComponent?: React.ReactElement | null;
+  ListFooterComponent?: React.ReactElement | null;
+  contentContainerStyle?: any;
 };
 
 const OptimizedFlashList: React.FC<OptimizedFlashListProps> = ({
-  data,
-  lottieRef,
-  favorites,
-  setFavorites,
-  animatingElement,
-  setAnimatingElement,
-  navigateToInfo,
-  refreshing = false,
-  onRefresh,
-  onEndReached,
-  onScroll,
-  ListHeaderComponent,
-  ListFooterComponent,
-  contentContainerStyle,
+  data = [],
+  lottieRef,
+  favorites,
+  setFavorites,
+  animatingElement,
+  setAnimatingElement,
+  navigateToInfo,
+  refreshing = false,
+  onRefresh,
+  onEndReached,
+  onScroll,
+  ListHeaderComponent,
+  ListFooterComponent,
+  contentContainerStyle,
 }) => {
-  const flashListRef = useRef<FlashList<ItemType>>(null);
+  const flashListRef = useRef<FlashList<ExtendedItemTypes>>(null);
 
-  // Configuration FlashList simplifiée
-  const flashListConfig = useMemo(
-    () => ({
-      estimatedItemSize: 250,
-      removeClippedSubviews: false,
-      maxToRenderPerBatch: 10,
-      windowSize: 10,
-      initialNumToRender:5,
-      updateCellsBatchingPeriod: 50,
-      debug: __DEV__,
-      // Retirer overrideItemLayout et getItemType pour éviter les conflits
-    }),
-    []
-  );
+  // Configuration optimisée pour les performances
+  const flashListConfig = useMemo(
+    () => ({
+      estimatedItemSize: 320,
+      removeClippedSubviews: true,
+      maxToRenderPerBatch: 8,
+      windowSize: 118,
+      initialNumToRender: 6,
+      updateCellsBatchingPeriod: 100,
+      getItemType: () => 'item',
+    }),
+    []
+  );
 
-  const renderItem = useCallback(
-    ({ item, index }: { item: ItemType; index: number }) => (
-      <RenderItem
-        item={item}
-        index={index}
-        lottieRef={lottieRef}
-        favorites={favorites}
-        setFavorites={setFavorites}
-        animatingElement={animatingElement}
-        setAnimatingElement={setAnimatingElement}
-        navigateToInfo={navigateToInfo}
-      />
-    ),
-    [
-      lottieRef,
-      favorites,
-      setFavorites,
-      animatingElement,
-      setAnimatingElement,
-      navigateToInfo,
-    ]
-  );
+  const renderItem = useCallback(
+    ({ item, index }: { item: ExtendedItemTypes; index: number }) => (
+      <RenderItem
+        item={item}
+        index={index}
+        lottieRef={lottieRef}
+        favorites={favorites}
+        setFavorites={setFavorites}
+        animatingElement={animatingElement}
+        setAnimatingElement={setAnimatingElement}
+        navigateToInfo={navigateToInfo}
+      />
+    ),
+    [lottieRef, favorites, setFavorites, animatingElement, setAnimatingElement, navigateToInfo]
+  );
 
-  const keyExtractor = useCallback(
-    (item: ItemType, index: number) => `${item.id}-${index}`,
-    []
-  );
+  const keyExtractor = useCallback(
+    (item: ItemType, index: number) => `${item.id}-${index}`,
+    []
+  );
 
-  const ListEmptyComponent = useCallback(
-    () => (
-      <ThemedView
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          paddingVertical: 50,
-        }}
-      >
-        <ThemedText
-          style={{
-            fontSize: 14,
-            opacity: 0.6,
-            textAlign: "center",
-          }}
-        >
-          Aucun élément à afficher
-        </ThemedText>
-      </ThemedView>
-    ),
-    []
-  );
+  const ListEmptyComponent = useCallback(
+    () => (
+      <ThemedView
+        style={{
+          // flex: 1,
+          minHeight: 400,
+          justifyContent: "center",
+          alignItems: "center",
+          paddingVertical: 50,
+        }}
+      >
+        <ThemedText
+          style={{
+            opacity: 0.6,
+            textAlign: "center",
+            marginBottom: 8
+          }}
+        >
+          Aucun élément à afficher
+        </ThemedText>
+        <ThemedText
+          style={{
+            opacity: 0.4,
+            textAlign: "center"
+          }}
+        >
+          Vérifiez vos filtres ou réessayez plus tard
+        </ThemedText>
+      </ThemedView>
+    ),
+    []
+  );
 
-  // Debug: Afficher le nombre d'éléments
-  console.log("FlashList data length:", data?.length);
+  // Debug amélioré
+  console.log("🔍 OptimizedFlashList Debug:", {
+    dataLength: data?.length || 0,
+    hasData: Array.isArray(data) && data.length > 0,
+    firstItem: data?.[0]?.id,
+    favoritesCount: favorites?.length || 0
+  });
 
-  return (
-    <ThemedView style={{ width: screenWidth, flex:1}}>
-      <FlashList
-        ref={flashListRef}
-        data={data}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        {...flashListConfig}
-        onRefresh={onRefresh}
-        refreshing={refreshing}
-        onEndReached={onEndReached}
-        onEndReachedThreshold={0.5}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        ListHeaderComponent={ListHeaderComponent}
-        ListFooterComponent={ListFooterComponent}
-        ListEmptyComponent={ListEmptyComponent}
-        contentContainerStyle={{
-          paddingVertical: 8,
-          paddingBottom: 100,
-          flexGrow: 1,
+  // Vérification de sécurité des données
+  const safeData = useMemo(() => {
+    if (!Array.isArray(data)) {
+      console.warn("⚠️ Data is not an array:", data);
+      return [];
+    }
+    return data.filter(item => item && item.id);
+  }, [data]);
+
+  // Preload images for the first few items
+  useEffect(() => {
+    if (safeData.length > 0) {
+      const imagesToPreload = safeData
+        .slice(0, flashListConfig.initialNumToRender + flashListConfig.maxToRenderPerBatch)
+        .map(item => ({
+          uri: (item as any).imageAvif || (item as any).imageWebP || item.avatar,
+        }));
+
+      FastImage.preload(imagesToPreload);
+    }
+  }, [safeData, flashListConfig.initialNumToRender, flashListConfig.maxToRenderPerBatch]);
 
 
-          ...contentContainerStyle,
-        }}
-        showsVerticalScrollIndicator={false}
-        directionalLockEnabled={true}
-        bounces={true}
-        alwaysBounceVertical={false}
-        style={{ flex: 1 }}
-      />
-    </ThemedView>
-  );
+  return (
+    <ThemedView style={{ width: screenWidth, flex: 1 }}>
+      <FlashList
+        ref={flashListRef}
+        data={safeData}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        {...flashListConfig}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.3}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        ListHeaderComponent={ListHeaderComponent}
+        ListFooterComponent={ListFooterComponent}
+        ListEmptyComponent={ListEmptyComponent}
+        contentContainerStyle={{
+          paddingVertical: 8,
+          paddingBottom: 120,
+          ...(safeData.length === 0 ? { flexGrow: 1 } : {}),
+          ...contentContainerStyle,
+        }}
+        showsVerticalScrollIndicator={false}
+        directionalLockEnabled={true}
+        bounces={true}
+        alwaysBounceVertical={false}
+        style={{ flex: 1 }}
+      />
+    </ThemedView>
+  );
 };
 
 export default React.memo(OptimizedFlashList);

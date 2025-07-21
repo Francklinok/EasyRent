@@ -1,384 +1,672 @@
-import React, {
-  useState,
-  useMemo,
-  useCallback,
-  useRef,
-  memo,
-  MutableRefObject,
-} from "react";
-import {
-  TouchableOpacity,
-  Animated,
-  Dimensions,
-  View,
-  InteractionManager,
-} from "react-native";
-import FastImage, { Source } from "react-native-fast-image";
+// RenderItem.tsx
+import React, { useMemo, useCallback, useRef, useEffect, useState } from "react";
+import { TouchableOpacity, Animated, Dimensions } from "react-native"; // Remove Image import
+import FastImage from 'react-native-fast-image'; // Import FastImage
+import { FontAwesome5, MaterialIcons, Ionicons, Entypo, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { MotiView, MotiText } from "moti";
+import * as Animatable from "react-native-animatable";
 import LottieView from "lottie-react-native";
 import * as Haptics from "expo-haptics";
 import { ThemedText } from "@/components/ui/ThemedText";
 import { ThemedView } from "@/components/ui/ThemedView";
+import renderEnergyScore from "./renderEnergieScore";
 import RenderNeighborhoodInfo from "./renderNeighborhoodInfo";
+import { ItemType, FeatureIcon } from "@/types/ItemType";
+import { MutableRefObject } from "react";
 import toggleFavorite from "@/components/utils/homeUtils/toggleFavorite";
 import { useTheme } from "@/components/contexts/theme/themehook";
-import { ItemType } from "@/types/ItemType";
+const { width } = Dimensions.get('window');
+import  {ThemeColors} from "@/components/contexts/theme/themeTypes"
+import { Availability } from "@/types/ItemType";
+import { ExtendedItemTypes } from "@/types/ItemType";
 
-const { width } = Dimensions.get("window");
+type Props = {
+  item: ExtendedItemTypes;
+  index: number;
+  lottieRef: MutableRefObject<any>;
+  setAnimatingElement: (id: string | null) => void;
+  favorites: string[];
+  setFavorites: React.Dispatch<React.SetStateAction<string[]>>;
+  animatingElement: string | null;
+  navigateToInfo: (item: ExtendedItemTypes) => void;
+};
 
-// ---- Types ----
-interface RenderItemProps {
-  item: ItemType;
-  index: number;
-  lottieRef: MutableRefObject<LottieView | null>;
-  favorites: string[];
-  setFavorites: React.Dispatch<React.SetStateAction<string[]>>;
-  animatingElement: string | null;
-  setAnimatingElement: (id: string | null) => void;
-  navigateToInfo: (item: ItemType) => void;
-}
-
-interface FavoriteButtonProps {
-  onPress: () => void;
-  isFavorite: boolean;
-  theme: any;
-  scaleAnim: Animated.Value;
+ interface StatusBadgeProps {
+  availibility:Availability,
+  theme:ThemeColors
 }
 
 interface PriceTagProps {
   price: string | number;
-  theme: any;
+  theme: ThemeColors;
+}
+interface FavoriteButtonProps {
+  onPress: () => void;
+  isFavorite: boolean;
+  theme: ThemeColors;
+  rotateAnim: Animated.Value;
 }
 
-interface LocationHeaderProps {
-  location: string;
-  item: ItemType;
-  theme: any;
+// Props pour FeaturesBadge
+interface FeaturesBadgeProps {
+  features: FeatureIcon[];
+  energyScore: number;
+  theme: ThemeColors;
 }
 
-interface ReviewTextProps {
-  review?: string;
-  theme: any;
+// Props pour ActionButtons
+interface ActionButtonsProps {
+  onPress: () => void;
+  scaleAnim: Animated.Value;
+  shimmerAnim: Animated.Value;
+  virtualTourAvailable: boolean;
+  breatheAnim: Animated.Value;
+  theme: ThemeColors;
 }
 
-// ---- Caches d'image ----
-const imageCache = {
-  priority: FastImage.priority.high,
-  cache: FastImage.cacheControl.immutable,
-};
+const AnimatedFastImage = Animated.createAnimatedComponent(FastImage);
 
-// ---- Styles pré-calculés ----
-const styles = {
-  imageContainer: { width: "100%", height: 220 },
-  cardContainer: { marginBottom: 10, paddingHorizontal: 8 },
-  favoriteButton: {
-    position: "absolute" as const,
-    top: 8,
-    right: 8,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-  },
-  priceTag: {
-    position: "absolute" as const,
-    bottom: 12,
-    right: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  discoverButton: {
-    backgroundColor: "#3B82F6",
-    paddingVertical: 8,
-    borderRadius: 12,
-    alignItems: "center" as const,
-    marginTop: 8,
-  },
-  locationRow: {
-    flexDirection: "row" as const,
-    justifyContent: "space-between" as const,
-    alignItems: "center" as const,
-    marginBottom: 8,
-  },
-  locationText: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
-    fontWeight: "bold" as const,
-  },
-};
+const StatusBadge =  React.memo(({ availibility, theme }: StatusBadgeProps) => {
+  const breatheAnim = useRef(new Animated.Value(1)).current;
+  
+  const pulseAnim = useMemo(() => {
+    const anim = new Animated.Value(1);
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, {
+          toValue: 1.05,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+    return anim;
+  }, []);
 
-// ---- FavoriteButton ----
-const FavoriteButton = memo<FavoriteButtonProps>(
-  ({ onPress, isFavorite, theme, scaleAnim }) => {
-    const buttonStyle = useMemo(
-      () => ({
-        ...styles.favoriteButton,
-        backgroundColor: isFavorite ? theme.error : theme.surface,
-        transform: [{ scale: scaleAnim }],
-      }),
-      [isFavorite, theme.error, theme.surface, scaleAnim]
-    );
-
-    return (
-      <Animated.View style={buttonStyle}>
-        <TouchableOpacity
-          onPress={onPress}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          activeOpacity={0.7}
-          style={{
-            width: "100%",
-            height: "100%",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons
-            name={isFavorite ? "heart" : "heart-outline"}
-            size={22}
-            color={isFavorite ? theme.surface : theme.onSurface}
-          />
-        </TouchableOpacity>
-      </Animated.View>
-    );
-  }
-);
-
-// ---- PriceTag ----
-const PriceTag = memo<PriceTagProps>(({ price, theme }) => {
-  const tagStyle = useMemo(
-    () => ({
-      ...styles.priceTag,
-      backgroundColor: theme.surface,
-    }),
-    [theme.surface]
-  );
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(breatheAnim, {
+          toValue: 1.02,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(breatheAnim, {
+          toValue: 1,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [breatheAnim]);
 
   return (
-    <ThemedView style={tagStyle}>
-      <ThemedText
-        style={{ color: theme.onSurface, fontSize: 16, fontWeight: "bold" }}
+    <MotiView
+      from={{ opacity: 0, translateY: -10 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ delay: 300, type: "spring" }}
+      className="absolute top-3 left-3"
+    >
+      <BlurView intensity={80} tint="light" className="rounded-full overflow-hidden">
+        <ThemedView
+          className="px-3 py-1.5 flex-row items-center gap-1.5"
+          style={{
+            backgroundColor: availibility === "available" 
+              ? theme.success
+              : theme.elevation.large,
+          }}
+        >
+          <ThemedView
+            className="w-1.5 h-1.5 rounded-full"
+            style={{
+              backgroundColor: theme.surface,
+            }}
+          />
+          <ThemedText
+            style={{
+              color: theme.surface,
+              fontSize: 11,
+              fontWeight: "600",
+              letterSpacing: 0.5,
+            }}
+          >
+            {availibility === "available" ? "Active" : "Sold"}
+          </ThemedText>
+        </ThemedView>
+      </BlurView>
+    </MotiView>
+  );
+});
+
+const PriceTag = React.memo(({ price, theme }: PriceTagProps) => (
+  <MotiView
+    from={{ opacity: 0, translateY: 20 }}
+    animate={{ opacity: 1, translateY: 0 }}
+    transition={{ delay: 600, type: "spring" }}
+    className="absolute bottom-4 right-4"
+  >
+    <BlurView intensity={95} tint="light" className="rounded-2xl overflow-hidden">
+      <ThemedView
+        className="px-4 py-2"
+        style={{
+          backgroundColor: theme.surface,
+          shadowColor: theme.elevation.large,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 6,
+        }}
       >
-        {price}
-      </ThemedText>
+        <ThemedText
+          style={{
+            color: theme.onSurface,
+            fontWeight: '800',
+            fontSize: 18,
+            letterSpacing: -0.5,
+          }}
+        >
+          {price}
+        </ThemedText>
+      </ThemedView>
+    </BlurView>
+  </MotiView>
+));
+
+const FavoriteButton = React.memo(({ 
+  onPress, 
+  isFavorite, 
+  theme, 
+  rotateAnim 
+}: FavoriteButtonProps) => (
+  <MotiView
+    from={{ opacity: 0, scale: 0 }}
+    animate={{ opacity: 1, scale: 1 }}
+    transition={{ delay: 500, type: "spring" }}
+    className="absolute top-3 right-3"
+  >
+    <TouchableOpacity
+      onPress={onPress}
+      className="w-12 h-12 rounded-full items-center justify-center"
+      accessibilityLabel="Toggle favorite"
+      accessibilityRole="button"
+      style={{
+        backgroundColor: isFavorite 
+          ? theme.error 
+          : theme.surface,
+        shadowColor: theme.onSurface,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 6,
+      }}
+    >
+      <Animated.View
+        style={{
+          transform: [
+            {
+              scale: rotateAnim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [1, 1.2, 1],
+              })
+            }
+          ]
+        }}
+      >
+        {isFavorite ? (
+          <Ionicons
+            name="heart"
+            size={24}
+            color={theme.surface}
+          />
+        ) : (
+          <Ionicons
+            name="heart-outline"
+            size={24}
+            color={theme.typography.caption}
+          />
+        )}
+      </Animated.View>
+    </TouchableOpacity>
+  </MotiView>
+));
+
+const FeaturesBadge = React.memo(({ features, energyScore, theme }: FeaturesBadgeProps) => {
+  if (!features || features.length === 0) return null;
+  
+  return (
+    <ThemedView className="absolute top-16 left-3 rounded-2xl">
+      <MotiView
+        from={{ opacity: 0, translateX: -20 }}
+        animate={{ opacity: 1, translateX: 0 }}
+        transition={{ delay: 700, type: "spring" }}
+      >
+        <BlurView intensity={60} tint="light" className="rounded-xl overflow-hidden">
+          <ThemedView backgroundColor="elevation"
+            className="px-2 py-1.5 flex-row items-center gap-1"
+          >
+            <FontAwesome5 
+              name={features[0] || "home"} 
+              size={12} 
+              color={theme.typography.caption}
+            />
+            <ThemedText
+              style={{
+                fontSize: 10,
+                fontWeight: "600",
+                color: theme.typography.caption,
+                letterSpacing: 0.3,
+              }}
+            >
+              {energyScore}/10
+            </ThemedText>
+          </ThemedView>
+        </BlurView>
+      </MotiView>
     </ThemedView>
   );
 });
 
-// ---- LoadingPlaceholder ----
-const LoadingPlaceholder = memo(() => (
-  <BlurView
-    intensity={20}
-    tint="light"
-    style={{
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      alignItems: "center",
-      justifyContent: "center",
-      
-    }}
-  >
-    <LottieView
-      source={require("@/assets/lottie/loading.json")}
-      autoPlay
-      loop
-      style={{ width: 50, height: 50 }}
-    />
-  </BlurView>
-));
-
-// ---- LocationHeader ----
-const LocationHeader = memo<LocationHeaderProps>(({ location, item, theme }) => (
-  <ThemedView style={styles.locationRow}>
-    <ThemedView style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
-      <MaterialIcons name="location-on" size={20} color={theme.error} />
-      <ThemedText
-        style={[styles.locationText, { color: theme.onSurface }]}
-        numberOfLines={1}
-        ellipsizeMode="tail"
+const ActionButtons = React.memo(({
+  onPress,
+  scaleAnim,
+  shimmerAnim,
+  virtualTourAvailable,
+  breatheAnim,
+  theme
+}: ActionButtonsProps) => (
+  <ThemedView className="flex-row gap-3 pb-2 px-1">
+    <TouchableOpacity
+      onPress={onPress}
+      className="flex-1 rounded-2xl overflow-hidden"
+      accessibilityLabel="Explorer la propriété"
+      accessibilityRole="button"
+    >
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <BlurView intensity={20} tint="light" className="overflow-hidden">
+          <LinearGradient
+            colors={theme.buttonGradient}
+            start={{ x: 0, y: 1 }}
+            end={{ x: 1, y: 1 }}
+            className="py-2.5 items-center relative"
+          >
+            <Animated.View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: theme.surface,
+                opacity: shimmerAnim.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [0, 0.1, 0],
+                }),
+                transform: [{
+                  translateX: shimmerAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-width, width],
+                  }),
+                }],
+              }}
+            />
+            <ThemedView className="flex-row items-center gap-2" style={{ backgroundColor: "transparent" }}>
+              <MaterialCommunityIcons name="rocket-launch" size={20} color={theme.surface} />
+              <ThemedText
+                style={{
+                  color: theme.surface,
+                  fontWeight: '900',
+                  fontSize: 14,
+                  textShadowColor: theme.elevation.large,
+                  textShadowOffset: { width: 0, height: 8 },
+                  textShadowRadius: 4,
+                }}
+              >
+                DÉCOUVRIR
+              </ThemedText>
+              <Entypo name="chevron-right" size={20} color={theme.surface} />
+            </ThemedView>
+          </LinearGradient>
+        </BlurView>
+      </Animated.View>
+    </TouchableOpacity>
+    
+    <MotiView
+      from={{ opacity: 0, scale: 0 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: 400, type: "spring" }}
+    >
+      <TouchableOpacity
+        className="rounded-2xl overflow-hidden p-1"
+        accessibilityLabel="Partager"
+        accessibilityRole="button"
+        style={{
+          backgroundColor: theme.surface,
+          borderWidth: 1,
+          borderColor: theme.surface,
+          shadowRadius: 8,
+        }}
       >
-        {location}
-      </ThemedText>
-    </ThemedView>
-    <RenderNeighborhoodInfo item={item} />
+        <MaterialIcons name="share" size={24} color={theme.onSurface} />
+      </TouchableOpacity>
+    </MotiView>
+    
+    {virtualTourAvailable && (
+      <MotiView
+        from={{ opacity: 0, scale: 0, rotateY: "90deg" }}
+        animate={{ opacity: 1, scale: 1, rotateY: "0deg" }}
+        transition={{ delay: 500, type: "spring" }}
+      >
+        <TouchableOpacity
+          className="rounded-full overflow-hidden p-1.5 relative"
+          accessibilityLabel="Visite virtuelle VR"
+          accessibilityRole="button"
+          style={{
+            borderWidth: 1,
+            borderColor: theme.outline,
+          }}
+        >
+          <Animated.View style={{ transform: [{ scale: breatheAnim }] }}>
+            <MaterialCommunityIcons name="virtual-reality" size={24} color={theme.primary} />
+          </Animated.View>
+          <ThemedView
+            className="absolute -top-2 -right-1 w-3 h-3 rounded-full"
+            style={{
+              backgroundColor: theme.error,
+              shadowColor: theme.error,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 1,
+              shadowRadius: 4,
+              elevation: 4,
+            }}
+          />
+        </TouchableOpacity>
+      </MotiView>
+    )}
   </ThemedView>
 ));
 
-// ---- ReviewText ----
-const ReviewText = memo<ReviewTextProps>(({ review, theme }) => {
-  const truncatedReview = useMemo(() => {
-    if (!review) return "";
-    return review.length > 100 ? `${review.substring(0, 100)}...` : review;
-  }, [review]);
+const RenderItem: React.FC<Props> = ({
+  item,
+  index,
+  lottieRef,
+  favorites,
+  setFavorites,
+  animatingElement,
+  setAnimatingElement,
+  navigateToInfo
+}) => {
+  const { theme } = useTheme();
+  const [isPressed, setIsPressed] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [placeholderLoaded, setPlaceholderLoaded] = useState(false); // New state for placeholder
 
-  if (!review) return null;
+  // Memoize expensive computations
+  const isFavorite = useMemo(() => favorites.includes(item.id), [favorites, item.id]);
+  const truncatedReview = useMemo(() =>
+    item.review?.length > 120 ? `${item.review.substring(0, 120)}...` : item.review,
+    [item.review]
+  );
 
+  // Create stable animation refs
+  const animRefs = useMemo(() => ({
+    scaleAnim: new Animated.Value(1),
+    rotateAnim: new Animated.Value(0),
+    shimmerAnim: new Animated.Value(0),
+    breatheAnim: new Animated.Value(1),
+    imageFadeAnim: new Animated.Value(0), // New animation for image fade-in
+  }), []);
+
+  // Start shimmer animation once
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(animRefs.shimmerAnim, {
+        toValue: 1,
+        duration: 3000,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, [animRefs.shimmerAnim]);
+
+  // Start breathe animation once
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(animRefs.breatheAnim, {
+          toValue: 1.02,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(animRefs.breatheAnim, {
+          toValue: 1,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [animRefs.breatheAnim]);
+
+  // Handle full image load
+  const handleImageLoad = useCallback(() => {
+    setImageLoaded(true);
+    Animated.timing(animRefs.imageFadeAnim, {
+      toValue: 1,
+      duration: 500, // Fade in the full image
+      useNativeDriver: true,
+    }).start();
+  }, [animRefs.imageFadeAnim]);
+
+  // Handle placeholder load (if using LQIP/BlurHash)
+  const handlePlaceholderLoad = useCallback(() => {
+    setPlaceholderLoaded(true);
+  }, []);
+
+  // Memoize callbacks to prevent recreations
+  const handlePress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    setIsPressed(true);
+
+    Animated.sequence([
+      Animated.timing(animRefs.scaleAnim, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(animRefs.scaleAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setIsPressed(false);
+      navigateToInfo(item);
+    });
+  }, [item, navigateToInfo, animRefs.scaleAnim]);
+
+  const handleToggleFavorite = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    Animated.sequence([
+      Animated.timing(animRefs.rotateAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(animRefs.rotateAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    toggleFavorite({
+      id: item.id,
+      lottieRef,
+      favorites,
+      setFavorites,
+    });
+
+    setAnimatingElement(item.id);
+  }, [item.id, setAnimatingElement, animRefs.rotateAnim, lottieRef, favorites, setFavorites]);
+
+  // Determine the best image URI based on availability and desired format
+  const getImageURI = useCallback(() => {
+    if (item.imageAvif) {
+      return item.imageAvif; // Prefer AVIF if available
+    }
+    if (item.imageWebP) {
+      return item.imageWebP; // Then WebP
+    }
+    return item.avatar; // Fallback to original
+  }, [item.imageAvif, item.imageWebP, item.avatar]);
+
+  
+  
   return (
-    <ThemedText
+  <ThemedView className="mb-4 px-2">
+    <ThemedView
+      className="rounded-3xl overflow-hidden"
       style={{
-        fontSize: 14,
-        color: theme.onSurface,
-        opacity: 0.8,
-        marginBottom: 8,
-        lineHeight: 20,
-      }}
-      numberOfLines={3}
-      ellipsizeMode="tail"
-    >
-      {truncatedReview}
-    </ThemedText>
-  );
-});
-
-// ---- Hook animations ----
-const useOptimizedAnimations = () => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  const animateFavorite = useCallback(() => {
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 1.3,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [scaleAnim]);
-
-  return { scaleAnim, animateFavorite };
-};
-
-// ---- RenderItem ----
-const RenderItem: React.FC<RenderItemProps> = memo(
-  ({
-    item,
-    index,
-    lottieRef,
-    favorites,
-    setFavorites,
-    animatingElement,
-    setAnimatingElement,
-    navigateToInfo,
-  }) => {
-    const { theme } = useTheme();
-    const [imageLoaded, setImageLoaded] = useState(false);
-    const [imageError, setImageError] = useState(false);
-    const { scaleAnim, animateFavorite } = useOptimizedAnimations();
-
-    const isFavorite = useMemo(
-      () => favorites.includes(item.id),
-      [favorites, item.id]
-    );
-
-    const cardStyle = useMemo(
-      () => ({
-        borderRadius: 24,
-        overflow: "hidden",
         borderWidth: 1,
         borderColor: theme.outline,
-      }),
-      [theme.outline]
-    );
+      }}
+    >
+      <LinearGradient colors={theme.cardGradient} className="overflow-hidden relative">
+        {/* Section Image */}
+        <ThemedView className="relative overflow-hidden">
+          {/* Placeholder/LQIP */}
+          {!imageLoaded && item.thumbnail && (
+            <FastImage
+              source={{ uri: item.thumbnail, priority: FastImage.priority.low }}
+              className="w-full rounded-t-2xl absolute inset-0"
+              resizeMode={FastImage.resizeMode.cover}
+              style={{ height: 220, opacity: placeholderLoaded ? 1 : 0 }}
+              onLoad={handlePlaceholderLoad}
+            />
+          )}
 
-    const handleToggleFavorite = useCallback(() => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      animateFavorite();
-      InteractionManager.runAfterInteractions(() => {
-        toggleFavorite({ id: item.id, lottieRef, favorites, setFavorites });
-        setAnimatingElement(item.id);
-      });
-    }, [
-      item.id,
-      lottieRef,
-      favorites,
-      setFavorites,
-      setAnimatingElement,
-      animateFavorite,
-    ]);
+          <MotiView
+            from={{ scale: 1.1, opacity: 0 }}
+            animate={{ scale: 1, opacity: imageLoaded ? 1 : 0 }}
+            transition={{ duration: 800, type: 'timing' }}
+            className="relative"
+          >
+            <AnimatedFastImage
+              source={{ uri: getImageURI(), priority: FastImage.priority.normal }}
+              className="w-full rounded-t-2xl"
+              resizeMode={FastImage.resizeMode.cover}
+              style={{ height: 220, opacity: animRefs.imageFadeAnim }}
+              onLoad={handleImageLoad}
+            />
+          </MotiView>
 
-    const handleNavigateToInfo = useCallback(() => {
-      InteractionManager.runAfterInteractions(() => {
-        navigateToInfo(item);
-      });
-    }, [item, navigateToInfo]);
-
-    const handleImageError = useCallback(() => {
-      setImageError(true);
-      setImageLoaded(true);
-    }, []);
-
-    const handleImageLoad = useCallback(() => {
-      setImageLoaded(true);
-    }, []);
-
-    const imageSource: Source = useMemo(
-      () => ({
-        uri: imageError ?  item.avatar : item.avatar,
-        ...imageCache,
-      }),
-      [item.avatar,  imageError]
-    );
-
-    return (
-      <ThemedView style={styles.cardContainer}>
-        <ThemedView style={cardStyle}>
-          <LinearGradient colors={theme.cardGradient} style={{ position: "relative" }}>
-            <ThemedView style={{ position: "relative" }}>
-              <FastImage
-                style={styles.imageContainer}
-                source={imageSource}
-                resizeMode={FastImage.resizeMode.cover}
-                onLoadEnd={handleImageLoad}
-                onError={handleImageError}
-                fallback={true}
-              />
-              {!imageLoaded && <LoadingPlaceholder />}
-              <FavoriteButton
-                onPress={handleToggleFavorite}
-                isFavorite={isFavorite}
-                theme={theme}
-                scaleAnim={scaleAnim}
-              />
-              <PriceTag price={item.price} theme={theme} />
-            </ThemedView>
-            <ThemedView style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
-              <LocationHeader location={item.location} item={item} theme={theme} />
-              <ReviewText review={item.review} theme={theme} />
-              <TouchableOpacity
-                onPress={handleNavigateToInfo}
-                style={styles.discoverButton}
-                activeOpacity={0.8}
-              >
-                <ThemedText style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: 16 }}>
-                  Découvrir
-                </ThemedText>
-              </TouchableOpacity>
-            </ThemedView>
-          </LinearGradient>
+          {/* Overlay subtil pour contraste */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.15)']}
+            locations={[0, 0.7, 1]}
+            className="absolute inset-0"
+          />
         </ThemedView>
-      </ThemedView>
-    );
-  },
-  (prevProps, nextProps) =>
-    prevProps.item.id === nextProps.item.id &&
-    prevProps.favorites === nextProps.favorites &&
-    prevProps.animatingElement === nextProps.animatingElement &&
-    prevProps.item.avatar === nextProps.item.avatar &&
-    prevProps.item.price === nextProps.item.price
-);
 
-RenderItem.displayName = "RenderItem";
+        {/* Badges et infos */}
+        <StatusBadge availibility={item.availibility} theme={theme} />
+        <PriceTag price={item.price} theme={theme} />
+        <FavoriteButton
+          onPress={handleToggleFavorite}
+          isFavorite={isFavorite}
+          theme={theme}
+          rotateAnim={animRefs.rotateAnim}
+        />
+        <FeaturesBadge
+          features={item.features.map(f => f.icon)}
+          energyScore={item.energyScore}
+          theme={theme}
+        />
 
-export default RenderItem;
+        {/* Section contenu */}
+        <ThemedView className="px-3 py-2 gap-1">
+          {/* En-tête localisation */}
+          <ThemedView className="flex-row items-center justify-between">
+            <ThemedView className="flex-row items-center gap-3 w-20">
+              <MaterialIcons
+                name="location-on"
+                size={20}
+                color={theme.error}
+                style={{
+                  textShadowColor: theme.error,
+                  textShadowOffset: { width: 0, height: 0 },
+                  textShadowRadius: 8,
+                }}
+              />
+              <ThemedText type="caption" className="text-base font-bold flex-1">
+                {item.location}
+              </ThemedText>
+            </ThemedView>
 
+            <ThemedView>
+              <RenderNeighborhoodInfo item={item} />
+            </ThemedView>
+
+            <MotiView
+              from={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 400, type: 'spring' }}
+            >
+              <BlurView intensity={30} tint="light" className="rounded-xl overflow-hidden">
+                <ThemedView className="flex-row items-center gap-2 px-3 py-1 border border-yellow-400/30">
+                  <FontAwesome5 name="star" size={16} color={theme.star} />
+                  <ThemedText className="text-lg font-bold" style={{ color: theme.star }}>
+                    {item.stars}
+                  </ThemedText>
+                </ThemedView>
+              </BlurView>
+            </MotiView>
+          </ThemedView>
+
+          {/* Avis */}
+          <MotiView
+            from={{ opacity: 0, translateY: 20 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ delay: 600, type: 'spring' }}
+          >
+            <BlurView intensity={20} tint="light" className="rounded-2xl overflow-hidden">
+              <ThemedView className="p-2">
+                <ThemedText
+                  type="caption"
+                  className="text-base leading-6"
+                  style={{ color: theme.text }}
+                >
+                  {truncatedReview}
+                </ThemedText>
+              </ThemedView>
+            </BlurView>
+          </MotiView>
+
+          {/* Boutons d'action */}
+          <MotiView
+            from={{ opacity: 0, translateY: 20 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ delay: 700, type: 'spring' }}
+          >
+            <ActionButtons
+              onPress={handlePress}
+              scaleAnim={animRefs.scaleAnim}
+              shimmerAnim={animRefs.shimmerAnim}
+              virtualTourAvailable={item.virtualTourAvailable}
+              breatheAnim={animRefs.breatheAnim}
+              theme={theme}
+            />
+          </MotiView>
+        </ThemedView>
+      </LinearGradient>
+    </ThemedView>
+  </ThemedView>
+)};
+
+export default React.memo(RenderItem);

@@ -79,7 +79,8 @@
     "stream-browserify": "^1.0.0",
     "undefined": "\\",
     "vm-browserify": "^0.0.4",
-    "yup": "^1.6.1"
+    "yup": "^1.6.1",
+    "expo-image": "~2.4.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

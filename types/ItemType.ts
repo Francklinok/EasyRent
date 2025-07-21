@@ -41,3 +41,19 @@ export interface ItemType {
   type: PropertyType;
   features: Feature[];
 }
+
+export interface ExtendedItemTypes extends Omit<ItemType, 'features'> {
+  features: Feature[];  // même que dans ItemType
+  energyScore: number;
+  virtualTourAvailable: boolean;
+  distanceToAmenities: {
+    schools: number;
+    healthcare: number;
+    shopping: number;
+    transport: number;
+  };
+  aiRecommendation: string;
+  thumbnail?: string;
+  imageWebP?: string;
+  imageAvif?: string;
+}
