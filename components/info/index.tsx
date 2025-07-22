@@ -9,6 +9,10 @@ import { Calendar } from 'react-native-calendars';
 import { useNavigation } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { useRoute } from "@react-navigation/native";
+import { ThemedView } from "../ui/ThemedView";
+import { ThemedText } from "../ui/ThemedText";
+import { useTheme } from "../contexts/theme/themehook";
+import { SafeAreaView, StatusBar } from "react-native";
 
 
 const { width } = Dimensions.get("window");
@@ -41,30 +45,36 @@ interface Item {
   availableDates: any;
 }
 
+
 const ItemData = () => (
-  <LinearGradient
-    colors={["rgba(242,242,242,0.25)", "rgba(255,255,255,0.28)"]}
-    start={{ x: -0.1, y: 0.2 }}
-    end={{ x: 1, y: 1 }}
-    className="flex"
-  >
-    <FlatList
-      data={data}
-      keyExtractor={(item) => item.id}
-      showsVerticalScrollIndicator={false}
-      renderItem={({ item }) => <ItemCard item={item} />}
-    />
-  </LinearGradient>
+  <SafeAreaView style={{ flex: 1, backgroundColor: "white" }}>
+    <StatusBar barStyle="dark-content" backgroundColor="white" />
+    <LinearGradient
+      colors={["rgba(242,242,242,0.25)", "rgba(255,255,255,0.28)"]}
+      start={{ x: -0.1, y: 0.2 }}
+      end={{ x: 1, y: 1 }}
+      style={{ flex: 1 }}
+    >
+      <FlatList
+        data={data}
+        keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
+        renderItem={({ item }) => <ItemCard item={item} />}
+      />
+    </LinearGradient>
+  </SafeAreaView>
 );
 
 const ItemCard = ({ item }:{ item: Item }) => {
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [animation] = useState(new Animated.Value(0)); // Animation value for the modal
   const navigation = useNavigation();
-
+  const   {theme} = useTheme()
   const descriptionCourte = "Studio de 14 m² Meublé • 6ème étage ...";
   const descriptionComplete = "Ce beau petit studio de 14 m² au total dont 11 m² Carrez...";
 
@@ -94,84 +104,86 @@ const ItemCard = ({ item }:{ item: Item }) => {
   };
 
   return (
-    <View className="flex flex-col gap-10 bg-white/90 rounded-3xl shadow-2xl p-1 overflow-hidden h-full">
+    <ThemedView className="flex flex-col gap-4 rounded-3xl px-0 ">
       {/* Réservation Bouton */}
       <TouchableOpacity
         onPress={() => router.navigate({
           pathname:"/booking/bookingscreen"
         })}
-        className="bg-blue-500 p-4 rounded-full absolute top-5 left-5 z-10"
+        className=" p-2 rounded-full absolute top-5 left-5 z-10"
+        style = {{backgroundColor:theme.blue600}}
       >
-        <Text className="text-white text-center text-lg font-bold">Réserver maintenant</Text>
+        <ThemedText style = {{color:theme.surface}}>Réserver maintenant</ThemedText>
       </TouchableOpacity>
 
       {/* Carrousel d'images */}
-      <View className="relative">
+      <ThemedView className="relative">
         <FlatList
           ref={flatListRef}
           horizontal
           data={item.avatar}
           keyExtractor={(_, index) => index.toString()}
           renderItem={({ item }) => (
-            <Image source={item} style={{ width, height: 300 }} resizeMode="cover" />
+            <Image source={item} style={{ width, height: 300, borderRadius:20 }} resizeMode="cover" />
           )}
           showsHorizontalScrollIndicator={false}
           pagingEnabled
           onScroll={handleScroll}
           scrollEventThrottle={16}
         />
-        <View className="absolute bottom-2 w-full flex-row justify-center">
+        <ThemedView className="absolute bottom-2 w-full flex-row justify-center">
           {item.avatar.map((_, index) => (
-            <View
+            <ThemedView
               key={index}
               className={`h-2 w-2 mx-1 rounded-full ${currentIndex === index ? "bg-blue-500" : "bg-gray-400"}`}
             />
           ))}
-        </View>
-      </View>
+        </ThemedView>
+      </ThemedView>
 
       {/* Description */}
-      <View className="flex flex-row justify-between p-4">
-        <View>
-          <Text className="text-[20px] font-bold">Description</Text>
-          <Text className="text-gray-800">{isExpanded ? descriptionComplete : descriptionCourte}</Text>
+      <ThemedView className="flex flex-row justify-between px-4">
+        <ThemedView>
+          <ThemedText  type = "subtitle" className=" pb-2">Description</ThemedText>
+          <ThemedText>{isExpanded ? descriptionComplete : descriptionCourte}</ThemedText>
           <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)}>
-            <Text className="text-blue-500 font-semibold">
+            <ThemedText variant = "primary">
               {isExpanded ? "Voir moins" : "Voir plus"}
-            </Text>
+            </ThemedText>
           </TouchableOpacity>
-        </View>
-      </View>
+        </ThemedView>
+      </ThemedView>
 
       {/* Informations générales */}
-      <View className="flex flex-col gap-8 pl-4">
-        <Text>Information générale</Text>
-        <View className="flex flex-row gap-10">
-          <View className="flex flex-row gap-4">
-            <Ionicons name="person-outline" size={24} color="black" />
-            <Text>1 Chambre</Text>
-          </View>
-          <View className="flex flex-row gap-4">
+      <ThemedView className="flex flex-col gap-2 pl-4">
+        <ThemedText type = "subtitle" className=" pb-2" >Information générale</ThemedText>
+        <ThemedView className="flex flex-row gap-6">
+          <ThemedView className="flex flex-row gap-4">
+            <Ionicons name="person-outline" size={16} color="black" />
+            <ThemedText>1 Chambre</ThemedText>
+          </ThemedView>
+          <ThemedView className="flex flex-row gap-4">
             <MaterialCommunityIcons name="shower" size={24} color="black" />
-            <Text>1 Shower</Text>
-          </View>
-          <View className="flex flex-row gap-4">
+            <ThemedText>1 Shower</ThemedText>
+          </ThemedView>
+          <ThemedView className="flex flex-row gap-4">
             <FontAwesome6 name="restroom" size={24} color="black" />
-            <Text>1 restroom</Text>
-          </View>
-        </View>
-      </View>
+            <ThemedText>1 restroom</ThemedText>
+          </ThemedView>
+        </ThemedView>
+      </ThemedView>
 
       {/* Calendrier de disponibilité */}
-      <View className="p-5">
-        <Text className="text-[20px] font-bold">Disponibilité</Text>
+      <ThemedView className="p-5">
+        <ThemedText type = "subtitle" className=" pb-2">Disponibilité</ThemedText>
         <TouchableOpacity
           onPress={openCalendarModal}
-          className="bg-blue-500 p-4 rounded-full mt-5"
+          className=" p-4 rounded-full mt-5"
+          style = {{backgroundColor:theme.success}}
         >
-          <Text className="text-white text-center text-lg font-bold">calendrier de disponibiliter</Text>
+          <ThemedText style = {{color:theme.surface}} className="text-center">calendrier de disponibiliter</ThemedText>
         </TouchableOpacity>
-      </View>
+      </ThemedView>
 
       {/* Modal calendrier */}
       <Modal
@@ -188,18 +200,18 @@ const ItemCard = ({ item }:{ item: Item }) => {
             transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [300, 0] }) }],
           }}
         >
-          <View className="bg-white rounded-t-3xl p-4">
+          <ThemedView className="bg-white rounded-t-3xl p-4">
             <Calendar markedDates={item.availableDates} />
             <TouchableOpacity
               onPress={closeCalendarModal}
-              className="bg-red-500 p-3 rounded-full mt-4"
+              className="bg-red-500 p-3 rounded-full mt-6"
             >
-              <Text className="text-white text-center text-lg font-bold">Fermer</Text>
+              <ThemedText className="text-white text-center text-lg font-bold">Fermer</ThemedText>
             </TouchableOpacity>
-          </View>
+          </ThemedView>
         </Animated.View>
       </Modal>
-    </View>
+    </ThemedView>
   );
 };
 

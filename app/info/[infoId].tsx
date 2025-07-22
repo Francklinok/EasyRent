@@ -1,7 +1,13 @@
-
-
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Image, SafeAreaView, StatusBar } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  SafeAreaView,
+  StatusBar,
+  ScrollView,
+} from 'react-native';
 import Octicons from '@expo/vector-icons/Octicons';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -12,94 +18,103 @@ import Services from '@/components/info/servicesFiles';
 import Equipment from '@/components/info/equipmentFiles';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
-// Définir le type pour les props des composants
+import { useTheme } from '@/components/contexts/theme/themehook';
+import { BackButton } from '@/components/ui/BackButton';
+
 interface ComponentProps {
   itemId: string | string[];
 }
 
-export default function Info (){
+export default function Info() {
   const router = useRouter();
-  // Récupérer les paramètres de la route
-  const params = useLocalSearchParams();
-  const { id, name } = params;
-  
-  // Définir un état initial correct
+  const { id, name } = useLocalSearchParams();
   const [activeComponent, setActiveComponent] = useState<string>('Description');
-  
-  // Mapper les noms aux composants
-  const componentMap: { [key: string]: React.ComponentType<ComponentProps> } = {
-    Description: ItemData,
-    Criteria: Criteria,
-    Atout: Atout,
-    Equipment: Equipment,
-    Services: Services
-  };
-  
-  const ActiveComponent = componentMap[activeComponent];
-  
-  return (
-    <SafeAreaView className="bg-white" style={{ paddingTop: StatusBar.currentHeight }}>
-      <StatusBar barStyle="dark-content" backgroundColor="white" />
-      <ThemedView className="flex flex-col gap-4">
-        {/* En-tête avec bouton retour */}
-        <ThemedView className="flex-row p-2 justify-between bg-white shadow-md rounded-t-lg">
-         
-          <ThemedView className="flex-row gap-2 justify-between bg-white">
-          <TouchableOpacity onPress={() => router.back()} className="p-2 pr-6 ">
-            <AntDesign name="arrowleft" size={24} color="black" />
-          </TouchableOpacity>
+ const  {theme} = useTheme()
+  const componentMap: Record<string, React.ComponentType<ComponentProps>> = useMemo(
+    () => ({
+      Description: ItemData,
+      Criteria: Criteria,
+      Atout: Atout,
+      Equipment: Equipment,
+      Services: Services,
+    }),
+    []
+  );
 
-            <ThemedView className="p-2">
-              <Image
-                source={{ uri: 'https://via.placeholder.com/150' }}
-                className="w-16 h-16 rounded-full mr-6 border"
-              />
-            </ThemedView>
-            <ThemedView className="flex flex-col justify-center">
-              <ThemedText className="text-lg font-semibold">{name}</ThemedText>
-              <ThemedText className="text-[12px] font-semibold pr-4">
-                Taux de réponse{' '}
-                <Text className="text-green-600 text-[14px] font-bold">100%</Text>
-              </ThemedText>
-            </ThemedView>
-            <ThemedView className="flex flex-row gap-6 items-center pr-4">
-              <Octicons name="verified" size={24} color="black" />
-              <AntDesign name="message1" size={24} color="black" />
-            </ThemedView>
-          </ThemedView>
+  const ActiveComponent = componentMap[activeComponent];
+
+  return (
+    <SafeAreaView className="flex-1 " style={{ paddingTop: StatusBar.currentHeight }}>
+      <StatusBar barStyle="dark-content" backgroundColor="white" />
+
+      {/* HEADER */}
+      <ThemedView className="flex-row items-center px-2 py-1 " style = {{borderBottomWidth:1, borderBottomColor: theme.outline}}>
+        <ThemedView className = "pr-4">
+       <BackButton/>
+ 
         </ThemedView>
-        
-        {/* ID de l'élément (pour le débogage, à supprimer en production) */}
-        <ThemedText className="px-4 text-gray-500">ID: {id}</ThemedText>
-        
-        {/* Boutons de navigation */}
-        <ThemedView className="flex flex-row flex-wrap gap-2 p-2">
-          {Object.keys(componentMap).map((key) => (
-            <TouchableOpacity
-              key={key}
-              onPress={() => setActiveComponent(key)}
-              style={{
-                backgroundColor: activeComponent === key ? '#e0e0e0' : '#f5f5f5',
-                paddingVertical: 6,
-                paddingHorizontal: 13,
-                borderRadius: 20,
-              }}
-            >
-              <ThemedText className="text-[14px]">{key}</ThemedText>
-            </TouchableOpacity>
-          ))}
+
+
+        <Image
+          source={{ uri: 'https://via.placeholder.com/150' }}
+          className="w-14 h-14 rounded-full mr-3 border "
+          
+        />
+
+        <ThemedView className="flex-1">
+          <ThemedText>{name || 'Utilisateur'}</ThemedText>
+          <ThemedText>
+            Taux de réponse{' '}
+            <ThemedText intensity = 'strong' variant = "primary">100%</ThemedText>
+          </ThemedText>
         </ThemedView>
-        
+
+        <ThemedView className="flex-row  gap-4  pr-4">
+          <Octicons name="verified" size={22} color={theme.blue700} />
+          <AntDesign name="message1" size={22} color={theme.blue700} />
+        </ThemedView>
+      </ThemedView>
+
+      {/* CONTENU */}
+      <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>        
+
+        {/* Navigation Tabs */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingHorizontal: 22,
+            paddingVertical: 8,
+            gap: 4,
+          }}
+        >
+          {Object.keys(componentMap).map((key) => {
+            const isActive = activeComponent === key;
+            return (
+              <TouchableOpacity
+                key={key}
+                onPress={() => setActiveComponent(key)}
+                className={`px-2 py-2 rounded-full`}
+                style = {{backgroundColor:   isActive ? theme.primary : theme.blue100}}
+              >
+                <ThemedText   style = {{color:   isActive ? theme.surface : theme.onSurface}}
+  >
+                  {key}
+                </ThemedText>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
         {/* Contenu dynamique */}
-        <ThemedView className="p-2">
+        <ThemedView className="px-2">
           {ActiveComponent ? (
             <ActiveComponent itemId={id} />
           ) : (
-            <Text>Aucune donnée disponible</Text>
+            <ThemedText>Aucune donnée disponible</ThemedText>
           )}
         </ThemedView>
-      </ThemedView>
+      </ScrollView>
     </SafeAreaView>
   );
-};
-
+}

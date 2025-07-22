@@ -1,191 +1,150 @@
-import React from "react";
-import { Image, TouchableOpacity } from "react-native";
-import { FontAwesome5, MaterialIcons, Ionicons,MaterialCommunityIcons } from "@expo/vector-icons";
+import React, { useCallback, memo } from "react";
+import { Image, TouchableOpacity, StyleSheet } from "react-native";
+import { FontAwesome5, MaterialIcons, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { MotiView } from "moti";
 import { ThemedText } from "@/components/ui/ThemedText";
 import { ThemedView } from "@/components/ui/ThemedView";
-import { ItemType, FeatureIcon } from "@/types/ItemType";
+import { ExtendedItemTypes } from "@/types/ItemType";
 import renderEnergyScore from "./renderEnergieScore";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import toggleFavorite from "@/components/utils/homeUtils/toggleFavorite";
 import { useTheme } from "@/components/contexts/theme/themehook";
 
-  interface ExtendedItemType extends ItemType {
-    features: FeatureIcon[];
-    energyScore: number; // Score énergétique de 0 à 100
-    virtualTourAvailable: boolean;
-    distanceToAmenities: {
-      schools: number;
-      healthcare: number;
-      shopping: number;
-      transport: number;
-    };
-    aiRecommendation: string; // Recommandation personnalisée par IA
-  }
-  
-  import type { MutableRefObject } from "react";
+import type { MutableRefObject } from "react";
 
-  type Props = {
-    item: ExtendedItemType;
-    index: number;
-    width: number;
-    lottieRef: MutableRefObject<any>; // ou lottieRef: MutableRefObject<LottieView | null> si tu as typé ton ref
-    setAnimatingElement: (id: string | null) => void;
-    favorites: string[];
-    setFavorites: React.Dispatch<React.SetStateAction<string[]>>;
-  };
-  
-  
-  const RenderGridItem:React.FC<Props> = ({   
-    item,
-    index,
-    setAnimatingElement,
-    setFavorites,
-    favorites,
-    lottieRef,
-    width,}) => {
+type Props = {
+  item: ExtendedItemTypes;
+  index: number;
+  width: number;
+  lottieRef: MutableRefObject<any>;
+  setAnimatingElement: (id: string | null) => void;
+  favorites: string[];
+  setFavorites: React.Dispatch<React.SetStateAction<string[]>>;
+};
 
-      const {theme} = useTheme()
-    const router = useRouter()
+const RenderGridItem: React.FC<Props> = ({
+  item,
+  index,
+  width,
+  setAnimatingElement,
+  favorites,
+}) => {
+  const { theme } = useTheme();
+  const router = useRouter();
 
-    const navigateToInfo = (item: ExtendedItemType) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      setAnimatingElement(item.id);
-      
-      // Add slight delay for transition effect
-      setTimeout(() => {
-        router.push({
-          pathname: "/info/[infoId]",
-          params: { 
-            id: item.id
-          }
-        });
-        
-        // Reset animating state
-        setTimeout(() => setAnimatingElement(null), 500);
-      }, 300);
-    };
+  const navigateToInfo = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setAnimatingElement(item.id);
 
-    return  (
+    setTimeout(() => {
+      router.push({ pathname: "/info/[infoId]", params: { id: item.id } });
+      setTimeout(() => setAnimatingElement(null), 500);
+    }, 300);
+  }, [item.id]);
+
+  const isFavorite = favorites.includes(item.id);
+
+  return (
     <MotiView
       from={{ opacity: 0, translateY: 10 }}
       animate={{ opacity: 1, translateY: 0 }}
-      transition={{ delay: index * 100, type: 'timing' }}
-      style={{ 
-        width: width / 2 - 24, 
-        marginLeft: index % 2 === 0 ? 16 : 8,
-        marginRight: index % 2 === 0 ? 8 : 16,
-        marginBottom: 16
-      }}
+      transition={{ delay: index * 60, type: "timing" }}
+      style={[
+        styles.cardContainer,
+        {
+          width: width / 2 - 24,
+          marginLeft: index % 2 === 0 ? 16 : 8,
+          marginRight: index % 2 === 0 ? 8 : 16,
+        },
+      ]}
     >
-      <TouchableOpacity
-        onPress={() => navigateToInfo(item)}
-        activeOpacity={0.9}
-      >
-        <ThemedView 
-          elevated="medium"
-          className="rounded-2xl overflow-hidden"
-        >
-          <BlurView 
-            intensity={isDark ? 20 : 70} 
-            tint={ "dark"} 
-            className={`border rounded-2xl overflow-hidden ${
-               "border-white/10"
-            }`}
-          >
+      <TouchableOpacity onPress={navigateToInfo} activeOpacity={0.9}>
+        <ThemedView elevated="medium"  style={styles.card}>
+          <BlurView intensity={70} tint="dark" style={styles.blurContainer}>
             {/* Image */}
-            <ThemedView className="relative">
-              <Image 
-                source={item.avatar} 
-                style={{ width: '100%', height: 100 }}
-                resizeMode="cover" 
-              />
-              
-              {/* Favorite button */}
-              <TouchableOpacity 
-                className="absolute top-2 right-2 p-2 rounded-full bg-black/30"
+            <ThemedView style={styles.imageContainer}>
+              <Image source={
+                  typeof item.avatar === "string"
+                    ? { uri: item.avatar }
+                    : item.avatar
+                } style={styles.image} resizeMode="cover" />
+
+              {/* Favorite */}
+              <TouchableOpacity
+                style={styles.favoriteBtn}
                 onPress={() => toggleFavorite(item.id)}
               >
-                <Ionicons 
-                  name={favorites.includes(item.id) ? "heart" : "heart-outline"} 
-                  size={16} 
-                  color={favorites.includes(item.id) ? "#f43f5e" : "#ffffff"} 
+                <Ionicons
+                  name={isFavorite ? "heart" : "heart-outline"}
+                  size={16}
+                  color={isFavorite ? theme.error : theme.surface}
                 />
               </TouchableOpacity>
-              
+
               {/* Price */}
-              <ThemedView className="absolute bottom-2 right-2">
-                <ThemedView 
-                  className="px-2 py-1 rounded-lg"
-                  style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
-                >
-                  <ThemedText className="text-white font-bold text-xs">
-                    {item.price}
-                  </ThemedText>
+              <ThemedView style={styles.priceContainer}>
+                <ThemedView style={styles.priceBox}>
+                  <ThemedText style={styles.priceText}>{item.price}</ThemedText>
                 </ThemedView>
               </ThemedView>
-              
-              {/* Energy score */}
-              <ThemedView className="absolute bottom-2 left-2">
+
+              {/* Energy Score */}
+              <ThemedView style={styles.energyScore}>
                 {renderEnergyScore(item.energyScore)}
               </ThemedView>
             </ThemedView>
-            
+
             {/* Content */}
-            <ThemedView className="p-2">
+            <ThemedView style={styles.content}>
               {/* Location */}
-              <ThemedView className="flex-row items-center">
+              <ThemedView style={styles.row}>
                 <MaterialIcons name="location-on" size={12} color={theme.subtext} />
-                <ThemedText className="text-xs ml-1 font-medium" numberOfLines={1}>
+                <ThemedText numberOfLines={1} style={styles.location}>
                   {item.location}
                 </ThemedText>
               </ThemedView>
-              
+
               {/* Rating */}
-              <ThemedView className="flex-row items-center mt-1">
-                <FontAwesome5 name="star" size={10} color="#fcd34d" />
-                <ThemedText className="text-xs ml-1 font-bold">
-                  {item.stars}
-                </ThemedText>
+              <ThemedView style={styles.row}>
+                <FontAwesome5 name="star" size={10} color={theme.star} />
+                <ThemedText style={styles.rating}>{item.stars}</ThemedText>
               </ThemedView>
-              
+
               {/* Features */}
-              <ThemedView className="flex-row mt-2 gap-1">
+              <ThemedView style={styles.featuresRow}>
                 {item.features.slice(0, 3).map((feature, idx) => (
-                  <ThemedView 
-                    key={idx} 
-                    className="p-1 rounded-md"
-                    style={{ backgroundColor: 'rgba(55, 65, 81, 0.3)'  }}
-                  >
+                  <ThemedView key={idx} style={styles.featureBox}>
                     <FontAwesome5 name={feature.icon} size={8} color={theme.subtext} />
                   </ThemedView>
                 ))}
               </ThemedView>
-              
+
               {/* Availability */}
-              <ThemedView className="mt-2 flex-row justify-between items-center">
-                <ThemedView className="flex-row items-center">
-                  <ThemedView 
-                    className="h-1.5 w-1.5 rounded-full mr-1"
-                    style={{ backgroundColor: item.availibility === "available" ? '#34d399' : '#ef4444' }}
+              <ThemedView style={styles.availabilityRow}>
+                <ThemedView style={styles.availability}>
+                  <ThemedView
+                    style={[
+                      styles.dot,
+                      { backgroundColor: item.availibility === "available" ? theme.success : theme.error },
+                    ]}
                   />
-                  <ThemedText 
-                    style={{ 
-                      color: item.availibility === "available" ? '#34d399' : '#ef4444',
+                  <ThemedText
+                    style={{
+                      color: item.availibility === "available" ? theme.success : theme.error,
                       fontSize: 10,
-                      fontWeight: '500'
+                      fontWeight: "500",
                     }}
                   >
                     {item.availibility === "available" ? "Disponible" : "Indisponible"}
                   </ThemedText>
                 </ThemedView>
-                
-                {/* Virtual tour badge mini */}
+
+                {/* Virtual tour badge */}
                 {item.virtualTourAvailable && (
-                  <ThemedView className="p-1 rounded-md bg-blue-500/20">
-                    <MaterialCommunityIcons name="rotate-3d-variant" size={10} color= {'#93c5fd'} />
+                  <ThemedView style={styles.virtualTourBadge}>
+                    <MaterialCommunityIcons name="rotate-3d-variant" size={10} color={theme.blue200} />
                   </ThemedView>
                 )}
               </ThemedView>
@@ -194,6 +153,30 @@ import { useTheme } from "@/components/contexts/theme/themehook";
         </ThemedView>
       </TouchableOpacity>
     </MotiView>
-  )}
+  );
+};
 
-  export  default RenderGridItem;
+export default memo(RenderGridItem);
+
+const styles = StyleSheet.create({
+  cardContainer: { marginBottom: 16 },
+  card: { borderRadius: 16, overflow: "hidden" },
+  blurContainer: { borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
+  imageContainer: { position: "relative" },
+  image: { width: "100%", height: 100 },
+  favoriteBtn: { position: "absolute", top: 2, right: 2, padding: 2, borderRadius: 50, backgroundColor: "rgba(0,0,0,0.3)" },
+  priceContainer: { position: "absolute", bottom: 2, right: 2 },
+  priceBox: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 8, backgroundColor: "rgba(0,0,0,0.6)" },
+  priceText: { color: "white", fontSize: 10, fontWeight: "bold" },
+  energyScore: { position: "absolute", bottom: 2, left: 2 },
+  content: { padding: 6 },
+  row: { flexDirection: "row", alignItems: "center", marginTop: 2 },
+  location: { fontSize: 10, marginLeft: 3, fontWeight: "500" },
+  rating: { fontSize: 10, marginLeft: 3, fontWeight: "bold" },
+  featuresRow: { flexDirection: "row", marginTop: 4, gap: 4 },
+  featureBox: { padding: 2, borderRadius: 4, backgroundColor: "rgba(55,65,81,0.3)" },
+  availabilityRow: { marginTop: 4, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  availability: { flexDirection: "row", alignItems: "center" },
+  dot: { width: 5, height: 5, borderRadius: 50, marginRight: 3 },
+  virtualTourBadge: { padding: 2, borderRadius: 4, backgroundColor: "rgba(59,130,246,0.2)" },
+});

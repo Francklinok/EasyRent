@@ -1,6 +1,13 @@
 // RenHouseAcceuil.tsx
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { TouchableOpacity, Dimensions, Animated, StatusBar } from "react-native";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import {
+  TouchableOpacity,
+  Dimensions,
+  Animated,
+  StatusBar,
+  InteractionManager,
+  StyleSheet,
+} from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -13,10 +20,12 @@ import RenderFilterModal from "./home/renderFilterModal";
 import RenderGridItem from "./home/renderGridItem";
 import enrichItems from "../utils/homeUtils/extendData";
 import RenderCategoryTabs from "./home/renderCategory";
-import OptimizedFlashList from "./home/OptimizedFlashList"; // <-- Import FlashList optimisée
+import OptimizedFlashList from "./home/optimizedFlashList";
 import { ExtendedItemTypes } from "@/types/ItemType";
+import LottieView from "lottie-react-native";
 
 const { width } = Dimensions.get("window");
+// const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
 type PropertyType =
   | "All"
@@ -32,20 +41,36 @@ type PropertyType =
   | "Terrain"
   | "Commercial";
 
-const propertyLabels: Record<PropertyType, string> = {
-  All: "Tous",
-  Villa: "Villa",
-  Appartement: "Appartement",
-  Maison: "Maison",
-  Penthouse: "Penthouse",
-  Studio: "Studio",
-  Loft: "Loft",
-  Bureau: "Bureau",
-  Chalet: "Chalet",
-  Hôtel: "Hôtel",
-  Terrain: "Terrain",
-  Commercial: "Commercial",
-};
+// --- Navigation Bar ---
+const NavigationBar = React.memo(({ theme }: { theme: any }) => (
+  <BlurView
+    intensity={40}
+    tint="dark"
+    style={[styles.navigationBar, { borderColor: "rgba(255,255,255,0.1)" }]}
+  >
+    <ThemedView style={[styles.navigationContent, { backgroundColor: "transparent" }]}>
+      <TouchableOpacity style={styles.navItem} activeOpacity={0.8}>
+        <MaterialIcons name="home" size={24} color="#3b82f6" />
+        <ThemedText style={[styles.navText, { color: "#3b82f6" }]}>Accueil</ThemedText>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.navItem} activeOpacity={0.8}>
+        <MaterialIcons name="search" size={24} color={theme.subtext} />
+        <ThemedText style={[styles.navText, { color: theme.subtext }]}>Recherche</ThemedText>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.navItem} activeOpacity={0.8}>
+        <MaterialIcons name="favorite-border" size={24} color={theme.subtext} />
+        <ThemedText style={[styles.navText, { color: theme.subtext }]}>Favoris</ThemedText>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.navItem} activeOpacity={0.8}>
+        <MaterialIcons name="person-outline" size={24} color={theme.subtext} />
+        <ThemedText style={[styles.navText, { color: theme.subtext }]}>Profil</ThemedText>
+      </TouchableOpacity>
+    </ThemedView>
+  </BlurView>
+));
 
 const RenHouseAcceuil = () => {
   const router = useRouter();
@@ -55,132 +80,165 @@ const RenHouseAcceuil = () => {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [animatingElement, setAnimatingElement] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<PropertyType>("All");
+  const [isReady, setIsReady] = useState(false);
 
-  // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const lottieRef = useRef(null);
-  const { theme } = useTheme();
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const lottieRef = useRef<LottieView>(null);
+  const { theme } = useTheme();
 
+  // --- Extended Data ---
+  const extendedData = useMemo<ExtendedItemTypes[]>(() => {
+    console.log("🔄 Processing extended data...");
+    return enrichItems(data);
+  }, []);
+
+  const filteredData = useMemo(() => {
+    console.log(`🔍 Filtering data for category: ${selectedCategory}`);
+    return selectedCategory === "All"
+      ? extendedData
+      : extendedData.filter((item) => item.type === selectedCategory);
+  }, [selectedCategory, extendedData]);
+
+  // --- Pulsation Animation ---
   const pulsate = useCallback(() => {
-    Animated.sequence([
-      Animated.timing(pulseAnim, { toValue: 1.5, duration: 800, useNativeDriver: true }),
-      Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-    ]).start(() => pulsate());
+    const pulseAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.5, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      ])
+    );
+    pulseAnimation.start();
+    return pulseAnimation;
   }, [pulseAnim]);
 
-  useEffect(() => {
-    pulsate();
-    Animated.timing(fadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }).start();
+  // --- Navigation ---
+  const navigateToInfo = useCallback((item: ExtendedItemTypes) => {
+      router.push({ pathname: "/item/[itemId]", params: { itemId: item.id } });
 
-    if (lottieRef.current) {
-      setTimeout(() => lottieRef.current?.play(), 500);
+
+  }, [router]);
+
+  // --- Category Change ---
+  const handleCategoryChange = useCallback((category: PropertyType) => {
+    if (category !== selectedCategory) {
+      setSelectedCategory(category);
     }
+  }, [selectedCategory]);
 
+  // --- Refresh & Pagination ---
+  const handleRefresh = useCallback(() => console.log("🔄 Refresh triggered"), []);
+  const handleEndReached = useCallback(() => console.log("📄 End reached - loading more data"), []);
+
+  // --- Effects ---
+  useEffect(() => {
+    let pulseAnimation: Animated.CompositeAnimation | null = null;
+    const interactionHandle = InteractionManager.runAfterInteractions(() => {
+      pulseAnimation = pulsate();
+      Animated.timing(fadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }).start();
+      lottieRef.current && setTimeout(() => lottieRef.current?.play(), 500);
+      setIsReady(true);
+    });
     return () => {
+      interactionHandle.cancel();
+      pulseAnimation?.stop();
       pulseAnim.setValue(1);
       fadeAnim.setValue(0);
     };
-  }, [pulsate, fadeAnim]);
+  }, [pulsate, fadeAnim, pulseAnim]);
 
-  // On enrichit les données
-  const extendedData: ExtendedItemTypes[] = enrichItems(data);
-
-  // Filtrage des données
-  const filteredData =
-    selectedCategory === "All"
-      ? extendedData
-      : extendedData.filter((item) => item.type === selectedCategory);
+  if (!isReady) {
+    return (
+      <ThemedView variant="default" style={styles.loadingContainer}>
+        <ThemedText>Chargement...</ThemedText>
+      </ThemedView>
+    );
+  }
 
   return (
-    <ThemedView variant="default" className="flex">
+    <ThemedView className="h-full mt-2" variant="default" >
       <StatusBar barStyle="light-content" />
-      <LinearGradient colors={theme.background} className="flex">
-        {/* Tabs de catégories */}
-        <RenderCategoryTabs onChange={(category) => setSelectedCategory(category)} />
+      <LinearGradient colors={theme.background} style={styles.gradient}>
+        {/* FlashList with Header for Categories */}
+        <RenderCategoryTabs
+            onChange={handleCategoryChange}
+            viewType={viewType}
+            onToggleView={() => setViewType(viewType === "list" ? "grid" : "list")}
+          />
+        {viewType === "list" ? (
+          
+          <OptimizedFlashList
+            data={filteredData}
+            lottieRef={lottieRef}
+            favorites={favorites}
+            setFavorites={setFavorites}
+            animatingElement={animatingElement}
+            setAnimatingElement={setAnimatingElement}
+            navigateToInfo={navigateToInfo}
+            refreshing={false}
+            onRefresh={handleRefresh}
+            onEndReached={handleEndReached}
+            contentContainerStyle={{ paddingBottom: 30 }}
+            ListFooterComponent={<ThemedView style={{ height: 250 }} />}
 
-        {/* Liste des propriétés */}
-        <Animated.View style={{ opacity: fadeAnim }}>
-          {viewType === "list" ? (
-            <OptimizedFlashList
-              data={filteredData}
-              lottieRef={lottieRef}
-              favorites={favorites}
-              setFavorites={setFavorites}
-              animatingElement={animatingElement}
-              setAnimatingElement={setAnimatingElement}
-              navigateToInfo={(item) => router.push(`/property/${item.id}`)}
-              refreshing={false}
-              onRefresh={() => console.log("Refresh triggered")}
-              onEndReached={() => console.log("End reached")}
-              contentContainerStyle={{ paddingTop: 1, paddingBottom: 30 }}
-              ListHeaderComponent={<></>}
-            />
-          ) : (
-            <Animated.FlatList
-              data={filteredData}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item, index }) => (
-                <RenderGridItem
-                  item={item}
-                  index={index}
-                  width={width}
-                  lottieRef={lottieRef}
-                  setAnimatingElement={setAnimatingElement}
-                  favorites={favorites}
-                  setFavorites={setFavorites}
-                />
-              )}
-              showsVerticalScrollIndicator={false}
-              numColumns={2}
-              contentContainerStyle={{ paddingTop: 120, paddingBottom: 30 }}
-              onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                { useNativeDriver: true }
-              )}
-            />
-          )}
-        </Animated.View>
+          />
+        ) : (
+          <Animated.FlatList
+            data={filteredData}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item, index }) => (
+              <RenderGridItem
+                item={item}
+                index={index}
+                width={width}
+                lottieRef={lottieRef}
+                setAnimatingElement={setAnimatingElement}
+                favorites={favorites}
+                setFavorites={setFavorites}
+              />
+            )}
+            showsVerticalScrollIndicator={false}
+            numColumns={2}
+            contentContainerStyle={{ paddingBottom: 30 }}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: true }
+            )}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={10}
+            updateCellsBatchingPeriod={50}
+            windowSize={10}
+            initialNumToRender={6}
+            getItemLayout={(data, index) => ({ length: 200, offset: 200 * index, index })}
+            style={styles.flatList}            
+          />
+        )}
 
-        {/* Modal de filtre */}
         <RenderFilterModal
           fadeAnim={fadeAnim}
           filterModalVisible={filterModalVisible}
           setFilterModalVisible={setFilterModalVisible}
         />
-
-        {/* Barre de navigation */}
-        <BlurView
-          intensity={40}
-          tint="dark"
-          className="absolute bottom-0 left-0 right-0 border-t"
-          style={{ borderColor: "rgba(255,255,255,0.1)" }}
-        >
-          <ThemedView className="flex-row justify-around py-4" style={{ backgroundColor: "transparent" }}>
-            <TouchableOpacity className="items-center">
-              <MaterialIcons name="home" size={24} color="#3b82f6" />
-              <ThemedText style={{ fontSize: 12, color: "#3b82f6", marginTop: 2 }}>Accueil</ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity className="items-center">
-              <MaterialIcons name="search" size={24} color={theme.subtext} />
-              <ThemedText style={{ fontSize: 12, color: theme.subtext, marginTop: 2 }}>Recherche</ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity className="items-center">
-              <MaterialIcons name="favorite-border" size={24} color={theme.subtext} />
-              <ThemedText style={{ fontSize: 12, color: theme.subtext, marginTop: 2 }}>Favoris</ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity className="items-center">
-              <MaterialIcons name="person-outline" size={24} color={theme.subtext} />
-              <ThemedText style={{ fontSize: 12, color: theme.subtext, marginTop: 2 }}>Profil</ThemedText>
-            </TouchableOpacity>
-          </ThemedView>
-        </BlurView>
+        {/* <NavigationBar theme={theme} /> */}
       </LinearGradient>
     </ThemedView>
   );
 };
 
-export default RenHouseAcceuil;
+const styles = StyleSheet.create({
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  gradient: { flex: 1,width: "100%" },
+  flatList: { flex: 1},
+  navigationBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopWidth: 1,
+  },
+  navigationContent: { flexDirection: "row", justifyContent: "space-around", paddingVertical: 16 },
+  navItem: { alignItems: "center" },
+  navText: { fontSize: 12, marginTop: 2 },
+});
+
+export default React.memo(RenHouseAcceuil);

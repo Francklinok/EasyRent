@@ -4,10 +4,10 @@ import { ThemedView } from "@/components/ui/ThemedView";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ui/ThemedText";
 import { useTheme } from "@/components/contexts/theme/themehook";
-import { ExtendedItemType } from '@/types/property';
+import { ExtendedItemTypes } from '@/types/ItemType';
 
 type  Props = {
-  item:ExtendedItemType,
+  item:ExtendedItemTypes,
 }
 
 
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 4,
+    paddingHorizontal: 90,
   },
   compactAmenities: {
     flexDirection: 'row',

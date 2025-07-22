@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import {
   ScrollView,
   TouchableOpacity,
@@ -6,12 +6,10 @@ import {
   Dimensions,
   Text,
   View,
-  LayoutChangeEvent,
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { MotiView } from "moti";
 import { ThemedView } from "@/components/ui/ThemedView";
-import { ThemedText } from "@/components/ui/ThemedText";
 import { useTheme } from "@/components/contexts/theme/themehook";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
@@ -47,56 +45,31 @@ const propertyLabels: Record<PropertyType, string> = {
   Commercial: "Commercial",
 };
 
-// ---- MarqueeText Component ----
-const MarqueeText = ({
-  text,
-  style,
-  duration = 3000,
-}: {
-  text: string;
-  style?: any;
-  duration?: number;
-}) => {
+// ---- MarqueeText ----
+const MarqueeText = ({ text, style, duration = 3000 }: { text: string; style?: any; duration?: number }) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const [textWidth, setTextWidth] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
 
   useEffect(() => {
     if (textWidth > containerWidth) {
-      Animated.loop(
+      const loopAnim = Animated.loop(
         Animated.sequence([
-          Animated.timing(translateX, {
-            toValue: -textWidth + containerWidth,
-            duration,
-            useNativeDriver: true,
-          }),
-          Animated.timing(translateX, {
-            toValue: 0,
-            duration: 0,
-            useNativeDriver: true,
-          }),
+          Animated.timing(translateX, { toValue: -textWidth + containerWidth, duration, useNativeDriver: true }),
+          Animated.timing(translateX, { toValue: 0, duration: 0, useNativeDriver: true }),
         ])
-      ).start();
+      );
+      loopAnim.start();
+      return () => loopAnim.stop();
     } else {
-      translateX.setValue(0); // Reset si pas besoin d'animation
+      translateX.setValue(0);
     }
   }, [textWidth, containerWidth]);
 
-  const onTextLayout = (e: LayoutChangeEvent) => {
-    setTextWidth(e.nativeEvent.layout.width);
-  };
-
-  const onContainerLayout = (e: LayoutChangeEvent) => {
-    setContainerWidth(e.nativeEvent.layout.width);
-  };
-
   return (
-    <View
-      onLayout={onContainerLayout}
-      style={{ overflow: "hidden", width: "100%" }}
-    >
+    <View onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)} style={{ overflow: "hidden", width: "100%" }}>
       <Animated.View style={{ transform: [{ translateX }] }}>
-        <Text onLayout={onTextLayout} style={style} numberOfLines={1}>
+        <Text onLayout={(e) => setTextWidth(e.nativeEvent.layout.width)} style={style} numberOfLines={1}>
           {text}
         </Text>
       </Animated.View>
@@ -106,74 +79,65 @@ const MarqueeText = ({
 
 // ---- Icon Getter ----
 const getPropertyIcon = (type: PropertyType, size: number) => {
-  switch (type) {
-    case "All":
-      return <MaterialCommunityIcons name="apps" size={size} />;
-    case "Villa":
-      return <MaterialCommunityIcons name="home-city-outline" size={size} />;
-    case "Maison":
-      return <MaterialCommunityIcons name="home-outline" size={size} />;
-    case "Appartement":
-      return (
-        <MaterialCommunityIcons name="office-building-outline" size={size} />
-      );
-    case "Penthouse":
-      return <MaterialCommunityIcons name="home-modern" size={size} />;
-    case "Studio":
-      return <MaterialCommunityIcons name="home-floor-1" size={size} />;
-    case "Loft":
-      return <MaterialCommunityIcons name="home-variant-outline" size={size} />;
-    case "Bureau":
-      return <MaterialCommunityIcons name="domain" size={size} />;
-    case "Chalet":
-      return <MaterialCommunityIcons name="home-group" size={size} />;
-    case "Hôtel":
-      return <MaterialCommunityIcons name="bed-outline" size={size} />;
-    case "Terrain":
-      return <MaterialCommunityIcons name="pine-tree" size={size} />;
-    case "Commercial":
-      return <MaterialCommunityIcons name="store-outline" size={size} />;
-    default:
-      return <MaterialCommunityIcons name="home-outline" size={size} />;
-  }
+  const icons: Record<PropertyType, string> = {
+    All: "apps",
+    Villa: "home-city-outline",
+    Maison: "home-outline",
+    Appartement: "office-building-outline",
+    Penthouse: "home-modern",
+    Studio: "home-floor-1",
+    Loft: "home-variant-outline",
+    Bureau: "domain",
+    Chalet: "home-group",
+    Hôtel: "bed-outline",
+    Terrain: "pine-tree",
+    Commercial: "store-outline",
+  };
+  return <MaterialCommunityIcons name={icons[type]} size={size} />;
 };
 
 // ---- Main Component ----
-const RenderCategoryTabs = ({ onChange }: { onChange?: (type: PropertyType) => void }) => {
+const RenderCategoryTabs = ({
+  onChange,
+  viewType,
+  onToggleView,
+}: {
+  onChange?: (type: PropertyType) => void;
+  viewType: "list" | "grid";
+  onToggleView: () => void;
+}) => {
   const { theme } = useTheme();
-  const [selectedProperty, setSelectedProperty] =
-    useState<PropertyType>("All");
+  const [selectedProperty, setSelectedProperty] = useState<PropertyType>("All");
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef<ScrollView>(null);
 
-  const properties = Object.keys(propertyLabels) as PropertyType[];
-  const itemWidth = SCREEN_WIDTH / ITEMS_PER_SCREEN;
-
+  const properties = useMemo(() => Object.keys(propertyLabels) as PropertyType[], []);
+  const itemWidth = useMemo(() => SCREEN_WIDTH / ITEMS_PER_SCREEN, []);
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
+    Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
   }, []);
 
-  const handlePropertySelect = (property: PropertyType) => {
-    setSelectedProperty(property);
-    onChange?.(property);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const index = properties.indexOf(property);
-    if (scrollRef.current && index !== -1) {
-      const scrollPosition =
-        index * itemWidth - SCREEN_WIDTH / 2 + itemWidth / 2;
-      scrollRef.current.scrollTo({ x: scrollPosition, animated: true });
-    }
-  };
+  const handlePropertySelect = useCallback(
+    (property: PropertyType) => {
+      if (property === selectedProperty) return;
+      setSelectedProperty(property);
+      onChange?.(property);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const index = properties.indexOf(property);
+      if (scrollRef.current && index !== -1) {
+        const scrollPosition = index * itemWidth - SCREEN_WIDTH / 2 + itemWidth / 2;
+        scrollRef.current.scrollTo({ x: scrollPosition, animated: true });
+      }
+    },
+    [selectedProperty, properties, itemWidth]
+  );
 
   return (
-    <Animated.View style={{ opacity: fadeAnim }}>
-      <ThemedView className="mb-2">
+    <Animated.View style={{ opacity: fadeAnim, flexDirection: "row", alignItems: "center" }}>
+      {/* ScrollView 75% */}
+      <ThemedView  style={{ flex: 3 }}>
         <ScrollView
           ref={scrollRef}
           horizontal
@@ -186,18 +150,12 @@ const RenderCategoryTabs = ({ onChange }: { onChange?: (type: PropertyType) => v
         >
           {properties.map((property, index) => {
             const isSelected = selectedProperty === property;
-            const label = propertyLabels[property];
-
             return (
               <MotiView
                 key={property}
                 from={{ opacity: 0, translateY: 15 }}
                 animate={{ opacity: 1, translateY: 0 }}
-                transition={{
-                  delay: index * 40,
-                  type: "timing",
-                  duration: 350,
-                }}
+                transition={{ delay: index * 40, type: "timing", duration: 300 }}
                 style={{ width: itemWidth - 15 }}
               >
                 <TouchableOpacity
@@ -207,9 +165,7 @@ const RenderCategoryTabs = ({ onChange }: { onChange?: (type: PropertyType) => v
                     paddingVertical: 5,
                     paddingHorizontal: 4,
                     borderRadius: 14,
-                    backgroundColor: isSelected
-                      ? theme.surfaceVariant
-                      : "transparent",
+                    backgroundColor: isSelected ? theme.surfaceVariant : "transparent",
                     alignItems: "center",
                     minHeight: 50,
                   }}
@@ -218,11 +174,9 @@ const RenderCategoryTabs = ({ onChange }: { onChange?: (type: PropertyType) => v
                     color: isSelected ? theme.primary : theme.typography.body,
                   })}
                   <MarqueeText
-                    text={label}
+                    text={propertyLabels[property]}
                     style={{
-                      color: isSelected
-                        ? theme.primary
-                        : theme.typography.body,
+                      color: isSelected ? theme.primary : theme.typography.body,
                       fontWeight: isSelected ? "600" : "normal",
                       marginTop: 4,
                       fontSize: 11,
@@ -235,6 +189,26 @@ const RenderCategoryTabs = ({ onChange }: { onChange?: (type: PropertyType) => v
           })}
         </ScrollView>
       </ThemedView>
+
+      {/* Bouton 25% */}
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <TouchableOpacity
+          onPress={onToggleView}
+          activeOpacity={0.7}
+          style={{
+            backgroundColor: theme.surface,
+            borderRadius: 25,
+            padding: 6,
+            elevation: 1,
+          }}
+        >
+          <MaterialCommunityIcons
+            name={viewType === "list" ? "view-grid" : "view-list"}
+            size={26}
+            color={theme.primary}
+          />
+        </TouchableOpacity>
+      </View>
     </Animated.View>
   );
 };

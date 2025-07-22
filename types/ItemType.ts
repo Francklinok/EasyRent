@@ -52,8 +52,9 @@ export interface ExtendedItemTypes extends Omit<ItemType, 'features'> {
     shopping: number;
     transport: number;
   };
-  aiRecommendation: string;
+  aiRecommendation?: string;
   thumbnail?: string;
   imageWebP?: string;
   imageAvif?: string;
+  blurhash?: string;
 }
