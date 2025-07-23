@@ -1,8 +1,10 @@
 import React from "react";
 import { View, Text, FlatList } from "react-native";
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
+import { ThemedView } from "../ui/ThemedView";
+import { ThemedText } from "../ui/ThemedText";
 
-const equipments = [
+const defaultEquipments = [
   { id: "1", icon: "bed", text: "Lits confortables", lib: FontAwesome5 },
   { id: "2", icon: "tv", text: "Télévision écran plat", lib: FontAwesome5 },
   { id: "3", icon: "wifi", text: "Wi-Fi haut débit", lib: FontAwesome5 },
@@ -29,24 +31,54 @@ const equipments = [
   { id: "24", icon: "baby-carriage", text: "Lit bébé", lib: MaterialCommunityIcons },
 ];
 
-const Equipement = () => {
+interface EquipmentProps {
+  itemData?: any;
+}
+
+const Equipment = ({ itemData }: EquipmentProps) => {
+  // Utiliser les équipements de l'item s'ils existent, sinon utiliser les équipements par défaut
+  const equipments = itemData?.equipments?.map((eq: string, index: number) => ({
+    id: index.toString(),
+    icon: "check-circle",
+    text: eq,
+    lib: FontAwesome5
+  })) || defaultEquipments;
+
   return (
-    <View className="bg-white p-5 rounded-xl shadow-lg ">
-      <Text className="text-xl font-bold text-gray-800 mb-4">🏡 Équipements de la maison</Text>
+    <ThemedView className="p-5 rounded-xl shadow-lg">
+      <ThemedText type="title" className="mb-4">
+        🏡 Équipements {itemData?.type ? `- ${itemData.type}` : 'de la maison'}
+      </ThemedText>
+      
+      {itemData?.location && (
+        <ThemedText className="mb-4 text-gray-600">
+          📍 {itemData.location}
+        </ThemedText>
+      )}
+      
       <FlatList
         data={equipments}
         keyExtractor={(item) => item.id}
-        numColumns={2} // Affichage en 2 colonnes
+        numColumns={2}
         columnWrapperStyle={{ justifyContent: "space-between" }}
         renderItem={({ item }) => (
-          <View className="flex-row items-center bg-gray-100 p-3 rounded-lg shadow-sm m-1 w-[48%]">
+          <ThemedView className="flex-row items-center p-3 rounded-lg shadow-sm m-1 w-[48%]" 
+                     style={{ backgroundColor: 'rgba(74, 144, 226, 0.1)' }}>
             <item.lib name={item.icon} size={24} color="#4A90E2" />
-            <Text className="text-gray-700 text-base ml-2 flex-1">{item.text}</Text>
-          </View>
+            <ThemedText className="ml-2 flex-1 text-base">{item.text}</ThemedText>
+          </ThemedView>
         )}
       />
-    </View>
+      
+      {itemData?.price && (
+        <ThemedView className="mt-4 p-3 rounded-lg" style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}>
+          <ThemedText type="subtitle" variant="primary">
+            💰 Prix: {itemData.price}
+          </ThemedText>
+        </ThemedView>
+      )}
+    </ThemedView>
   );
 };
 
-export default Equipement;
+export default Equipment;

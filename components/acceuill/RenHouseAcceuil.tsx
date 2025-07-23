@@ -114,7 +114,9 @@ const RenHouseAcceuil = () => {
 
   // --- Navigation ---
   const navigateToInfo = useCallback((item: ExtendedItemTypes) => {
-      router.push({ pathname: "/item/[itemId]", params: { itemId: item.id } });
+      router.push({ pathname: "/info/[infoId]", params: { id: item.id } });
+
+      // router.push({ pathname: "/item/[itemId]", params: { itemId: item.id } });
 
 
   }, [router]);

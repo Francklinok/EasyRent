@@ -10,8 +10,6 @@ import { MotiView } from 'moti';
 import * as Haptics from 'expo-haptics';
 import Header from '@/components/ui/header';
 import RenHouseAcceuil from '@/components/acceuill/RenHouseAcceuil';
-import houseSelleAcceuil from '@/components/acceuill/houseSelleAcceuil';
-import landSelleAcceuill from '@/components/acceuill/landSelleAcceuill';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useTheme } from '@/components/contexts/theme/themehook';
@@ -53,8 +51,6 @@ const Home = () => {
   
   const componentMap: { [key: string]: React.ComponentType<ComponentProps> } = {
     "RentHouse": RenHouseAcceuil,
-    "SelleHouse": houseSelleAcceuil,
-    "SelleLand": landSelleAcceuill
   };
   
   const ActiveComponent = componentMap[activeComponent];
