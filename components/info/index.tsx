@@ -37,7 +37,7 @@ const getMarkedDates = (start: string, end: string) => {
     marked[dateStr] = {
       startingDay: index === 0,
       endingDay: index === days.length - 1,
-      color: "#34D399", // vert
+      color: "#34D399", 
       textColor: "white",
     };
   });
@@ -140,7 +140,7 @@ const ItemData = ({ itemData }: ItemDataProps) => {
 
   return (
     <>
-      <ThemedView className="flex flex-col space-y-6 pb-6">
+      <ThemedView className="flex flex-col space-y-6 pb-16">
         {/* Carrousel d'images avec overlay gradient */}
         <ThemedView className="relative overflow-hidden rounded-3xl mx-4 shadow-lg">
           <FlatList
@@ -181,7 +181,7 @@ const ItemData = ({ itemData }: ItemDataProps) => {
               position: 'absolute', 
               top: 20, 
               left: 20, 
-              transform: [{ scale: scaleAnim }] 
+              transform: [{ scale: scaleAnim }] ,
             }}
           >
             <TouchableOpacity
@@ -193,27 +193,28 @@ const ItemData = ({ itemData }: ItemDataProps) => {
                 }
               }}
               className="overflow-hidden rounded-full"
+              style= {{backgroundColor:theme.success}}
             >
-              <BlurView intensity={80} tint="light" style={{ paddingHorizontal: 20, paddingVertical: 12}}>
-                <View  className="flex-row items-center space-x-2">
+              <BlurView intensity={10} tint="light" style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor:theme.success}}>
+                <ThemedView style= {{backgroundColor:theme.success}} className="flex-row items-center space-x-2">
                   <MaterialIcons 
                     name={item.availibility === "available" ? "event-available" : "event-busy"} 
                     size={18} 
-                    color={item.availibility === "available" ?theme.surface : theme.error} 
+                    color={theme.surface} 
                   />
                   <ThemedText 
                     className="font-semibold text-sm"
-                    style={{ color: item.availibility === "available" ?theme.surface : theme.error}}
+                    style={{ color:theme.surface }}
                   >
                     {item.availibility === "available" ? "Disponible" : "Indisponible"}
                   </ThemedText>
-                </View>
+                </ThemedView>
               </BlurView>
             </TouchableOpacity>
           </Animated.View>
 
           {/* Indicateurs de pagination améliorés */}
-          <ThemedView className="absolute bottom-4 w-full flex-row justify-center space-x-2">
+          <ThemedView className="absolute bottom-8 w-full flex-row justify-center space-x-2">
             {imageList.map((_, index) => (
               <Animated.View
                 key={index}
@@ -222,29 +223,28 @@ const ItemData = ({ itemData }: ItemDataProps) => {
                 }`}
                 style={{
                   shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
+                  // shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.25,
                   shadowRadius: 4,
-                  elevation: 5,
-                }}
+                  elevation: 5,}}
               />
             ))}
           </ThemedView>
         </ThemedView>
 
         {/* Prix et localisation avec design cards */}
-        <View className="flex-row px-4 space-x-3">
-          <ThemedView variant="surfaceVariant" className="flex-1 flex-row items-center p-4 rounded-2xl shadow-sm">
+        <ThemedView className="flex-row px-4 gap-4 space-x-3 py-2 ">
+          <ThemedView variant="surfaceVariant" className="flex-1 flex-row items-center p-2 rounded-2xl shadow-sm">
             <MaterialIcons name="location-on" size={20} color={theme.primary} />
-            <View className="ml-3 flex-1">
+            <ThemedView  variant="surfaceVariant" className="ml-3 flex-1">
               <ThemedText type="caption" className="opacity-70">Location</ThemedText>
               <ThemedText intensity="strong" type="body" className="mt-1">
                 {item.location || "Localisation"}
               </ThemedText>
-            </View>
+            </ThemedView>
           </ThemedView>
           
-          <ThemedView variant="surfaceVariant" className="flex-1 flex-row items-center p-4 rounded-2xl shadow-sm">
+          <ThemedView variant="surfaceVariant" className="flex-1 flex-row items-center p-2 rounded-2xl shadow-sm">
             <MaterialIcons name="attach-money" size={20} color={theme.success} />
             <View className="ml-3 flex-1">
               <ThemedText type="caption" className="opacity-70">Prix</ThemedText>
@@ -253,14 +253,14 @@ const ItemData = ({ itemData }: ItemDataProps) => {
               </ThemedText>
             </View>
           </ThemedView>
-        </View>
+        </ThemedView>
 
         {/* Description avec animation */}
-        <ThemedView className="px-4 space-y-3">
-          <View className="flex-row items-center space-x-2">
+        <ThemedView className="px-4 space-y-3 pt-2">
+          <ThemedView className="flex-row  gap-2 items-center space-x-2 pb-2">
             <MaterialIcons name="description" size={20} color={theme.primary} />
-            <ThemedText type="subtitle">Description</ThemedText>
-          </View>
+            <ThemedText type = "body" className = "p-2">Description</ThemedText>
+          </ThemedView>
           
           <ThemedView variant="surfaceVariant" className="p-4 rounded-2xl">
             <ThemedText className="leading-6">
@@ -278,10 +278,10 @@ const ItemData = ({ itemData }: ItemDataProps) => {
         </ThemedView>
 
         {/* Infos générales avec icônes colorées */}
-        <ThemedView className="px-4 space-y-4">
-          <ThemedView className="flex-row items-center space-x-2">
+        <ThemedView className="px-4 space-y-4 pt-2">
+          <ThemedView className="flex-row items-center gap-2 space-x-2 pb-2">
             <MaterialIcons name="info" size={20} color={theme.primary} />
-            <ThemedText type="subtitle">Informations générales</ThemedText>
+            <ThemedText type = "body" className = "p-2">Informations générales</ThemedText>
           </ThemedView>
           
           <ThemedView variant="surfaceVariant" className="p-4 rounded-2xl">
@@ -298,7 +298,7 @@ const ItemData = ({ itemData }: ItemDataProps) => {
               
               <ThemedView className="items-center space-y-2 flex-1">
                 <ThemedView className="w-12 h-12 rounded-full items-center justify-center" style={{ backgroundColor: theme.success + '20' }}>
-                  <MaterialCommunityIcons name="shower" size={24} color={theme.success} />
+                  <MaterialCommunityIcons name="shower" size={24} color={theme.surface} />
                 </ThemedView>
                 <ThemedText type="caption" className="text-center opacity-70">Douches</ThemedText>
                 <ThemedText intensity="strong" className="text-center">
@@ -320,31 +320,27 @@ const ItemData = ({ itemData }: ItemDataProps) => {
         </ThemedView>
 
         {/* Bouton calendrier avec gradient et animation */}
-        <ThemedView className="px-4 space-y-3">
-          <ThemedView className="flex-row items-center space-x-2">
+        <ThemedView className="px-4 space-y-3 pt-2">
+          <ThemedView className="flex-row items-center  gap-2 space-x-2 pb-2">
             <MaterialIcons name="event" size={20} color={theme.primary} />
-            <ThemedText type="subtitle">Disponibilité</ThemedText>
+            <ThemedText type = "body" className = "p-2" >Disponibilité</ThemedText>
           </ThemedView>
           
           <TouchableOpacity
             onPress={openCalendarModal}
-            className="overflow-hidden rounded-2xl shadow-lg"
+            className="overflow-hidden rounded-2xl shadow-lg p-2"
             activeOpacity={0.8}
+            style = {{backgroundColor:theme.success}}
           >
-            <LinearGradient
-              colors={[theme.success, theme.success + 'CC']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ padding: 16 }}
-            >
-              <ThemedView className="flex-row items-center justify-center space-x-3">
-                <MaterialIcons name="calendar-today" size={24} color="white" />
-                <ThemedText className="text-white font-semibold text-lg">
+            <ThemedView >
+              <ThemedView style = {{backgroundColor:theme.success}} className="flex-row items-center justify-center space-x-3 gap-4">
+                <MaterialIcons name="calendar-today" size={24} color={theme.surface} />
+                <ThemedText style = {{color:theme.surface}}>
                   Voir le calendrier
                 </ThemedText>
-                <MaterialIcons name="arrow-forward" size={20} color="white" />
+                <MaterialIcons name="arrow-forward" size={20} color={theme.surface} />
               </ThemedView>
-            </LinearGradient>
+            </ThemedView>
           </TouchableOpacity>
         </ThemedView>
       </ThemedView>
@@ -352,7 +348,7 @@ const ItemData = ({ itemData }: ItemDataProps) => {
       {/* Modal Bottom Sheet Ultra Moderne */}
       <Modal
         visible={modalVisible}
-        transparent={true}
+        transparent={false}
         animationType="none"
         onRequestClose={closeCalendarModal}
         statusBarTranslucent={true}
@@ -393,7 +389,7 @@ const ItemData = ({ itemData }: ItemDataProps) => {
                 paddingHorizontal: 24,
                 paddingBottom: Platform.OS === 'ios' ? 34 : 20,
                 shadowColor: '#000',
-                shadowOffset: { width: 0, height: -10 },
+                // shadowOffset: { width: 0, height: -10 },
                 shadowOpacity: 0.3,
                 shadowRadius: 20,
                 elevation: 20,
@@ -424,14 +420,14 @@ const ItemData = ({ itemData }: ItemDataProps) => {
                   borderRadius: 16,
                 }}
               >
-                <ThemedView className="flex-row items-center space-x-3">
+                <ThemedView variant = "surfaceVariant" className="flex-row items-center space-x-1 gap-4">
                   <ThemedView 
                     className="w-10 h-10 rounded-full items-center justify-center"
                     style={{ backgroundColor: theme.primary }}
                   >
                     <MaterialIcons name="event" size={20} color="white" />
                   </ThemedView>
-                  <ThemedText type="title" className="font-bold">
+                  <ThemedText >
                     Calendrier de disponibilité
                   </ThemedText>
                 </ThemedView>
@@ -457,12 +453,12 @@ const ItemData = ({ itemData }: ItemDataProps) => {
                     calendarBackground: 'transparent',
                     textSectionTitleColor: theme.onSurface,
                     selectedDayBackgroundColor: theme.primary,
-                    selectedDayTextColor: '#FFFFFF',
+                    selectedDayTextColor: theme.onSurface,
                     todayTextColor: theme.primary,
                     dayTextColor: theme.onSurface,
                     textDisabledColor: theme.outline,
                     dotColor: theme.primary,
-                    selectedDotColor: '#FFFFFF',
+                    selectedDotColor: theme.onSurface,
                     arrowColor: theme.primary,
                     disabledArrowColor: theme.outline,
                     monthTextColor: theme.onSurface,
@@ -473,8 +469,8 @@ const ItemData = ({ itemData }: ItemDataProps) => {
                     textDayFontWeight: '500',
                     textMonthFontWeight: '700',
                     textDayHeaderFontWeight: '600',
-                    textDayFontSize: 16,
-                    textMonthFontSize: 20,
+                    textDayFontSize: 14,
+                    textMonthFontSize: 14,
                     textDayHeaderFontSize: 14,
                   }}
                   style={{
@@ -496,16 +492,16 @@ const ItemData = ({ itemData }: ItemDataProps) => {
                   borderRadius: 16,
                 }}
               >
-                <ThemedView className="flex-row items-center space-x-3">
+                <ThemedView variant = "surfaceVariant" className="flex-row items-center space-x-3">
                   <ThemedView
                     style={{
                       width: 16,
                       height: 16,
-                      backgroundColor: '#34D399',
+                      backgroundColor:theme.success,
                       borderRadius: 8,
                     }}
                   />
-                  <ThemedText intensity="strong" className="font-medium">
+                  <ThemedText intensity="strong">
                     Période disponible
                   </ThemedText>
                 </ThemedView>

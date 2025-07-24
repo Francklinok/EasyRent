@@ -68,7 +68,46 @@ const data: ItemType[] = [
       { key: "housekeeping", title: "Ménage hebdomadaire", description: "Service de ménage professionnel", icon: "broom", price: "200€/semaine", included: false, available: true },
       { key: "chef", title: "Chef à domicile", description: "Chef privé sur demande", icon: "chef-hat", price: "150€/repas", included: false, available: true },
       { key: "security", title: "Sécurité renforcée", description: "Surveillance 24h/24", icon: "security", included: true, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
   {
     id: "villa_2",
@@ -130,7 +169,46 @@ const data: ItemType[] = [
       { key: "garden", title: "Entretien jardin", description: "Jardinier 2 fois/semaine", icon: "leaf", included: true, available: true },
       { key: "pool", title: "Entretien piscine", description: "Nettoyage piscine hebdomadaire", icon: "pool", included: true, available: true },
       { key: "housekeeping", title: "Ménage", description: "Service de ménage", icon: "broom", price: "120€/semaine", included: false, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
   {
     id: "villa_3",
@@ -192,7 +270,46 @@ const data: ItemType[] = [
       { key: "garden", title: "Entretien jardin", description: "Jardinier 2 fois/semaine", icon: "leaf", included: true, available: true },
       { key: "pool", title: "Entretien piscine", description: "Nettoyage piscine hebdomadaire", icon: "pool", included: true, available: true },
       { key: "housekeeping", title: "Ménage", description: "Service de ménage", icon: "broom", price: "120€/semaine", included: false, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
   {
     id: "villa_4",
@@ -254,7 +371,46 @@ const data: ItemType[] = [
       { key: "garden", title: "Entretien jardin", description: "Jardinier 2 fois/semaine", icon: "leaf", included: true, available: true },
       { key: "pool", title: "Entretien piscine", description: "Nettoyage piscine hebdomadaire", icon: "pool", included: true, available: true },
       { key: "housekeeping", title: "Ménage", description: "Service de ménage", icon: "broom", price: "120€/semaine", included: false, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
 
   // === APPARTEMENTS ===
@@ -321,7 +477,46 @@ const data: ItemType[] = [
       { key: "internet", title: "Internet fibre", description: "Connexion très haut débit", icon: "wifi", included: true, available: true },
       { key: "maintenance", title: "Maintenance", description: "Interventions techniques", icon: "wrench", included: true, available: true },
       { key: "cleaning", title: "Ménage mensuel", description: "Nettoyage parties communes", icon: "broom", price: "80€/mois", included: false, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
   {
     id: "apt_2",
@@ -386,7 +581,46 @@ const data: ItemType[] = [
       { key: "internet", title: "Internet fibre", description: "Connexion très haut débit", icon: "wifi", included: true, available: true },
       { key: "maintenance", title: "Maintenance", description: "Interventions techniques", icon: "wrench", included: true, available: true },
       { key: "cleaning", title: "Ménage mensuel", description: "Nettoyage parties communes", icon: "broom", price: "80€/mois", included: false, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
   {
     id: "apt_3",
@@ -451,7 +685,46 @@ const data: ItemType[] = [
       { key: "internet", title: "Internet fibre", description: "Connexion très haut débit", icon: "wifi", included: true, available: true },
       { key: "maintenance", title: "Maintenance", description: "Interventions techniques", icon: "wrench", included: true, available: true },
       { key: "cleaning", title: "Ménage mensuel", description: "Nettoyage parties communes", icon: "broom", price: "80€/mois", included: false, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
 
   // === MAISONS ===
@@ -570,7 +843,46 @@ const data: ItemType[] = [
     services: [
       { key: "garden", title: "Conseil jardinage", description: "Conseils d'entretien jardin", icon: "leaf", included: true, available: true },
       { key: "maintenance", title: "Dépannage", description: "Interventions d'urgence", icon: "wrench", included: true, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
   {
     id: "house_3",
@@ -689,7 +1001,46 @@ const data: ItemType[] = [
     services: [
       { key: "garden", title: "Conseil jardinage", description: "Conseils d'entretien jardin", icon: "leaf", included: true, available: true },
       { key: "maintenance", title: "Dépannage", description: "Interventions d'urgence", icon: "wrench", included: true, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
   {
     id: "pent_2",
@@ -748,7 +1099,46 @@ const data: ItemType[] = [
     services: [
       { key: "garden", title: "Conseil jardinage", description: "Conseils d'entretien jardin", icon: "leaf", included: true, available: true },
       { key: "maintenance", title: "Dépannage", description: "Interventions d'urgence", icon: "wrench", included: true, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
 
   // === STUDIOS ===
@@ -813,7 +1203,46 @@ const data: ItemType[] = [
       { key: "internet", title: "Internet étudiant", description: "Connexion adaptée aux études", icon: "wifi", included: true, available: true },
       { key: "laundry", title: "Laverie", description: "Laverie en rez-de-chaussée", icon: "washing-machine", price: "5€/cycle", included: false, available: true },
       { key: "support", title: "Support étudiant", description: "Assistance pour démarches", icon: "phone", included: true, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
   {
     id: "studio_2",
@@ -876,7 +1305,46 @@ const data: ItemType[] = [
       { key: "internet", title: "Internet étudiant", description: "Connexion adaptée aux études", icon: "wifi", included: true, available: true },
       { key: "laundry", title: "Laverie", description: "Laverie en rez-de-chaussée", icon: "washing-machine", price: "5€/cycle", included: false, available: true },
       { key: "support", title: "Support étudiant", description: "Assistance pour démarches", icon: "phone", included: true, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
 
   // === LOFTS ===
@@ -941,7 +1409,46 @@ const data: ItemType[] = [
       { key: "internet", title: "Internet étudiant", description: "Connexion adaptée aux études", icon: "wifi", included: true, available: true },
       { key: "laundry", title: "Laverie", description: "Laverie en rez-de-chaussée", icon: "washing-machine", price: "5€/cycle", included: false, available: true },
       { key: "support", title: "Support étudiant", description: "Assistance pour démarches", icon: "phone", included: true, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
   {
     id: "loft_2",
@@ -1004,7 +1511,46 @@ const data: ItemType[] = [
       { key: "internet", title: "Internet étudiant", description: "Connexion adaptée aux études", icon: "wifi", included: true, available: true },
       { key: "laundry", title: "Laverie", description: "Laverie en rez-de-chaussée", icon: "washing-machine", price: "5€/cycle", included: false, available: true },
       { key: "support", title: "Support étudiant", description: "Assistance pour démarches", icon: "phone", included: true, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
 
   // === BUREAUX ===
@@ -1069,7 +1615,46 @@ const data: ItemType[] = [
       { key: "meeting", title: "Salle de réunion", description: "Réservation salles", icon: "users", included: true, available: true },
       { key: "it", title: "Support IT", description: "Assistance informatique", icon: "laptop", price: "50€/intervention", included: false, available: true },
       { key: "catering", title: "Restauration", description: "Service traiteur", icon: "utensils", price: "Variable", included: false, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
   {
     id: "office_2",
@@ -1132,7 +1717,46 @@ const data: ItemType[] = [
       { key: "meeting", title: "Salle de réunion", description: "Réservation salles", icon: "users", included: true, available: true },
       { key: "it", title: "Support IT", description: "Assistance informatique", icon: "laptop", price: "50€/intervention", included: false, available: true },
       { key: "catering", title: "Restauration", description: "Service traiteur", icon: "utensils", price: "Variable", included: false, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
 
   // === CHALETS ===
@@ -1197,7 +1821,46 @@ const data: ItemType[] = [
       { key: "meeting", title: "Salle de réunion", description: "Réservation salles", icon: "users", included: true, available: true },
       { key: "it", title: "Support IT", description: "Assistance informatique", icon: "laptop", price: "50€/intervention", included: false, available: true },
       { key: "catering", title: "Restauration", description: "Service traiteur", icon: "utensils", price: "Variable", included: false, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
   {
     id: "chalet_2",
@@ -1260,7 +1923,46 @@ const data: ItemType[] = [
       { key: "meeting", title: "Salle de réunion", description: "Réservation salles", icon: "users", included: true, available: true },
       { key: "it", title: "Support IT", description: "Assistance informatique", icon: "laptop", price: "50€/intervention", included: false, available: true },
       { key: "catering", title: "Restauration", description: "Service traiteur", icon: "utensils", price: "Variable", included: false, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
 
   // === HÔTELS ===
@@ -1326,7 +2028,46 @@ const data: ItemType[] = [
       { key: "meeting", title: "Salle de réunion", description: "Réservation salles", icon: "users", included: true, available: true },
       { key: "it", title: "Support IT", description: "Assistance informatique", icon: "laptop", price: "50€/intervention", included: false, available: true },
       { key: "catering", title: "Restauration", description: "Service traiteur", icon: "utensils", price: "Variable", included: false, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
   {
     id: "hotel_2",
@@ -1389,7 +2130,46 @@ const data: ItemType[] = [
       { key: "meeting", title: "Salle de réunion", description: "Réservation salles", icon: "users", included: true, available: true },
       { key: "it", title: "Support IT", description: "Assistance informatique", icon: "laptop", price: "50€/intervention", included: false, available: true },
       { key: "catering", title: "Restauration", description: "Service traiteur", icon: "utensils", price: "Variable", included: false, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
 
   // === TERRAINS ===
@@ -1450,7 +2230,46 @@ services: [
   { key: "legal", title: "Assistance juridique", description: "Vérification et rédaction des actes", icon: "balance-scale", included: false, price: "Sur devis", available: true },
   { key: "fencing", title: "Clôture", description: "Construction d'une clôture", icon: "draw-polygon", included: false, price: "Selon surface", available: true },
   { key: "cleaning", title: "Débroussaillage", description: "Nettoyage du terrain", icon: "tree", included: false, price: "Sur demande", available: true }
-]
+],
+atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
 
   },
   {
@@ -1510,7 +2329,46 @@ services: [
   { key: "legal", title: "Assistance juridique", description: "Vérification et rédaction des actes", icon: "balance-scale", included: false, price: "Sur devis", available: true },
   { key: "fencing", title: "Clôture", description: "Construction d'une clôture", icon: "draw-polygon", included: false, price: "Selon surface", available: true },
   { key: "cleaning", title: "Débroussaillage", description: "Nettoyage du terrain", icon: "tree", included: false, price: "Sur demande", available: true }
-]
+],
+atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
 
   },
 
@@ -1577,7 +2435,46 @@ services: [
       { key: "meeting", title: "Salle de réunion", description: "Réservation salles", icon: "users", included: true, available: true },
       { key: "it", title: "Support IT", description: "Assistance informatique", icon: "laptop", price: "50€/intervention", included: false, available: true },
       { key: "catering", title: "Restauration", description: "Service traiteur", icon: "utensils", price: "Variable", included: false, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   },
   {
     id: "com_2",
@@ -1641,7 +2538,46 @@ services: [
       { key: "meeting", title: "Salle de réunion", description: "Réservation salles", icon: "users", included: true, available: true },
       { key: "it", title: "Support IT", description: "Assistance informatique", icon: "laptop", price: "50€/intervention", included: false, available: true },
       { key: "catering", title: "Restauration", description: "Service traiteur", icon: "utensils", price: "Variable", included: false, available: true }
-    ]
+    ],
+    atouts: [
+    {
+      id: "res_05",
+      type: "predefined",
+      icon: "water",
+      text: "Vue mer/lac exceptionnelle",
+      lib: "MaterialCommunityIcons",
+      category: "location",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "res_23",
+      type: "predefined", 
+      icon: "swimming-pool",
+      text: "Piscine à débordement",
+      lib: "MaterialCommunityIcons",
+      category: "outdoor",
+      verified: true,
+      priority: 5
+    },
+    {
+      id: "custom_1640995200000",
+      type: "custom_text",
+      text: "Ascenseur panoramique avec vue à 360°",
+      category: "custom",
+      priority: 4
+    },
+    {
+      id: "custom_icon_1640995201000",
+      type: "custom_icon",
+      text: "Héliport privé homologué",
+      icon: "helicopter",
+      lib: "FontAwesome5",
+      category: "custom",
+      priority: 5,
+      customIcon: false
+    }
+  ],
   }
 ];
 
