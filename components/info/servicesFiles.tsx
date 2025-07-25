@@ -1,103 +1,226 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-// import Ionicons from 'react-native-vector-icons/Ionicons';
+import { View, Text, ScrollView, TouchableOpacity, Animated } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { ThemedView } from '../ui/ThemedView';
+import { ThemedText } from '../ui/ThemedText';
+import { useTheme } from '../contexts/theme/themehook';
 
 type ServicesProps = {
-  activeContracts: string[];
-  onSignContract: (serviceKey: string) => void;
+  itemData?: {
+    services?: {
+      key: string;
+      title: string;
+      description: string;
+      icon: string;
+      available?: boolean;
+    }[];
+  };
 };
 
-const Services = ({ activeContracts = [], onSignContract }: ServicesProps) => {
-  const navigation = useNavigation();
+const ServiceCard = ({ service, index }: { service: any; index: number }) => {
+  const scaleValue = new Animated.Value(1);
+  const  {theme} = useTheme()
 
-  const services = [
-    {
-      key: 'telemedicine',
-      title: 'Téléconsultation Médicale',
-      description: 'Consultations à distance avec des médecins disponibles 24/7.',
-      icon: 'medical-bag',
-      action: () => navigation.navigate('Telemedicine'),
-    },
-    {
-      key: 'insurance',
-      title: 'Assurance Santé',
-      description: 'Souscris à une assurance santé pour ta tranquillité d’esprit.',
-      icon: 'shield-check',
-      action: () => navigation.navigate('Insurance'),
-    },
-    {
-      key: 'delivery',
-      title: 'Assistance Domicile',
-      description: 'Services de dépannage à domicile disponibles à tout moment.',
-      icon: 'wrench',
-      action: () => navigation.navigate('Assistance'),
-    },
-    {
-      key: 'moving',
-      title: 'Aide au Déménagement',
-      description: 'Partenariats avec des services de déménagement et installation.',
-      icon: 'truck-fast',
-      action: () => navigation.navigate('Moving'),
-    },
-    {
-      key: 'security',
-      title: 'Sécurité à Domicile',
-      description: 'Système de sécurité intelligent pour une maison sûre.',
-      icon: 'security',
-      action: () => navigation.navigate('Security'),
-    },
-    {
-      key: 'wellness',
-      title: 'Bien-être et Relaxation',
-      description: 'Séances de méditation et de yoga en ligne pour ton bien-être.',
-      icon: 'spa',
-      action: () => navigation.navigate('Wellness'),
-    },
-  ];
+  const handlePressIn = () => {
+    Animated.spring(scaleValue, {
+      toValue: 0.96,
+      useNativeDriver: true,
+      tension: 150,
+      friction: 7,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleValue, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 150,
+      friction: 7,
+    }).start();
+  };
 
   return (
-    <ScrollView className="flex bg-gray-100 p-3">
-      {services.map((service, index) => (
-        <TouchableOpacity
-          key={index}
-          onPress={service.action}
-          className="bg-white p-5 rounded-lg shadow-lg mb-4 transform transition-all duration-300 hover:scale-105"
-        >
-          <View className="flex-row items-center space-x-4">
+    <Animated.View 
+      style={{ 
+        transform: [{ scale: scaleValue }],
+        marginBottom: 11,
+      }}
+    >
+      <TouchableOpacity
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={0.9}
+        // className=" rounded-2xl"
+        // style={{
+        //   shadowColor: theme.shadow,
+        //   shadowOffset: { width: 0, height: 4 },
+        //   shadowOpacity: 0.1,
+        //   shadowRadius: 12,
+        //   elevation: 0,
+        // }}
+      >
+        <ThemedView variant = "surfaceVariant" className="p-3 flex-row gap-4 items-center rounded-1xl">
+          {/* Icon avec gradient background */}
+          <ThemedView  
+            className="rounded-2xl mr-2"
+            style={{
+              backgroundColor: theme.primary,
+              padding: 14,
+              shadowColor: theme.primary,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 1,
+            }}>
             <MaterialCommunityIcons
               name={service.icon}
-              size={40}
-              color="#4A90E2"
-              style={{
-                padding: 5,
-                backgroundColor: '#E6F0FF',
-                borderRadius: 10,
-                marginRight: 6,
-              }}
+              size={24}
+              color= {theme.surface}
             />
-            <View className="flex-1">
-              <Text className="text-lg font-semibold text-gray-800">{service.title}</Text>
-              <Text className="text-sm text-gray-600 mt-1">{service.description}</Text>
-            </View>
-            {activeContracts.includes(service.key) ? (
-              <Text className="text-sm text-green-500">Contrat signé</Text>
-            ) : (
-              <TouchableOpacity
-                onPress={() => onSignContract(service.key)}
-                className="bg-blue-500 p-2 rounded-lg text-white text-sm"
-              >
-                Signer le contrat
-              </TouchableOpacity>
-            )}
-          </View>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
+          </ThemedView>
+
+          {/* Content */}
+          <ThemedView variant = "surfaceVariant" className="flex-1">
+            <ThemedText type = "body" className = "pb-2">
+              {service.title}
+            </ThemedText>
+            <ThemedText >
+              {service.description}
+            </ThemedText>
+          </ThemedView>
+
+          {/* Arrow indicator */}
+          <ThemedView 
+            className="rounded-full p-2 ml-3"
+          >
+            <MaterialCommunityIcons
+              name="chevron-right"
+              size={20}
+              color={theme.onSurface}
+            />
+          </ThemedView>
+        </ThemedView>
+
+        {/* Subtle bottom accent */}
+        <ThemedView 
+          className="h-1 rounded-b-2xl"
+          style={{
+            backgroundColor: '#4A90E2',
+            opacity: 0.1,
+          }}
+        />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
+const EmptyState = () => (
+  <ThemedView className="flex-1 justify-center items-center px-6 py-20 ">
+    {/* Icon avec animation */}
+    <ThemedView 
+      className="rounded-full p-8 mb-6"
+      style={{
+        backgroundColor: '#F8FAFC',
+        borderWidth: 2,
+        borderColor: '#E2E8F0',
+        borderStyle: 'dashed',
+      }}
+    >
+      <MaterialCommunityIcons
+        name="cog-outline"
+        size={64}
+        color="#CBD5E0"
+      />
+    </ThemedView>
+
+    {/* Title */}
+    <ThemedText 
+      className="text-2xl font-bold text-center mb-3"
+      style={{ color: '#1A202C' }}
+    >
+      Aucun service disponible
+    </ThemedText>
+
+    {/* Description */}
+    <ThemedText 
+      className="text-center text-base leading-6 mb-8 max-w-sm"
+      style={{ color: '#718096' }}
+    >
+      Vous pourrez souscrire aux services dans votre{" "}
+      <ThemedText 
+        type="body" 
+        intensity="strong"
+        style={{ color: '#4A90E2' }}
+      >
+        profil
+      </ThemedText>
+      {" "}une fois votre location confirmée
+    </ThemedText>
+
+    {/* CTA Button */}
+    <TouchableOpacity
+      className="rounded-xl px-8 py-4"
+      style={{
+        backgroundColor: '#4A90E2',
+        shadowColor: '#4A90E2',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
+      }}
+    >
+      <ThemedText 
+      >
+        Découvrir les services
+      </ThemedText>
+    </TouchableOpacity>
+  </ThemedView>
+);
+
+const Services = ({ itemData }: ServicesProps) => {
+  // On filtre les services disponibles (available === true)
+  const availableServices = itemData?.services?.filter(service => service.available) || [];
+
+  if (availableServices.length === 0) {
+    return <EmptyState />;
+  }
+
+  return (
+    <ThemedView className="flex-1">
+      <ThemedView 
+        className="px-6 pt-6 pb-4 "
+        style={{
+          borderBottomLeftRadius: 24,
+          borderBottomRightRadius: 24,
+        }}
+      >
+        <ThemedText type = "subtitle"
+          className=" mb-2  text-center"
+        >
+          Services disponibles
+        </ThemedText>
+        <ThemedText className = "text-center"
+        >
+          {availableServices.length} service{availableServices.length > 1 ? 's' : ''} à votre disposition
+        </ThemedText>
+      </ThemedView>
+
+      {/* Services List */}
+      <ScrollView 
+        className="flex-1 px-6 pt-6"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 24 }}
+      >
+        {availableServices.map((service, index) => (
+          <ServiceCard 
+            key={service.key} 
+            service={service} 
+            index={index} 
+          />
+        ))}
+      </ScrollView>
+    </ThemedView>
   );
 };
 
 export default Services;
-
-

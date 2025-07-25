@@ -138,7 +138,7 @@ export default function Info() {
     return (
       <SafeAreaView style={styles.container}>
         <LinearGradient
-          colors={['#667eea', '#764ba2']}
+          colors={theme.priceGradient}
           style={styles.errorContainer}
         >
           <MaterialIcons name="error-outline" size={64} color="white" />
@@ -154,7 +154,7 @@ export default function Info() {
 
             {/* HEADER avec gradient et glassmorphism */}
       <LinearGradient
-        colors={['#667eea', '#764ba2']}
+        colors={theme.priceGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerGradient}
@@ -177,15 +177,24 @@ export default function Info() {
 
             {/* Info propriétaire */}
             <View style={styles.ownerInfo}>
-              <Text style={styles.ownerName}>
+              <ThemedText style={styles.ownerName}>
                 {currentItem.owner?.name || 'Propriétaire'}
-              </Text>
+              </ThemedText>
               <View style={styles.responseRate}>
-                <MaterialIcons name="verified" size={16} color="#10B981" />
-                <Text style={styles.responseText}>
-                  Taux de réponse{' '}
-                  <Text style={styles.responsePercent}>100%</Text>
-                </Text>
+                <View className="flex-col gap-1">
+                  <View className = "flex-row gap-1">
+                  <MaterialIcons name="verified" size={16} color= {theme.success} />
+                    <ThemedText style={{ color: theme.text }}>
+                    Taux de réponse
+                  </ThemedText>
+                  </View>
+                 
+                  <ThemedText className = "text-center" style={{ color: theme.success }}>
+                    100%
+                  </ThemedText>
+                </View>
+
+                
               </View>
             </View>
 
@@ -352,15 +361,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  responseText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '500',
-  },
-  responsePercent: {
-    color: '#10B981',
-    fontWeight: '700',
-  },
+
+ 
   actionButtons: {
     flexDirection: 'row',
     gap: 12,

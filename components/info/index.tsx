@@ -195,8 +195,8 @@ const ItemData = ({ itemData }: ItemDataProps) => {
               className="overflow-hidden rounded-full"
               style= {{backgroundColor:theme.success}}
             >
-              <BlurView intensity={10} tint="light" style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor:theme.success}}>
-                <ThemedView style= {{backgroundColor:theme.success}} className="flex-row items-center space-x-2">
+              <BlurView intensity={10} tint="light" style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor:item.availibility === "available" ?theme.success: theme.error}}>
+                <ThemedView style= {{backgroundColor:item.availibility === "available" ?theme.success: theme.error}} className="flex-row items-center space-x-2">
                   <MaterialIcons 
                     name={item.availibility === "available" ? "event-available" : "event-busy"} 
                     size={18} 
@@ -284,7 +284,7 @@ const ItemData = ({ itemData }: ItemDataProps) => {
             <ThemedText type = "body" className = "p-2">Informations générales</ThemedText>
           </ThemedView>
           
-          <ThemedView variant="surfaceVariant" className="p-4 rounded-2xl">
+          <ThemedView  className="p-4 rounded-2xl">
             <ThemedView className="flex-row justify-between">
               <ThemedView className="items-center space-y-2 flex-1">
                 <ThemedView className="w-12 h-12 rounded-full items-center justify-center" style={{ backgroundColor: theme.primary + '20' }}>

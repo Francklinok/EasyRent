@@ -6,7 +6,7 @@ import Fontisto from "@expo/vector-icons/Fontisto";
 import { ThemedView } from "../ui/ThemedView";
 import { ThemedText } from "../ui/ThemedText";
 import { OwnerCriteria } from "@/types/ItemType";
-
+import { useTheme } from "../contexts/theme/themehook";
 interface ItemDataProps {
   itemData?: {
     ownerCriteria?: OwnerCriteria;
@@ -16,6 +16,7 @@ interface ItemDataProps {
 
 
 export default function Criteria({itemData}:ItemDataProps) {
+  const   {theme} = useTheme()
   const   item = itemData
   if(!item ||  !item.ownerCriteria){
     return (
@@ -78,9 +79,9 @@ export default function Criteria({itemData}:ItemDataProps) {
 
       {/* Section Situation Demandée */}
       <ThemedText type = "body" className = "p-2">Situation Demandée</ThemedText>
-      <ThemedView className="flex flex-row flex-wrap gap-3">
+      <ThemedView  className="flex flex-row flex-wrap gap-3">
         {situations.map((situation, index) => (
-          <ThemedText key={index} className="text-base bg-gray-100 p-2 rounded-lg text-center w-[30%] shadow-sm">
+          <ThemedText   key={index} className=" p-2 rounded-lg text-center w-[30%]" style = {{backgroundColor:theme.surfaceVariant }}>
             {situation}
           </ThemedText>
         ))}
@@ -90,8 +91,8 @@ export default function Criteria({itemData}:ItemDataProps) {
       <ThemedText type = "body" className = "p-2">Documents à Fournir</ThemedText>
       <ThemedView bordered className=" rounded-xl  p-4">
         {documents.map((section, index) => (
-          <ThemedView key={index} className="mb-4">
-            <ThemedText className="text-lg font-semibold bg-gray-100 px-3 py-1 rounded-md">{section.type}</ThemedText>
+          <ThemedView variant="surfaceVariant" key={index} className="mb-4">
+            <ThemedText className="text-lg font-semibold px-3 py-1 rounded-md">{section.type}</ThemedText>
             {section.docs.map((doc, docIndex) => (
               <ThemedText key={docIndex} className="text-base pl-4 mt-1">
                 - {doc}
