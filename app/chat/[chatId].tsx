@@ -295,10 +295,10 @@ export default function ChatComponent() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
     >
-      <ThemedView className="flex-1">
+      <ThemedView className="flex-1 justify-between">
         <StatusBar hidden={true} />
 
-        <ThemedView className="flex-1">
+        <ThemedView className="pt-2">
           <FlatList
             data={messages}
             keyExtractor={(item) => item.msgId}
@@ -321,7 +321,7 @@ export default function ChatComponent() {
           />
         </ThemedView>
 
-        <ThemedView className="p-2">
+        <ThemedView className="px-2 pb-4 ">
           <MessageFooter 
             onSend={handleSendMessage}
             onTypingChange={handleTypingStatusChange}

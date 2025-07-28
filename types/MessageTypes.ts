@@ -2,6 +2,10 @@
 export interface FrontendMessage {
   msgId: string; // String au lieu d'ObjectId
   senderId: string;
+  sender?: {
+    name: string;
+    avatar: string;
+  };
   conversationId: string;
   messageType: 'text' | 'image' | 'video' | 'audio' | 'document' | 'location' | 'contact' | 'property' | 'voice_note' | 'ar_preview' | 'virtual_tour';
   content: string;
@@ -180,16 +184,6 @@ export interface MessageBodyProps {
   onEdit?: (messageId: string, newContent: string) => void;
   onReact?: (messageId: string, emoji: string) => void;
   onMarkAsRead?: (messageId: string) => void;
-  // Ajouter d'autres props selon vos besoins
 }
 
-// Ou si vous préférez une interface plus simple
-export interface MessageDisplayProps {
-  message: FrontendMessage;
-  currentUserId: string;
-  onReply?: () => void;
-  onDelete?: () => void;
-  onEdit?: (newContent: string) => void;
-  onReact?: (emoji: string) => void;
-  onMarkAsRead?: () => void;
-}
+
