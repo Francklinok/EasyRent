@@ -1,245 +1,663 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Image,
   Alert,
   TouchableOpacity,
   ScrollView,
+  Dimensions,
+  Animated,
+  Platform,
+  View,
+  StatusBar,
+  Share,
+  Linking,
 } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { BackButton } from '@/components/ui/BackButton';
 import { useTheme } from '@/components/contexts/theme/themehook';
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 
-type ActionButtonProps = {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
-  color?: string;
-  iconSize?: number;
+const { width, height } = Dimensions.get('window');
+
+type ContactData = {
+  name: string;
+  phone: string;
+  email?: string;
+  status: string;
+  image: string;
+  isOnline: boolean;
+  lastSeen: string;
+  mutedUntil?: Date;
+  isBlocked: boolean;
+  sharedMedia: number;
+  commonGroups: number;
 };
 
-const ActionButton: React.FC<ActionButtonProps> = ({
-  icon,
-  label,
-  onPress,
-  color,
-  iconSize = 24,
-}) => {
+const ContactInfo = () => {
+  const { name, image, status, chatId, phone } = useLocalSearchParams();
   const { theme } = useTheme();
+  const scrollY = useRef(new Animated.Value(0)).current;
+  
+  // États locaux
+  const [isMuted, setIsMuted] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [contactData, setContactData] = useState<ContactData>({
+    name: String(name),
+    phone: String(phone || '+1234567890'),
+    status: String(status),
+    image: String(image),
+    isOnline: Math.random() > 0.5,
+    lastSeen: 'il y a 2 heures',
+    sharedMedia: 126,
+    commonGroups: 3,
+    isBlocked: false
+  });
 
-  return (
-    <TouchableOpacity
-      className="items-center justify-center p-2 rounded-2xl flex-1"
-      style={{
-        backgroundColor: theme.surfaceVariant,
-        // borderWidth: 1,
-        // borderColor: theme.cardBorder,
-        minHeight: 50,
-      }}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <Ionicons name={icon} size={iconSize} color={color || theme.info} />
-      <ThemedText  type = 'caption' className="text-xs mt-2 text-center font-medium" style={{ color: color || theme.info }}>
-        {label}
-      </ThemedText>
-    </TouchableOpacity>
-  );
-};
+  // Animation pour le header flottant
+  const headerHeight = scrollY.interpolate({
+    inputRange: [0, 280],
+    outputRange: [0, 60],
+    extrapolate: 'clamp',
+  });
 
-type InfoItemProps = {
-  icon: string;
-  label: string;
-  onPress: () => void;
-  color?: string;
-  destructive?: boolean;
-};
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [250, 300],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
 
-const InfoItem: React.FC<InfoItemProps> = ({
-  icon,
-  label,
-  onPress,
-  color,
-  destructive = false,
-}) => {
-  const { theme } = useTheme();
-  const iconColor = color || theme.typography.caption;
-
-  return (
-    <TouchableOpacity
-      className="flex-row items-center p-3 rounded-2xl mb-3 "
-      style={{
-        backgroundColor: theme.surfaceVariant,
-        // borderWidth: 1,
-        // borderColor: theme.cardBorder,
-      }}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <ThemedView
-        className="w-10 h-10 rounded-xl items-center justify-center mr-3"
-        style={{ backgroundColor: destructive ? `${iconColor}20` : theme.surface }}
-      >
-        {React.createElement(
-          icon.includes('block') ? MaterialIcons : Feather,
-          { name: icon as any, size: 20, color: iconColor }
-        )}
-      </ThemedView>
-      <ThemedText
-        className="flex-1 text-sm font-medium"
-        style={{ color: destructive ? iconColor : theme.primary}}
-      >
-        {label}
-      </ThemedText>
-      <Feather name="chevron-right" size={16} color={theme.typography.caption} />
-    </TouchableOpacity>
-  );
-};
-
-export default function ContactInfo() {
-  const { name, image, status, chatId } = useLocalSearchParams();
-  const { theme } = useTheme();
-
-  const statusColor = /écrit|train|typing/i.test(String(status)) ? theme.warning : theme.success;
-
-  const handleCall = () => {
-    Alert.alert('Appel', `Appeler ${name} ?`, [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Appeler', onPress: () => console.log('Appel initié') },
-    ]);
+  // Fonctions d'action
+  const handleCall = async () => {
+    try {
+      const url = `tel:${contactData.phone}`;
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Erreur', 'Impossible d\'effectuer l\'appel');
+      }
+    } catch (error) {
+      Alert.alert('Erreur', 'Erreur lors de l\'appel');
+    }
   };
 
   const handleVideoCall = () => {
-    Alert.alert('Appel vidéo', `Démarrer un appel vidéo avec ${name} ?`, [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Appeler', onPress: () => console.log('Appel vidéo initié') },
-    ]);
+    Alert.alert(
+      'Appel vidéo',
+      `Démarrer un appel vidéo avec ${contactData.name} ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Appeler', 
+          onPress: () => {
+            // Ici vous pouvez intégrer votre logique d'appel vidéo
+            console.log('Appel vidéo initié avec:', contactData.name);
+          }
+        },
+      ]
+    );
   };
 
   const handleMessage = () => {
-    console.log('Retour au chat');
+    router.back();
+  };
+
+  const handleMute = () => {
+    Alert.alert(
+      isMuted ? 'Réactiver les notifications' : 'Désactiver les notifications',
+      isMuted 
+        ? `Réactiver les notifications pour ${contactData.name} ?`
+        : `Désactiver les notifications pour ${contactData.name} ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: isMuted ? 'Réactiver' : 'Désactiver',
+          onPress: () => {
+            setIsMuted(!isMuted);
+            console.log(isMuted ? 'Notifications réactivées' : 'Notifications désactivées');
+          },
+        },
+      ]
+    );
   };
 
   const handleBlock = () => {
     Alert.alert(
-      'Bloquer ce contact',
-      `Voulez-vous vraiment bloquer ${name} ? Cette action empêchera ce contact de vous envoyer des messages.`,
+      isBlocked ? 'Débloquer ce contact' : 'Bloquer ce contact',
+      isBlocked
+        ? `Débloquer ${contactData.name} ? Vous pourrez à nouveau recevoir ses messages.`
+        : `Bloquer ${contactData.name} ? Cette personne ne pourra plus vous envoyer de messages.`,
       [
         { text: 'Annuler', style: 'cancel' },
-        { text: 'Bloquer', style: 'destructive', onPress: () => console.log('Contact bloqué') },
+        {
+          text: isBlocked ? 'Débloquer' : 'Bloquer',
+          style: isBlocked ? 'default' : 'destructive',
+          onPress: () => {
+            setIsBlocked(!isBlocked);
+            setContactData(prev => ({ ...prev, isBlocked: !prev.isBlocked }));
+            console.log(isBlocked ? 'Contact débloqué' : 'Contact bloqué');
+          },
+        },
       ]
     );
   };
 
   const handleReport = () => {
     Alert.alert(
-      'Signaler le profil',
-      'Pourquoi voulez-vous signaler ce profil ?',
+      'Signaler le contact',
+      'Pourquoi voulez-vous signaler ce contact ?',
       [
         { text: 'Annuler', style: 'cancel' },
-        { text: 'Spam', onPress: () => console.log('Signalé pour spam') },
-        { text: 'Comportement inapproprié', onPress: () => console.log('Signalé pour comportement') },
-        { text: 'Autre', onPress: () => console.log('Signalé pour autre') },
+        { 
+          text: 'Spam', 
+          onPress: () => console.log('Signalé pour spam') 
+        },
+        {
+          text: 'Comportement inapproprié',
+          onPress: () => console.log('Signalé pour comportement'),
+        },
+        { 
+          text: 'Autre', 
+          onPress: () => console.log('Signalé pour autre') 
+        },
       ]
     );
   };
 
-  const handleMute = () => {
-    Alert.alert('Notifications', `Désactiver les notifications pour ${name} ?`, [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Désactiver', onPress: () => console.log('Notifications désactivées') },
-    ]);
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `Contact: ${contactData.name} - ${contactData.phone}`,
+        title: 'Partager le contact',
+      });
+    } catch (error) {
+      console.error('Erreur lors du partage:', error);
+    }
   };
 
-  return ( 
-    <SafeAreaView 
-    style={{ flex: 1, backgroundColor:theme.surface}}>
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 20 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <ThemedView className="flex-row items-center justify-between  ">
-          <BackButton />
-          <TouchableOpacity className="p-2 rounded-xl">
-            <Feather name="more-horizontal" size={20} color={theme.typography.caption} />
-          </TouchableOpacity>
-        </ThemedView>
+  const handleEdit = () => {
+    console.log('Modifier le contact');
+    // Navigation vers l'écran d'édition
+  };
 
-        {/* Profil */}
-        <ThemedView className="items-center mb-1  rounded-2xl">
-          <ThemedView className="relative mb-4">
+  const handleViewMedia = () => {
+    console.log('Voir les médias partagés');
+    // Navigation vers les médias partagés
+  };
+
+  const handleExportChat = () => {
+    Alert.alert(
+      'Exporter la conversation',
+      'Voulez-vous inclure les médias dans l\'export ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Sans médias', 
+          onPress: () => console.log('Export sans médias') 
+        },
+        { 
+          text: 'Avec médias', 
+          onPress: () => console.log('Export avec médias') 
+        },
+      ]
+    );
+  };
+
+  const ActionButton = ({ 
+    icon, 
+    label, 
+    onPress, 
+    color = theme.primary 
+  }: {
+    icon: keyof typeof Ionicons.glyphMap;
+    label: string;
+    onPress: () => void;
+    color?: string;
+  }) => (
+    <TouchableOpacity
+      onPress={onPress}
+      style={{
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: color,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        marginHorizontal: 12,
+        shadowColor: color,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+      }}
+      activeOpacity={0.8}
+    >
+      <Ionicons name={icon} size={24} color="white" />
+    </TouchableOpacity>
+  );
+
+  const InfoSection = ({ 
+    title, 
+    children 
+  }: { 
+    title: string; 
+    children: React.ReactNode;
+  }) => (
+    <View style={{ marginBottom: 32 }}>
+      <ThemedText
+        style={{
+          fontSize: 14,
+          fontWeight: '600',
+          color: theme.primary,
+          marginHorizontal: 20,
+          marginBottom: 12,
+        }}
+      >
+        {title}
+      </ThemedText>
+      <View
+        style={{
+          backgroundColor: theme.surface,
+          marginHorizontal: 0,
+          borderTopWidth: 0.5,
+          borderBottomWidth: 0.5,
+          borderColor: theme.surfaceVariant,
+        }}
+      >
+        {children}
+      </View>
+    </View>
+  );
+
+  const InfoItem = ({
+    icon,
+    title,
+    subtitle,
+    onPress,
+    rightElement,
+    destructive = false,
+    showArrow = true,
+  }: {
+    icon: string;
+    title: string;
+    subtitle?: string;
+    onPress?: () => void;
+    rightElement?: React.ReactNode;
+    destructive?: boolean;
+    showArrow?: boolean;
+  }) => (
+    <TouchableOpacity
+      onPress={onPress}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        backgroundColor: theme.surface,
+        borderBottomWidth: 0.5,
+        borderBottomColor: theme.surfaceVariant,
+      }}
+      activeOpacity={onPress ? 0.7 : 1}
+    >
+      <Feather
+        name={icon as any}
+        size={22}
+        color={destructive ? theme.error : theme.typography.caption}
+        style={{ marginRight: 20, width: 24 }}
+      />
+      <View style={{ flex: 1 }}>
+        <ThemedText
+          style={{
+            fontSize: 16,
+            color: destructive ? theme.error : theme.text,
+            marginBottom: subtitle ? 2 : 0,
+          }}
+        >
+          {title}
+        </ThemedText>
+        {subtitle && (
+          <ThemedText
+            style={{
+              fontSize: 14,
+              color: theme.typography.caption,
+            }}
+          >
+            {subtitle}
+          </ThemedText>
+        )}
+      </View>
+      {rightElement && <View style={{ marginRight: 8 }}>{rightElement}</View>}
+      {showArrow && onPress && (
+        <Feather 
+          name="chevron-right" 
+          size={20} 
+          color={theme.typography.caption} 
+        />
+      )}
+    </TouchableOpacity>
+  );
+
+  return (
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      <StatusBar 
+        barStyle={theme.dark ? 'light-content' : 'dark-content'} 
+        backgroundColor={theme.surface} 
+      />
+      
+      {/* Header fixe en haut */}
+      <SafeAreaView edges={['top']}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            backgroundColor: theme.surface,
+            borderBottomWidth: 0.5,
+            borderBottomColor: theme.surfaceVariant,
+          }}
+        >
+          <BackButton />
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert(
+                'Options',
+                '',
+                [
+                  { text: 'Modifier', onPress: handleEdit },
+                  { text: 'Partager', onPress: handleShare },
+                  { text: 'Annuler', style: 'cancel' },
+                ]
+              );
+            }}
+            style={{
+              padding: 8,
+              borderRadius: 20,
+            }}
+          >
+            <Feather name="more-vertical" size={20} color={theme.text} />
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
+      >
+        {/* Section Profil */}
+        <View
+          style={{
+            alignItems: 'center',
+            paddingVertical: 32,
+            backgroundColor: theme.surface,
+            borderBottomWidth: 8,
+            borderBottomColor: theme.background,
+          }}
+        >
+          <View style={{ position: 'relative', marginBottom: 16 }}>
             <Image
-              source={{ uri: String(image) || `https://i.pravatar.cc/150?u=${name}` }}
+              source={{
+                uri: contactData.image || `https://i.pravatar.cc/200?u=${contactData.name}`,
+              }}
               style={{
                 width: 120,
                 height: 120,
                 borderRadius: 60,
-                borderWidth: 4,
-                borderColor: theme.surfaceVariant,
+                backgroundColor: theme.surfaceVariant,
               }}
             />
-            <ThemedView
-              className="absolute bottom-2 right-2 w-6 h-6 rounded-full items-center justify-center"
-              style={{
-                backgroundColor: theme.surface,
-                borderWidth: 2,
-                borderColor: theme.background,
-              }}
-            >
-              <ThemedView
+            {contactData.isOnline && (
+              <View
                 style={{
-                  backgroundColor: statusColor,
-                  width: 12,
-                  height: 12,
-                  borderRadius: 6,
+                  position: 'absolute',
+                  bottom: 4,
+                  right: 4,
+                  width: 24,
+                  height: 24,
+                  borderRadius: 12,
+                  backgroundColor: '#25D366',
+                  borderWidth: 3,
+                  borderColor: theme.surface,
                 }}
               />
-            </ThemedView>
-          </ThemedView>
+            )}
+          </View>
 
-          <ThemedText className="text-2xl font-bold mb-2 text-center">{name}</ThemedText>
+          <ThemedText
+            style={{
+              fontSize: 24,
+              fontWeight: '600',
+              marginBottom: 4,
+              textAlign: 'center',
+            }}
+          >
+            {contactData.name}
+          </ThemedText>
 
-          <ThemedView className="flex-row items-center px-4 py-2 rounded-full mb-6" style={{ backgroundColor: theme.surfaceVariant }}>
-            <ThemedView
-              style={{
-                backgroundColor: statusColor,
-                width: 8,
-                height: 8,
-                borderRadius: 4,
-                marginRight: 8,
-              }}
-            />
-            <ThemedText className="text-sm font-medium">{status}</ThemedText>
-          </ThemedView>
+          <ThemedText
+            style={{
+              fontSize: 16,
+              color: theme.typography.caption,
+              marginBottom: 8,
+            }}
+          >
+            {contactData.phone}
+          </ThemedText>
+
+          <ThemedText
+            style={{
+              fontSize: 14,
+              color: theme.typography.caption,
+              textAlign: 'center',
+            }}
+          >
+            {contactData.isOnline ? 'En ligne' : `Vu ${contactData.lastSeen}`}
+          </ThemedText>
 
           {/* Actions rapides */}
-          <ThemedView className="flex-row gap-3 mb-8 px-2 ">
-            <ActionButton icon="call" label="Appeler" onPress={handleCall} iconSize={22} />
-            <ActionButton icon="videocam" label="Vidéo" onPress={handleVideoCall} iconSize={22} />
-            <ActionButton icon="chatbubble" label="Message" onPress={handleMessage} iconSize={22} />
-          </ThemedView>
-        </ThemedView>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              marginTop: 24,
+            }}
+          >
+            <ActionButton
+              icon="call"
+              label="Appeler"
+              onPress={handleCall}
+              color="#25D366"
+            />
+            <ActionButton
+              icon="videocam"
+              label="Vidéo"
+              onPress={handleVideoCall}
+              color="#128C7E"
+            />
+            <ActionButton
+              icon="chatbubble-ellipses"
+              label="Message"
+              onPress={handleMessage}
+              color="#075E54"
+            />
+          </View>
+        </View>
 
-        {/* Section informations */}
-        <ThemedView className="mb-2 px-2  rounded-2xl p-2">
-          <ThemedText type = 'caption' className="text-base font-semibold mb-4">Informations</ThemedText>
-          <InfoItem icon="info" label="Voir les détails du profil" onPress={() => console.log('Voir profil')} />
-          <InfoItem icon="image" label="Photos, vidéos et fichiers" onPress={() => console.log('Voir médias')} />
-          <InfoItem icon="bell-off" label="Désactiver les notifications" onPress={handleMute} />
-        </ThemedView>
+        {/* Status */}
+        {contactData.status && (
+          <InfoSection title="À propos et numéro de téléphone">
+            <InfoItem
+              icon="info"
+              title={contactData.status}
+              subtitle={`${new Date().toLocaleDateString()} à ${new Date().toLocaleTimeString()}`}
+              showArrow={false}
+            />
+            <InfoItem
+              icon="phone"
+              title={contactData.phone}
+              subtitle="Mobile"
+              onPress={handleCall}
+            />
+          </InfoSection>
+        )}
 
-        {/* Section confidentialité */}
-        <ThemedView className = "mb-2 px-2  rounded-2xl p-2">
-          <ThemedText type ="caption" className="text-base font-semibold mb-4">Confidentialité</ThemedText>
-          <InfoItem icon="alert-triangle" label="Signaler ce profil" onPress={handleReport} color={theme.warning} destructive />
-          <InfoItem icon="block" label="Bloquer ce contact" onPress={handleBlock} color={theme.error} destructive />
-        </ThemedView>
+        {/* Médias et documents */}
+        <InfoSection title="Médias, liens et documents">
+          <InfoItem
+            icon="image"
+            title="Médias partagés"
+            subtitle={`${contactData.sharedMedia} éléments`}
+            onPress={handleViewMedia}
+            rightElement={
+              <ThemedText style={{ color: theme.typography.caption }}>
+                {contactData.sharedMedia}
+              </ThemedText>
+            }
+          />
+        </InfoSection>
+
+        {/* Groupes en commun */}
+        {contactData.commonGroups > 0 && (
+          <InfoSection title="Groupes en commun">
+            <InfoItem
+              icon="users"
+              title="Groupes"
+              subtitle={`${contactData.commonGroups} groupes en commun`}
+              onPress={() => console.log('Voir groupes communs')}
+              rightElement={
+                <ThemedText style={{ color: theme.typography.caption }}>
+                  {contactData.commonGroups}
+                </ThemedText>
+              }
+            />
+          </InfoSection>
+        )}
+
+        {/* Paramètres de conversation */}
+        <InfoSection title="Paramètres de conversation">
+          <InfoItem
+            icon={isMuted ? "bell-off" : "bell"}
+            title="Notifications"
+            subtitle={isMuted ? "Désactivées" : "Activées"}
+            onPress={handleMute}
+            showArrow={false}
+            rightElement={
+              <TouchableOpacity onPress={handleMute}>
+                <View
+                  style={{
+                    width: 44,
+                    height: 24,
+                    borderRadius: 12,
+                    backgroundColor: isMuted ? theme.surfaceVariant : '#25D366',
+                    justifyContent: 'center',
+                    paddingHorizontal: 2,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 10,
+                      backgroundColor: 'white',
+                      alignSelf: isMuted ? 'flex-start' : 'flex-end',
+                    }}
+                  />
+                </View>
+              </TouchableOpacity>
+            }
+          />
+          <InfoItem
+            icon="download"
+            title="Visibilité des médias"
+            subtitle="Par défaut"
+            onPress={() => console.log('Paramètres médias')}
+          />
+          <InfoItem
+            icon="archive"
+            title="Exporter la conversation"
+            onPress={handleExportChat}
+          />
+        </InfoSection>
+
+        {/* Actions */}
+        <InfoSection title="">
+          <InfoItem
+            icon={isBlocked ? "user-check" : "user-x"}
+            title={isBlocked ? "Débloquer" : "Bloquer"}
+            onPress={handleBlock}
+            destructive={!isBlocked}
+            showArrow={false}
+          />
+          <InfoItem
+            icon="flag"
+            title="Signaler le contact"
+            onPress={handleReport}
+            destructive
+            showArrow={false}
+          />
+        </InfoSection>
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Header flottant avec animation */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: Platform.OS === 'ios' ? 44 : StatusBar.currentHeight || 0,
+          left: 0,
+          right: 0,
+          height: headerHeight,
+          opacity: headerOpacity,
+          zIndex: 1000,
+        }}
+        pointerEvents="box-none"
+      >
+        <BlurView
+          intensity={95}
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 16,
+            borderBottomWidth: 0.5,
+            borderBottomColor: theme.surfaceVariant,
+          }}
+        >
+          <BackButton />
+          <ThemedText
+            style={{
+              fontSize: 17,
+              fontWeight: '600',
+              flex: 1,
+              textAlign: 'center',
+              marginHorizontal: 16,
+            }}
+          >
+            {contactData.name}
+          </ThemedText>
+          <TouchableOpacity
+            style={{
+              padding: 8,
+              borderRadius: 20,
+            }}
+          >
+            <Feather name="more-vertical" size={20} color={theme.text} />
+          </TouchableOpacity>
+        </BlurView>
+      </Animated.View>
+    </View>
   );
-}
+};
+
+export default ContactInfo;

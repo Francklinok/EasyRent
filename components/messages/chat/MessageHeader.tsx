@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Image, TouchableOpacity, Animated } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
+import { Ionicons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { RootStackParamList } from '@/components/navigator/RouteType';
 import { ThemedView } from '@/components/ui/ThemedView';
