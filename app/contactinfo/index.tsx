@@ -247,21 +247,19 @@ const ContactInfo = () => {
     title: string; 
     children: React.ReactNode;
   }) => (
-    <View style={{ marginBottom: 32 }}>
+    <ThemedView style={{ marginBottom: 8 }}>
       <ThemedText
         style={{
-          fontSize: 14,
-          fontWeight: '600',
-          color: theme.primary,
+          color: theme.text,
           marginHorizontal: 20,
           marginBottom: 12,
         }}
       >
         {title}
       </ThemedText>
-      <View
+      <ThemedView
         style={{
-          backgroundColor: theme.surface,
+          // backgroundColor: theme.surface,
           marginHorizontal: 0,
           borderTopWidth: 0.5,
           borderBottomWidth: 0.5,
@@ -269,8 +267,8 @@ const ContactInfo = () => {
         }}
       >
         {children}
-      </View>
-    </View>
+      </ThemedView>
+    </ThemedView>
   );
 
   const InfoItem = ({
@@ -295,11 +293,11 @@ const ContactInfo = () => {
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        backgroundColor: theme.surface,
-        borderBottomWidth: 0.5,
-        borderBottomColor: theme.surfaceVariant,
+        paddingHorizontal: 40,
+        paddingVertical: 10,
+        // backgroundColor: theme.surface,
+        // borderBottomWidth: 0.5,
+        // borderBottomColor: theme.surfaceVariant,
       }}
       activeOpacity={onPress ? 0.7 : 1}
     >
@@ -309,10 +307,9 @@ const ContactInfo = () => {
         color={destructive ? theme.error : theme.typography.caption}
         style={{ marginRight: 20, width: 24 }}
       />
-      <View style={{ flex: 1 }}>
+      <ThemedView style={{ flex: 1 }}>
         <ThemedText
           style={{
-            fontSize: 16,
             color: destructive ? theme.error : theme.text,
             marginBottom: subtitle ? 2 : 0,
           }}
@@ -322,14 +319,13 @@ const ContactInfo = () => {
         {subtitle && (
           <ThemedText
             style={{
-              fontSize: 14,
               color: theme.typography.caption,
             }}
           >
             {subtitle}
           </ThemedText>
         )}
-      </View>
+      </ThemedView>
       {rightElement && <View style={{ marginRight: 8 }}>{rightElement}</View>}
       {showArrow && onPress && (
         <Feather 
@@ -342,7 +338,7 @@ const ContactInfo = () => {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
+    <ThemedView style={{ flex: 1 }}>
       <StatusBar 
         barStyle={theme.dark ? 'light-content' : 'dark-content'} 
         backgroundColor={theme.surface} 
@@ -350,16 +346,16 @@ const ContactInfo = () => {
       
       {/* Header fixe en haut */}
       <SafeAreaView edges={['top']}>
-        <View
+        <ThemedView
           style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             paddingHorizontal: 16,
             paddingVertical: 12,
-            backgroundColor: theme.surface,
-            borderBottomWidth: 0.5,
-            borderBottomColor: theme.surfaceVariant,
+            // backgroundColor: theme.surface,
+            // borderBottomWidth: 0.5,
+            // borderBottomColor: theme.surfaceVariant,
           }}
         >
           <BackButton />
@@ -376,13 +372,13 @@ const ContactInfo = () => {
               );
             }}
             style={{
-              padding: 8,
+              // padding: 4,
               borderRadius: 20,
             }}
           >
             <Feather name="more-vertical" size={20} color={theme.text} />
           </TouchableOpacity>
-        </View>
+        </ThemedView>
       </SafeAreaView>
 
       <ScrollView
@@ -396,16 +392,16 @@ const ContactInfo = () => {
         scrollEventThrottle={16}
       >
         {/* Section Profil */}
-        <View
+        <ThemedView
           style={{
             alignItems: 'center',
             paddingVertical: 32,
-            backgroundColor: theme.surface,
+            // backgroundColor: theme.surface,
             borderBottomWidth: 8,
-            borderBottomColor: theme.background,
+            // borderBottomColor: theme.background,
           }}
         >
-          <View style={{ position: 'relative', marginBottom: 16 }}>
+          <ThemedView style={{ position: 'relative', marginBottom: 16 }}>
             <Image
               source={{
                 uri: contactData.image || `https://i.pravatar.cc/200?u=${contactData.name}`,
@@ -418,7 +414,7 @@ const ContactInfo = () => {
               }}
             />
             {contactData.isOnline && (
-              <View
+              <ThemedView
                 style={{
                   position: 'absolute',
                   bottom: 4,
@@ -432,12 +428,10 @@ const ContactInfo = () => {
                 }}
               />
             )}
-          </View>
+          </ThemedView>
 
-          <ThemedText
+          <ThemedText type = "title"
             style={{
-              fontSize: 24,
-              fontWeight: '600',
               marginBottom: 4,
               textAlign: 'center',
             }}
@@ -447,7 +441,6 @@ const ContactInfo = () => {
 
           <ThemedText
             style={{
-              fontSize: 16,
               color: theme.typography.caption,
               marginBottom: 8,
             }}
@@ -457,7 +450,6 @@ const ContactInfo = () => {
 
           <ThemedText
             style={{
-              fontSize: 14,
               color: theme.typography.caption,
               textAlign: 'center',
             }}
@@ -466,11 +458,11 @@ const ContactInfo = () => {
           </ThemedText>
 
           {/* Actions rapides */}
-          <View
+          <ThemedView
             style={{
               flexDirection: 'row',
               justifyContent: 'center',
-              marginTop: 24,
+              marginTop: 20,
             }}
           >
             <ActionButton
@@ -491,8 +483,8 @@ const ContactInfo = () => {
               onPress={handleMessage}
               color="#075E54"
             />
-          </View>
-        </View>
+          </ThemedView>
+        </ThemedView>
 
         {/* Status */}
         {contactData.status && (
@@ -554,7 +546,7 @@ const ContactInfo = () => {
             showArrow={false}
             rightElement={
               <TouchableOpacity onPress={handleMute}>
-                <View
+                <ThemedView
                   style={{
                     width: 44,
                     height: 24,
@@ -564,7 +556,7 @@ const ContactInfo = () => {
                     paddingHorizontal: 2,
                   }}
                 >
-                  <View
+                  <ThemedView
                     style={{
                       width: 20,
                       height: 20,
@@ -573,7 +565,7 @@ const ContactInfo = () => {
                       alignSelf: isMuted ? 'flex-start' : 'flex-end',
                     }}
                   />
-                </View>
+                </ThemedView>
               </TouchableOpacity>
             }
           />
@@ -623,7 +615,7 @@ const ContactInfo = () => {
         pointerEvents="box-none"
       >
         <BlurView
-          intensity={95}
+          intensity={15}
           style={{
             flex: 1,
             flexDirection: 'row',
@@ -631,14 +623,12 @@ const ContactInfo = () => {
             justifyContent: 'space-between',
             paddingHorizontal: 16,
             borderBottomWidth: 0.5,
-            borderBottomColor: theme.surfaceVariant,
+            // borderBottomColor: theme.surfaceVariant,
           }}
         >
-          <BackButton />
-          <ThemedText
+          {/* <BackButton /> */}
+          <ThemedText type = "body"
             style={{
-              fontSize: 17,
-              fontWeight: '600',
               flex: 1,
               textAlign: 'center',
               marginHorizontal: 16,
@@ -656,8 +646,10 @@ const ContactInfo = () => {
           </TouchableOpacity>
         </BlurView>
       </Animated.View>
-    </View>
+    </ThemedView>
   );
 };
 
 export default ContactInfo;
+
+
