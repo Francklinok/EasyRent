@@ -158,7 +158,7 @@ const RenHouseAcceuil = () => {
   }
 
   return (
-    <ThemedView className="h-full mt-2" variant="default" >
+    <ThemedView className="h-full" variant="default" >
       <StatusBar barStyle="light-content" />
       <LinearGradient colors={theme.background} style={styles.gradient}>
         {/* FlashList with Header for Categories */}
@@ -180,7 +180,7 @@ const RenHouseAcceuil = () => {
             refreshing={false}
             onRefresh={handleRefresh}
             onEndReached={handleEndReached}
-            contentContainerStyle={{ paddingBottom: 30 }}
+            contentContainerStyle={{ paddingBottom: 30, paddingTop:8 }}
             ListFooterComponent={<ThemedView style={{ height: 250 }} />}
 
           />

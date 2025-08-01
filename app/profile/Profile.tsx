@@ -1,12 +1,11 @@
-import { View, Text } from 'react-native'
 import React from 'react'
 import { ThemedView } from '@/components/ui/ThemedView'
-import ProfileFile from '@/components/profile/ProfileComponent'
+import EnhancedProfileComponent from '@/components/profile/EnhancedProfileComponent'
+
 const Profile = () => {
   return (
-    <ThemedView>
-        <ProfileFile/>
-        
+    <ThemedView style={{ flex: 1 }}>
+      <EnhancedProfileComponent />
     </ThemedView>
   )
 }

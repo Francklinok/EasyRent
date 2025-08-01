@@ -6,15 +6,16 @@ import {
   Dimensions,
   Text,
   View,
+  TextInput,
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { MotiView } from "moti";
 import { ThemedView } from "@/components/ui/ThemedView";
 import { useTheme } from "@/components/contexts/theme/themehook";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-
+import { ThemedText } from "@/components/ui/ThemedText";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const ITEMS_PER_SCREEN = 6;
+const ITEMS_PER_SCREEN = 4;
 
 type PropertyType =
   | "All"
@@ -67,13 +68,13 @@ const MarqueeText = ({ text, style, duration = 3000 }: { text: string; style?: a
   }, [textWidth, containerWidth]);
 
   return (
-    <View onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)} style={{ overflow: "hidden", width: "100%" }}>
+    <ThemedView onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)} style={{ overflow: "hidden", width: "80%" }}>
       <Animated.View style={{ transform: [{ translateX }] }}>
-        <Text onLayout={(e) => setTextWidth(e.nativeEvent.layout.width)} style={style} numberOfLines={1}>
+        <ThemedText onLayout={(e) => setTextWidth(e.nativeEvent.layout.width)} style={style} numberOfLines={1}>
           {text}
-        </Text>
+        </ThemedText>
       </Animated.View>
-    </View>
+    </ThemedView>
   );
 };
 
@@ -108,12 +109,20 @@ const RenderCategoryTabs = ({
 }) => {
   const { theme } = useTheme();
   const [selectedProperty, setSelectedProperty] = useState<PropertyType>("All");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef<ScrollView>(null);
 
   const properties = useMemo(() => Object.keys(propertyLabels) as PropertyType[], []);
   const itemWidth = useMemo(() => SCREEN_WIDTH / ITEMS_PER_SCREEN, []);
+  
+  const filteredProperties = useMemo(() => {
+    if (!searchQuery) return properties;
+    return properties.filter(property => 
+      propertyLabels[property].toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [properties, searchQuery]);
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
@@ -135,54 +144,103 @@ const RenderCategoryTabs = ({
   );
 
   return (
-    <Animated.View style={{ opacity: fadeAnim, flexDirection: "row", alignItems: "center" }}>
-      {/* ScrollView 75% */}
-      <ThemedView  style={{ flex: 3 }}>
+    <Animated.View style={{ opacity: fadeAnim, paddingVertical: 1, backgroundColor:theme.outline, paddingBottom:2 }}>
+      {/* Search Bar */}
+      {/* <ThemedView style={{ alignItems: "center", marginBottom: 8 }}>
+        <ThemedView style={{ 
+          flexDirection: "row", 
+          alignItems: "center", 
+          paddingHorizontal: 18,
+          backgroundColor: theme.surfaceVariant,
+          borderRadius: 25,
+          borderWidth: 1,
+          borderColor: theme.outline,
+          width: 280,
+        }}>
+        <MaterialCommunityIcons name="magnify" size={18} color={theme.typography.body} style={{ marginRight: 8 }} />
+        <TextInput
+          style={{
+            flex: 1,
+            paddingVertical: 8,
+            fontSize: 14,
+            color: theme.typography.body,
+          }}
+          placeholder="Rechercher un type..."
+          placeholderTextColor={theme.typography.caption}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery ? (
+          <TouchableOpacity onPress={() => setSearchQuery("")} style={{ padding: 4 }}>
+            <MaterialCommunityIcons name="close" size={18} color={theme.typography.body} />
+          </TouchableOpacity>
+        ) : null}
+        </ThemedView>
+      </ThemedView> */}
+      
+      {/* Categories and View Toggle */}
+      <ThemedView  className="flex-row items-center pb-1" style={{ backgroundColor:theme.outline }}>
+        {/* ScrollView 75% */}
+        <ThemedView  style={{ flex: 3, marginRight: 12,backgroundColor:theme.outline  }}>
         <ScrollView
           ref={scrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{
             alignItems: "center",
-            paddingHorizontal: 8,
-            gap: 12,
+            paddingHorizontal: 0, 
+            gap: 0, 
           }}
         >
-          {properties.map((property, index) => {
+          {filteredProperties.map((property, index) => {
             const isSelected = selectedProperty === property;
             return (
               <MotiView
                 key={property}
-                from={{ opacity: 0, translateY: 15 }}
-                animate={{ opacity: 1, translateY: 0 }}
+                from={{ opacity: 0, scale: 1 }}
+                animate={{ opacity: 1, scale: isSelected ? 1.08 : 1 }}
                 transition={{ delay: index * 40, type: "timing", duration: 300 }}
-                style={{ width: itemWidth - 15 }}
+                style={{ width: itemWidth * 0.4, alignItems: "center", justifyContent: "center", marginHorizontal: 8,paddingLeft:18}}
               >
                 <TouchableOpacity
                   onPress={() => handlePropertySelect(property)}
                   activeOpacity={0.8}
                   style={{
-                    paddingVertical: 5,
-                    paddingHorizontal: 4,
-                    borderRadius: 14,
-                    backgroundColor: isSelected ? theme.surfaceVariant : "transparent",
+                    paddingVertical: 6,
+                    borderRadius: 18,
+                    backgroundColor:theme.outline,
                     alignItems: "center",
-                    minHeight: 50,
+                    justifyContent: "center",
+                    minHeight: 44,
+                    width: 44,
+                    flexDirection: "column",
+                    borderWidth:  1,
+                    borderColor:  theme.outline,
+                    shadowColor: isSelected ? theme.primary : theme.shadowColor || "#000",
+                    shadowOffset: { width: 0, height: isSelected ? 4 : 2 },
+                    shadowOpacity: isSelected ? 0.25 : 0.1,
+                    shadowRadius: isSelected ? 8 : 4,
+                    // elevation: isSelected ? 6 : 2,
                   }}
                 >
                   {React.cloneElement(getPropertyIcon(property, 18), {
-                    color: isSelected ? theme.primary : theme.typography.body,
+                    color: isSelected ? theme.primary : theme.text,
                   })}
-                  <MarqueeText
-                    text={propertyLabels[property]}
-                    style={{
-                      color: isSelected ? theme.primary : theme.typography.body,
-                      fontWeight: isSelected ? "600" : "normal",
-                      marginTop: 4,
-                      fontSize: 11,
-                      textAlign: "center",
-                    }}
-                  />
+                  <View style={{ marginTop: 1, width: "100%", alignItems: "center" }}>
+                    <ThemedText
+                      style={{
+                        color: isSelected ? theme.text : theme.typography.body,
+                        fontWeight: isSelected ? "700" : "600",
+                        fontSize: 9,
+                        textAlign: "center",
+                        width: "100%",
+                        letterSpacing: 0.2,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {propertyLabels[property]}
+                    </ThemedText>
+                  </View>
                 </TouchableOpacity>
               </MotiView>
             );
@@ -190,25 +248,32 @@ const RenderCategoryTabs = ({
         </ScrollView>
       </ThemedView>
 
-      {/* Bouton 25% */}
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <TouchableOpacity
-          onPress={onToggleView}
-          activeOpacity={0.7}
-          style={{
-            backgroundColor: theme.surface,
-            borderRadius: 25,
-            padding: 6,
-            elevation: 1,
-          }}
-        >
-          <MaterialCommunityIcons
-            name={viewType === "list" ? "view-grid" : "view-list"}
-            size={26}
-            color={theme.primary}
-          />
-        </TouchableOpacity>
-      </View>
+        {/* Bouton 25% */}
+        <ThemedView  style={{ flex: 0.5, alignItems: "center", justifyContent: "center", paddingLeft: 1, marginRight:6,backgroundColor: theme.outline, }}>
+          <TouchableOpacity
+            onPress={onToggleView}
+            activeOpacity={0.8}
+            style={{
+              backgroundColor: theme.success,
+              borderRadius: 20,
+              padding: 12,
+              // elevation: 4,
+              // shadowColor: theme.primary,
+              // shadowOffset: { width: 0, height: 3 },
+              // shadowOpacity: 0.3,
+              // shadowRadius: 6,
+              // borderWidth: 1,
+              // borderColor: theme.outline,
+            }}
+          >
+            <MaterialCommunityIcons
+              name={viewType === "list" ? "view-grid" : "view-list"}
+              size={22}
+              color={theme.text}
+            />
+          </TouchableOpacity>
+        </ThemedView>
+      </ThemedView>
     </Animated.View>
   );
 };

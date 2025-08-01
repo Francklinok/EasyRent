@@ -73,8 +73,7 @@ const Home = () => {
       transition={{ type: 'timing', duration: 800 }}
       className="flex bg-white "
     >
-      <ThemedView className="mb-1">
-
+      <ThemedView>
         <MotiView
           from={{ translateY: -20, opacity: 0 }}
           animate={{ translateY: 0, opacity: 1 }}
