@@ -581,14 +581,14 @@ const RenderItem: React.FC<Props> = ({
       from={{ opacity: 0, translateY: 50, scale: 0.9 }}
       animate={{ opacity: 1, translateY: 0, scale: 1 }}
       transition={{ delay: index * 100, type: 'spring', damping: 15 }}
-      style={{ marginBottom: 16, paddingHorizontal: 8 }}
+      style={{ marginBottom: 16, paddingHorizontal: 2 }}
     >
       <ThemedView
         style={{
-          borderRadius: 24,
+          borderRadius: 3,
           overflow: 'hidden',
           borderWidth: 1,
-          borderColor: theme.outline + '20',
+          borderColor: theme.outline + '50',
           shadowColor: theme.shadowColor || '#000',
           shadowOffset: { width: 0, height: 8 },
           shadowOpacity: 0.12,
@@ -725,7 +725,7 @@ const RenderItem: React.FC<Props> = ({
                 justifyContent: 'space-between',
                 backgroundColor: theme.surfaceVariant + '25',
                 borderRadius: 10,
-                paddingVertical: 8,
+                paddingVertical: 2,
                 paddingHorizontal: 12
               }}>
                 <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
@@ -764,7 +764,7 @@ const RenderItem: React.FC<Props> = ({
               >
                 <ThemedView style={{
                   backgroundColor: theme.surface + '60',
-                  borderRadius: 8,
+                  borderRadius: 6,
                   padding: 8,
                   borderLeftWidth: 2,
                   borderLeftColor: theme.primary

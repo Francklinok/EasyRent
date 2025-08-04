@@ -144,7 +144,7 @@ const RenderCategoryTabs = ({
   );
 
   return (
-    <Animated.View style={{ opacity: fadeAnim, paddingVertical: 1, backgroundColor:theme.outline, paddingBottom:2 }}>
+    <Animated.View style={{ opacity: fadeAnim, paddingVertical: 1, backgroundColor:theme.surfaceVariant, paddingBottom:2 }}>
       {/* Search Bar */}
       {/* <ThemedView style={{ alignItems: "center", marginBottom: 8 }}>
         <ThemedView style={{ 
@@ -179,9 +179,9 @@ const RenderCategoryTabs = ({
       </ThemedView> */}
       
       {/* Categories and View Toggle */}
-      <ThemedView  className="flex-row items-center pb-1" style={{ backgroundColor:theme.outline }}>
+      <ThemedView  className="flex-row items-center pb-1" style={{ backgroundColor:theme.surface + '90' }}>
         {/* ScrollView 75% */}
-        <ThemedView  style={{ flex: 3, marginRight: 12,backgroundColor:theme.outline  }}>
+        <ThemedView  style={{ flex: 3, marginRight: 12, backgroundColor:theme.surface + '80'  }}>
         <ScrollView
           ref={scrollRef}
           horizontal
@@ -207,15 +207,15 @@ const RenderCategoryTabs = ({
                   activeOpacity={0.8}
                   style={{
                     paddingVertical: 6,
-                    borderRadius: 18,
-                    backgroundColor:theme.outline,
+                    // borderRadius: 18,
+                    // backgroundColor:theme.outline,
                     alignItems: "center",
                     justifyContent: "center",
                     minHeight: 44,
                     width: 44,
                     flexDirection: "column",
-                    borderWidth:  1,
-                    borderColor:  theme.outline,
+                    // borderWidth:  1,
+                    // borderColor:  theme.outline,
                     shadowColor: isSelected ? theme.primary : theme.shadowColor || "#000",
                     shadowOffset: { width: 0, height: isSelected ? 4 : 2 },
                     shadowOpacity: isSelected ? 0.25 : 0.1,
@@ -249,14 +249,14 @@ const RenderCategoryTabs = ({
       </ThemedView>
 
         {/* Bouton 25% */}
-        <ThemedView  style={{ flex: 0.5, alignItems: "center", justifyContent: "center", paddingLeft: 1, marginRight:6,backgroundColor: theme.outline, }}>
+        <ThemedView  style={{ flex: 0.5, alignItems: "center", justifyContent: "center", paddingLeft: 1, marginRight:6,backgroundColor: theme.surface + "90", }}>
           <TouchableOpacity
             onPress={onToggleView}
             activeOpacity={0.8}
             style={{
               backgroundColor: theme.success,
               borderRadius: 20,
-              padding: 12,
+              padding: 10,
               // elevation: 4,
               // shadowColor: theme.primary,
               // shadowOffset: { width: 0, height: 3 },
