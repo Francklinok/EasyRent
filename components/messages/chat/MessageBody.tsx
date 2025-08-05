@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
   Image,
   TouchableOpacity,
-  Linking,
   Pressable,
   Modal,
   Animated,
@@ -12,19 +11,16 @@ import {
   Dimensions,
   Vibration,
   TextInput,
-  Easing,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Video } from "expo-av";
-import { Audio } from "expo-av";
+import { BlurView } from "expo-blur";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { MessageBodyProps } from "@/types/MessageTypes";
 import { ThemedText } from "@/components/ui/ThemedText";
 import { ThemedView } from "@/components/ui/ThemedView";
 import { useTheme } from "@/components/contexts/theme/themehook";
 
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 
 const MessageDisplay = ({
   message,
@@ -36,53 +32,36 @@ const MessageDisplay = ({
   onEdit
 }: MessageBodyProps) => {
   const [showContextMenu, setShowContextMenu] = useState(false);
-  const [showReactions, setShowReactions] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editText, setEditText] = useState(message.content);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPressed, setIsPressed] = useState(false);
   
-  // const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const contextMenuScale = useRef(new Animated.Value(0)).current;
-  const contextMenuOpacity = useRef(new Animated.Value(0)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const messageOpacity = useRef(new Animated.Value(1)).current;
 
   const isSent = message.senderId === currentUserId;
-  const senderAvatar = message.sender?.avatar || `https://i.pravatar.cc/150?u=${message.senderId}`;
-  const senderName = message.sender?.name || message.senderId;
-  const  {theme} = useTheme()
+  const senderAvatar = message.sender?.avatar || `https://ui-avatars.com/api/?name=${message.sender?.name || 'User'}&background=random`;
+  const senderName = message.sender?.name || 'Unknown';
+  const { theme } = useTheme();
 
-  // Discord-like colors
   const messageColors = isSent 
     ? {
         background: theme.primary,
-        backgroundSecondary: '#4752c4',
-        text:  theme.text,
+        text: '#FFFFFF',
         textSecondary: 'rgba(255,255,255,0.8)',
-        border: theme.outline
+        border: theme.primary + '20'
       }
     : {
         background: theme.surfaceVariant,
-        backgroundSecondary: '#2f3136',
-        text: theme.text,
-        textSecondary: '#b9bbbe',
-        border: theme.outline
+        text: theme.onSurface,
+        textSecondary: theme.onSurface + '80',
+        border: theme.outline + '30'
       };
 
   const reactionEmojis = [
-    { emoji: '👍', name: 'like' },
-    { emoji: '❤️', name: 'love' },
-    { emoji: '😂', name: 'laugh' },
-    { emoji: '😮', name: 'wow' },
-    { emoji: '😢', name: 'sad' },
-    { emoji: '😡', name: 'angry' },
-    { emoji: '🔥', name: 'fire' },
-    { emoji: '👀', name: 'eyes' }
+    '👍', '❤️', '😂', '😮', '😢', '😡', '🔥', '👀'
   ];
 
   const handlePressIn = () => {
@@ -92,13 +71,12 @@ const MessageDisplay = ({
       useNativeDriver: true,
     }).start();
 
-    // Démarrer le timer pour l'appui prolongé
     longPressTimer.current = setTimeout(() => {
       if (isPressed) {
         Vibration.vibrate(50);
         showContextMenuAnimated();
       }
-    }, 800); // 800ms d'appui
+    }, 600);
   };
 
   const handlePressOut = () => {
@@ -128,16 +106,6 @@ const MessageDisplay = ({
         tension: 100,
         friction: 8,
         useNativeDriver: true,
-      }),
-      Animated.timing(contextMenuOpacity, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(messageOpacity, {
-        toValue: 0.7,
-        duration: 200,
-        useNativeDriver: true,
       })
     ]).start();
   };
@@ -151,18 +119,6 @@ const MessageDisplay = ({
       }),
       Animated.spring(contextMenuScale, {
         toValue: 0,
-        tension: 100,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-      Animated.timing(contextMenuOpacity, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(messageOpacity, {
-        toValue: 1,
-        duration: 150,
         useNativeDriver: true,
       })
     ]).start(() => {
@@ -171,13 +127,12 @@ const MessageDisplay = ({
   };
 
   const handleReaction = (emoji: string) => {
-    onReact?.(message.msgId, emoji);
+    onReact?.(emoji);
     hideContextMenu();
     
-    // Animation de feedback
     Animated.sequence([
       Animated.spring(scaleAnim, {
-        toValue: 1.1,
+        toValue: 1.05,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
@@ -198,7 +153,7 @@ const MessageDisplay = ({
           {
             text: "Supprimer",
             style: "destructive",
-            onPress: () => onDelete?.(message.msgId)
+            onPress: () => onDelete?.()
           }
         ]
       );
@@ -212,30 +167,7 @@ const MessageDisplay = ({
 
   const handleReply = () => {
     hideContextMenu();
-    onReply?.(message);
-  };
-
-  const playAudio = async () => {
-    try {
-      if (isPlaying && sound) {
-        await sound.pauseAsync();
-        setIsPlaying(false);
-      } else {
-        const newSound = new Audio.Sound();
-        await newSound.loadAsync({ uri: message.content });
-        await newSound.playAsync();
-        setSound(newSound);
-        setIsPlaying(true);
-        
-        newSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            setIsPlaying(false);
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Erreur lors de la lecture audio:', error);
-    }
+    onReply?.();
   };
 
   const renderMessageContent = () => {
@@ -243,7 +175,11 @@ const MessageDisplay = ({
       case "text":
         return (
           <ThemedText 
-            style={{ color: messageColors.text }}
+            style={{ 
+              color: messageColors.text,
+              fontSize: 16,
+              lineHeight: 22
+            }}
           >
             {message.content}
           </ThemedText>
@@ -251,138 +187,109 @@ const MessageDisplay = ({
 
       case "image":
         return (
-          <ThemedView className="mt-1 rounded-lg overflow-hidden">
+          <View style={{ marginTop: 4, borderRadius: 12, overflow: 'hidden' }}>
             <Image
               source={{ uri: message.content }}
-              className="w-72 h-48"
+              style={{ 
+                width: screenWidth * 0.65, 
+                height: 200,
+                borderRadius: 12
+              }}
               resizeMode="cover"
             />
-            <ThemedView className="absolute top-2 right-2  rounded-full p-1">
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.3)']}
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 40,
+                justifyContent: 'flex-end',
+                paddingHorizontal: 12,
+                paddingBottom: 8
+              }}
+            >
               <Ionicons name="expand" size={16} color="white" />
-            </ThemedView>
-          </ThemedView>
-        );
-
-      case "video":
-        return (
-          <View className="mt-2 rounded-lg overflow-hidden">
-            <Video
-              source={{ uri: message.content }}
-              style={{ width: 280, height: 180 }}
-              useNativeControls
-              // resizeMode="cover"
-            />
+            </LinearGradient>
           </View>
         );
 
-      case "audio":
-        return (
-          <TouchableOpacity
-            onPress={playAudio}
-            className="mt-2 flex-row items-center rounded-lg px-3 py-3"
-            style={{ backgroundColor: messageColors.backgroundSecondary }}
-          >
-            <View 
-              className="w-10 h-10 rounded-full items-center justify-center mr-3"
-              style={{ backgroundColor: isSent ? 'rgba(255,255,255,0.2)' : '#5865f2' }}
-            >
-              <Ionicons
-                name={isPlaying ? "pause" : "play"}
-                size={18}
-                color="white"
-              />
-            </View>
-            <View className="flex-1">
-              <Text style={{ color: messageColors.text }} className="font-medium">
-                Message vocal
-              </Text>
-              <Text style={{ color: messageColors.textSecondary }} className="text-xs">
-                {isPlaying ? "En cours de lecture..." : "Cliquer pour écouter"}
-              </Text>
-            </View>
-            <View className="flex-row space-x-1">
-              {[...Array(4)].map((_, i) => (
-                <View
-                  key={i}
-                  className="w-1 rounded-full"
-                  style={{
-                    height: Math.random() * 20 + 8,
-                    backgroundColor: messageColors.textSecondary,
-                  }}
-                />
-              ))}
-            </View>
-          </TouchableOpacity>
-        );
-
-      case "document":
-        return (
-          <TouchableOpacity
-            onPress={() => Linking.openURL(message.content)}
-            className="mt-2 flex-row items-center rounded-lg px-3 py-3"
-            style={{ backgroundColor: messageColors.backgroundSecondary }}
-          >
-            <View 
-              className="w-10 h-10 rounded-lg items-center justify-center mr-3"
-              style={{ backgroundColor: '#5865f2' }}
-            >
-              <Ionicons name="document-text" size={18} color="white" />
-            </View>
-            <View className="flex-1">
-              <Text style={{ color: messageColors.text }} className="font-medium">
-                Document.pdf
-              </Text>
-              <Text style={{ color: messageColors.textSecondary }} className="text-xs">
-                Cliquer pour ouvrir
-              </Text>
-            </View>
-            <Ionicons name="download-outline" size={18} color={messageColors.textSecondary} />
-          </TouchableOpacity>
-        );
-
       default:
-        return null;
+        return (
+          <ThemedText style={{ color: messageColors.text }}>
+            {message.content}
+          </ThemedText>
+        );
     }
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   return (
     <>
-      <Animated.View 
-        style={{ opacity: messageOpacity }}
-        className={`mb-1 px-3 ${isSent ? "items-end" : "items-start"}`}
-      >
-        <ThemedView className={`flex-row max-w-[8 0%] ${isSent ? "flex-row-reverse" : "flex-row"}`}>
+      <View style={{
+        marginBottom: 8,
+        paddingHorizontal: 16,
+        alignItems: isSent ? 'flex-end' : 'flex-start'
+      }}>
+        <View style={{
+          flexDirection: isSent ? 'row-reverse' : 'row',
+          maxWidth: '85%',
+          alignItems: 'flex-end'
+        }}>
           {/* Avatar */}
           {!isSent && (
-            <Image
-              source={{ uri: senderAvatar }}
-              className="w-6 h-6 rounded-full mr-3 mt-1"
-            />
+            <View style={{ marginRight: 8, marginBottom: 4 }}>
+              <Image
+                source={{ uri: senderAvatar }}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  borderWidth: 2,
+                  borderColor: theme.outline + '30'
+                }}
+              />
+            </View>
           )}
 
           <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
             <Pressable
               onPressIn={handlePressIn}
               onPressOut={handlePressOut}
-              className="group"
             >
               {/* Message bubble */}
-              <ThemedView
-                className={`px-2 py-2 rounded-2xl ${
-                  isSent ? "rounded-br-md" : "rounded-bl-md"
-                }`}
-                style={{
-                  backgroundColor: messageColors.background,
-                  borderColor: messageColors.border,
-                  borderWidth: 1,
-                }}
-              >
+              <View style={{
+                backgroundColor: messageColors.background,
+                borderRadius: 20,
+                borderBottomLeftRadius: isSent ? 20 : 6,
+                borderBottomRightRadius: isSent ? 6 : 20,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderWidth: 1,
+                borderColor: messageColors.border,
+                shadowColor: theme.onSurface,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
+                elevation: 3
+              }}>
                 {/* Sender name for received messages */}
                 {!isSent && (
                   <ThemedText 
- 
-                    className=" mb-1" 
-                    style={{ color: theme.success }}
+                    style={{ 
+                      color: theme.primary,
+                      fontSize: 12,
+                      fontWeight: '600',
+                      marginBottom: 4
+                    }}
                   >
                     {senderName}
                   </ThemedText>
@@ -393,170 +300,288 @@ const MessageDisplay = ({
 
                 {/* Reactions */}
                 {message.reactions && message.reactions.length > 0 && (
-                  <ThemedView className="flex-row flex-wrap mt-3 -mb-1">
+                  <View style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    marginTop: 8,
+                    marginBottom: -4
+                  }}>
                     {message.reactions.map((reaction, index) => (
-                      <ThemedView
+                      <View
                         key={index}
-                        className="rounded-full px-2 py-1 mr-1 mb-1 flex-row items-center"
-                        style={{ backgroundColor: messageColors.backgroundSecondary }}
+                        style={{
+                          backgroundColor: theme.surface,
+                          borderRadius: 12,
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          marginRight: 4,
+                          marginBottom: 4,
+                          borderWidth: 1,
+                          borderColor: theme.outline + '20'
+                        }}
                       >
-                        <ThemedText >{reaction.emoji}</ThemedText>
-                        {/* <Text 
-                          className="text-xs ml-1 font-medium" 
-                          style={{ color: messageColors.textSecondary }}
-                        >
-                          {reaction.count}
-                        </Text> */}
-                      </ThemedView>
+                        <Text style={{ fontSize: 14 }}>{reaction.emoji}</Text>
+                      </View>
                     ))}
-                  </ThemedView>
+                  </View>
                 )}
 
                 {/* Footer */}
-                <View  className="flex-row justify-between items-center mt-1">
+                <View style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: 6
+                }}>
                   <ThemedText 
-                    style={{ color: messageColors.textSecondary }}
+                    style={{ 
+                      color: messageColors.textSecondary,
+                      fontSize: 11,
+                      fontWeight: '500'
+                    }}
                   >
-                    {new Date(message.createdAt).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    {formatTime(message.createdAt)}
                     {message.isEdited && " • modifié"}
                   </ThemedText>
                   
                   {isSent && (
-                    <Ionicons
-                      name={message.status?.read?.length ? "checkmark-done" : "checkmark"}
-                      size={14}
-                      color={message.status?.read?.length ? theme.success : messageColors.textSecondary}
-                    />
+                    <View style={{ marginLeft: 8 }}>
+                      <Ionicons
+                        name={message.status?.read?.length ? "checkmark-done" : "checkmark"}
+                        size={14}
+                        color={message.status?.read?.length ? theme.success : messageColors.textSecondary}
+                      />
+                    </View>
                   )}
                 </View>
-              </ThemedView>
+              </View>
             </Pressable>
           </Animated.View>
+        </View>
+      </View>
 
-          {/* Avatar for sent messages */}
-          {/* {isSent && (
-            <Image
-              source={{ uri: senderAvatar }}
-              className="w-10 h-10 rounded-full ml-3 mt-1"
-            />
-          )} */}
-        </ThemedView>
-      </Animated.View>
-
-      {/* Context Menu Overlay */}
+      {/* Context Menu Modal */}
       <Modal transparent visible={showContextMenu} animationType="none">
         <Animated.View
           style={{ 
             flex: 1, 
-            backgroundColor: 'rgba(0,0,0,0.6)',
+            backgroundColor: 'rgba(0,0,0,0.5)',
             opacity: overlayOpacity
           }}
         >
           <TouchableOpacity
             style={{ flex: 1 }}
             onPress={hideContextMenu}
-            className="justify-center items-center"
+            activeOpacity={1}
           >
-            <Animated.View
-              style={{
-                transform: [{ scale: contextMenuScale }],
-                opacity: contextMenuOpacity,
-              }}
-              className=" rounded-xl p-2 mx-4  min-w-[200px]"
-            >
-              {/* Quick Reactions */}
-              <ThemedView className="flex-row justify-center mb-3 px-2">
-                {reactionEmojis.slice(0, 6).map((reaction, index) => (
+            <View style={{
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              paddingHorizontal: 20
+            }}>
+              <Animated.View
+                style={{
+                  transform: [{ scale: contextMenuScale }],
+                  backgroundColor: theme.surface,
+                  borderRadius: 16,
+                  padding: 16,
+                  minWidth: 280,
+                  shadowColor: theme.onSurface,
+                  shadowOffset: { width: 0, height: 8 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 16,
+                  elevation: 12
+                }}
+              >
+                {/* Quick Reactions */}
+                <View style={{
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  marginBottom: 16,
+                  paddingHorizontal: 8
+                }}>
+                  {reactionEmojis.slice(0, 6).map((emoji, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      onPress={() => handleReaction(emoji)}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginHorizontal: 4,
+                        backgroundColor: theme.surfaceVariant
+                      }}
+                    >
+                      <Text style={{ fontSize: 20 }}>{emoji}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Separator */}
+                <View style={{
+                  height: 1,
+                  backgroundColor: theme.outline + '30',
+                  marginBottom: 12
+                }} />
+
+                {/* Action buttons */}
+                <TouchableOpacity
+                  onPress={handleReply}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    borderRadius: 8
+                  }}
+                >
+                  <Ionicons name="arrow-undo-outline" size={20} color={theme.onSurface} />
+                  <ThemedText style={{ marginLeft: 12, fontSize: 16, fontWeight: '500' }}>
+                    Répondre
+                  </ThemedText>
+                </TouchableOpacity>
+
+                {isSent && message.messageType === "text" && (
                   <TouchableOpacity
-                    key={index}
-                    onPress={() => handleReaction(reaction.emoji)}
-                    className="w-10 h-10 rounded-full items-center justify-center mx-1 active:bg-[#5865f2]"
+                    onPress={handleEdit}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: 12,
+                      paddingHorizontal: 16,
+                      borderRadius: 8
+                    }}
                   >
-                    <ThemedText >{reaction.emoji}</ThemedText>
+                    <Ionicons name="create-outline" size={20} color={theme.onSurface} />
+                    <ThemedText style={{ marginLeft: 12, fontSize: 16, fontWeight: '500' }}>
+                      Modifier
+                    </ThemedText>
                   </TouchableOpacity>
-                ))}
-              </ThemedView>
+                )}
 
-              {/* Separator */}
-              <ThemedView className="h-[1px]  mb-2" />
-
-              {/* Action buttons */}
-              <TouchableOpacity
-                onPress={handleReply}
-                className="flex-row items-center px-3 py-2 rounded-lg"
-              >
-                <Ionicons name="arrow-undo-outline" size={18} color="#b9bbbe" />
-                <ThemedText className="ml-3 ">Répondre</ThemedText>
-              </TouchableOpacity>
-
-              {isSent && message.messageType === "text" && (
                 <TouchableOpacity
-                  onPress={handleEdit}
-                  className="flex-row items-center px-3 py-2 rounded-lg active:bg-[#40444b]"
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    borderRadius: 8
+                  }}
                 >
-                  <Ionicons name="create-outline" size={18} color="#b9bbbe" />
-                  <ThemedText className="ml-3">Modifier</ThemedText>
+                  <Ionicons name="copy-outline" size={20} color={theme.onSurface} />
+                  <ThemedText style={{ marginLeft: 12, fontSize: 16, fontWeight: '500' }}>
+                    Copier
+                  </ThemedText>
                 </TouchableOpacity>
-              )}
 
-              <TouchableOpacity
-                onPress={() => {/* Copy functionality */}}
-                className="flex-row items-center px-3 py-2 rounded-lg active:bg-[#40444b]"
-              >
-                <Ionicons name="copy-outline" size={18} color="#b9bbbe" />
-                <ThemedText className="ml-3 text-[#dcddde] font-medium">Copier</ThemedText>
-              </TouchableOpacity>
-
-              {isSent && (
-                <TouchableOpacity
-                  onPress={handleDelete}
-                  className="flex-row items-center px-3 py-2 rounded-lg active:bg-[#40444b]"
-                >
-                  <Ionicons name="trash-outline" size={18} color={theme.error} />
-                  <ThemedText className="ml-3 ">Supprimer</ThemedText>
-                </TouchableOpacity>
-              )}
-            </Animated.View>
+                {isSent && (
+                  <TouchableOpacity
+                    onPress={handleDelete}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: 12,
+                      paddingHorizontal: 16,
+                      borderRadius: 8
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={theme.error} />
+                    <ThemedText style={{ 
+                      marginLeft: 12, 
+                      fontSize: 16, 
+                      fontWeight: '500',
+                      color: theme.error 
+                    }}>
+                      Supprimer
+                    </ThemedText>
+                  </TouchableOpacity>
+                )}
+              </Animated.View>
+            </View>
           </TouchableOpacity>
         </Animated.View>
       </Modal>
 
       {/* Edit Modal */}
       <Modal transparent visible={showEditModal} animationType="slide">
-        <ThemedView className="flex-1 justify-end">
-          <ThemedView className=" rounded-t-3xl p-6">
-            <ThemedText className=" mb-4">Modifier le message</ThemedText>
-            <TextInput
-              value={editText}
-              onChangeText={setEditText}
-              multiline
-              className="border border-[#40444b] rounded-lg p-4 text-[#dcddde] mb-4 min-h-[100px]"
-              placeholder="Tapez votre message..."
-              placeholderTextColor="#72767d"
-              style={{ backgroundColor: '#40444b' }}
-            />
-            <ThemedView className="flex-row justify-end space-x-3">
-              <TouchableOpacity
-                onPress={() => setShowEditModal(false)}
-                className="px-6 py-3 rounded-full bg-[#40444b]"
-              >
-                <Text className="font-medium text-[#dcddde]">Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  onEdit?.(message.msgId, editText);
-                  setShowEditModal(false);
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+            <View style={{
+              backgroundColor: theme.surface,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: 24,
+              paddingBottom: 40
+            }}>
+              <ThemedText style={{ 
+                fontSize: 20, 
+                fontWeight: '600', 
+                marginBottom: 16,
+                textAlign: 'center'
+              }}>
+                Modifier le message
+              </ThemedText>
+              
+              <TextInput
+                value={editText}
+                onChangeText={setEditText}
+                multiline
+                style={{
+                  backgroundColor: theme.surfaceVariant,
+                  borderRadius: 12,
+                  padding: 16,
+                  color: theme.onSurface,
+                  fontSize: 16,
+                  minHeight: 100,
+                  textAlignVertical: 'top',
+                  borderWidth: 1,
+                  borderColor: theme.outline + '30'
                 }}
-                className="px-6 py-3 rounded-full bg-[#5865f2]"
-              >
-                <ThemedText>Sauvegarder</ThemedText>
-              </TouchableOpacity>
-            </ThemedView>
-          </ThemedView>
-        </ThemedView>
+                placeholder="Tapez votre message..."
+                placeholderTextColor={theme.onSurface + '60'}
+              />
+              
+              <View style={{
+                flexDirection: 'row',
+                justifyContent: 'flex-end',
+                marginTop: 20,
+                gap: 12
+              }}>
+                <TouchableOpacity
+                  onPress={() => setShowEditModal(false)}
+                  style={{
+                    paddingHorizontal: 24,
+                    paddingVertical: 12,
+                    borderRadius: 24,
+                    backgroundColor: theme.surfaceVariant
+                  }}
+                >
+                  <ThemedText style={{ fontWeight: '600' }}>Annuler</ThemedText>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  onPress={() => {
+                    onEdit?.(editText);
+                    setShowEditModal(false);
+                  }}
+                  style={{
+                    paddingHorizontal: 24,
+                    paddingVertical: 12,
+                    borderRadius: 24,
+                    backgroundColor: theme.primary
+                  }}
+                >
+                  <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>
+                    Sauvegarder
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
       </Modal>
     </>
   );

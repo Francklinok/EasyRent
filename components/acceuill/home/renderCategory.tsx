@@ -254,9 +254,9 @@ const RenderCategoryTabs = ({
             onPress={onToggleView}
             activeOpacity={0.8}
             style={{
-              backgroundColor: theme.success,
+              backgroundColor: theme.success + '10',
               borderRadius: 20,
-              padding: 10,
+              padding: 8,
               // elevation: 4,
               // shadowColor: theme.primary,
               // shadowOffset: { width: 0, height: 3 },
@@ -269,7 +269,7 @@ const RenderCategoryTabs = ({
             <MaterialCommunityIcons
               name={viewType === "list" ? "view-grid" : "view-list"}
               size={22}
-              color={theme.text}
+              color={theme.text + '80'}
             />
           </TouchableOpacity>
         </ThemedView>

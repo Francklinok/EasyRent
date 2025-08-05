@@ -327,7 +327,7 @@ const ActionButtons = React.memo(({
   }), []);
 
   return (
-    <ThemedView style={{ flexDirection: 'row', gap: 8, paddingTop: 4 }}>
+    <ThemedView style={{ flexDirection: 'row', gap: 8, paddingBottom:8}}>
       <TouchableOpacity
         onPress={onPress}
         style={{ flex: 1, borderRadius: 16, overflow: 'hidden' }}
@@ -590,10 +590,10 @@ const RenderItem: React.FC<Props> = ({
           borderWidth: 1,
           borderColor: theme.outline + '50',
           shadowColor: theme.shadowColor || '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.12,
-          shadowRadius: 16,
-          elevation: 8,
+          shadowOffset: { width: 0, height:2  },
+          // shadowOpacity: 0.12,2
+          // shadowRadius: 16,
+          // elevation: 8,
         }}
       >
         <LinearGradient colors={theme.cardGradient} style={{ overflow: 'hidden', position: 'relative' }}>

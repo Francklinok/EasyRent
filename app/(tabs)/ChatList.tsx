@@ -1,25 +1,31 @@
 import React, { useState } from 'react';
-import { FlatList, Image, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { FlatList, TextInput, TouchableOpacity, Dimensions } from 'react-native';
 import { MotiView, AnimatePresence } from 'moti';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import { Image } from 'expo-image';
 import Header from '@/components/ui/header';
 import { router } from 'expo-router';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/components/contexts/theme/themehook';
-import messageData from '@/assets/data/messagedata';
+import chatListData from '@/assets/data/chatListData';
+import { ChatListItem, FilterType, SortType, MenuAction } from '@/types/ChatListTypes';
+
+const { width } = Dimensions.get('window');
 
 export default function ChatList() {
   const { theme } = useTheme();
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'unread', 'archived'
-  const [sortBy, setSortBy] = useState('recent'); // 'recent', 'name', 'unread'
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [sortBy, setSortBy] = useState<SortType>('recent');
   const [showMenu, setShowMenu] = useState(false);
 
   // Filter messages based on active filter
-  const getFilteredMessages = () => {
-    let filtered = messageData;
+  const getFilteredMessages = (): ChatListItem[] => {
+    let filtered = chatListData;
 
     // Apply filter
     switch (activeFilter) {
@@ -47,10 +53,15 @@ export default function ChatList() {
         filtered.sort((a, b) => a.sender.name.localeCompare(b.sender.name));
         break;
       case 'unread':
-        filtered.sort((a, b) => (b.count || 0) - (a.count || 0));
+        filtered.sort((a, b) => b.count - a.count);
         break;
       default: // recent
-        filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        filtered.sort((a, b) => {
+          if (a.timestamp.includes(':') && b.timestamp.includes(':')) {
+            return b.timestamp.localeCompare(a.timestamp);
+          }
+          return a.timestamp.localeCompare(b.timestamp);
+        });
     }
 
     return filtered;
@@ -59,8 +70,8 @@ export default function ChatList() {
   const filteredMessages = getFilteredMessages();
 
   // Count unread messages
-  const unreadCount = messageData.reduce((total, item) => total + (item.count || 0), 0);
-  const totalUnreadChats = messageData.filter(item => item.count > 0).length;
+  const unreadCount = chatListData.reduce((total, item) => total + item.count, 0);
+  const totalUnreadChats = chatListData.filter(item => item.count > 0).length;
 
   // Handle new chat
   const handleNewChat = () => {
@@ -68,20 +79,20 @@ export default function ChatList() {
   };
 
   // Handle menu actions
-  const handleMenuAction = (action) => {
+  const handleMenuAction = (action: MenuAction) => {
     setShowMenu(false);
     switch (action) {
       case 'settings':
-        router.navigate('/settings');
+        router.navigate('/chat/settings');
         break;
       case 'archive':
-        router.navigate('/archived-chats');
+        router.navigate('/chat/archived');
         break;
       case 'starred':
-        router.navigate('/starred-messages');
+        router.navigate('/chat/starred');
         break;
       case 'broadcast':
-        router.navigate('/broadcast');
+        router.navigate('/chat/broadcast');
         break;
       default:
         break;
@@ -90,7 +101,7 @@ export default function ChatList() {
 
   // Toggle sort
   const toggleSort = () => {
-    const sorts = ['recent', 'name', 'unread'];
+    const sorts: SortType[] = ['recent', 'name', 'unread'];
     const currentIndex = sorts.indexOf(sortBy);
     const nextIndex = (currentIndex + 1) % sorts.length;
     setSortBy(sorts[nextIndex]);
@@ -105,7 +116,7 @@ export default function ChatList() {
   };
 
   const rightHeaderElement = (
-    <ThemedView className="flex-row items-center gap-2">
+    <ThemedView  className="flex-row items-center gap-2" style = {{backgroundColor:theme.surfaceVariant + "20"}}>
       {/* Search Toggle Button */}
       <TouchableOpacity 
         onPress={() => {
@@ -154,7 +165,7 @@ export default function ChatList() {
             transition={{ type: 'timing', duration: 200 }}
             className="absolute top-12 right-0 z-50"
             style={{
-              backgroundColor: theme.surface,
+              backgroundColor: theme.surfaceVariant,
               borderRadius: 12,
               shadowColor: theme.onSurface,
               shadowOpacity: 0.15,
@@ -165,10 +176,10 @@ export default function ChatList() {
             }}
           >
             {[
-              { id: 'starred', icon: 'star-outline', label: 'Favoris' },
-              { id: 'archive', icon: 'archive-outline', label: 'Archivés' },
-              { id: 'broadcast', icon: 'megaphone-outline', label: 'Diffusion' },
-              { id: 'settings', icon: 'settings-outline', label: 'Paramètres' },
+              { id: 'starred' as MenuAction, icon: 'star-outline', label: 'Favoris' },
+              { id: 'archive' as MenuAction, icon: 'archive-outline', label: 'Archivés' },
+              { id: 'broadcast' as MenuAction, icon: 'megaphone-outline', label: 'Diffusion' },
+              { id: 'settings' as MenuAction, icon: 'settings-outline', label: 'Paramètres' },
             ].map((item, index) => (
               <TouchableOpacity
                 key={item.id}
@@ -192,7 +203,7 @@ export default function ChatList() {
   const leftHeaderElement = (
     <ThemedView className="flex-row items-center">
       <ThemedView className="flex-row items-center">
-        <ThemedText className="text-xl font-bold" style={{ color: theme.onSurface }}>
+        <ThemedText type = "subtitle" style={{ color: theme.onSurface }}>
           Messages
         </ThemedText>
         {unreadCount > 0 && (
@@ -204,7 +215,7 @@ export default function ChatList() {
           >
             <ThemedView
               className="px-2 py-0.5 rounded-full min-w-[20px] items-center justify-center"
-              style={{ backgroundColor: theme.error }}
+              style={{ backgroundColor: theme.error +'40' }}
             >
               <ThemedText className="text-white text-xs font-bold">
                 {unreadCount > 99 ? '99+' : unreadCount}
@@ -217,7 +228,7 @@ export default function ChatList() {
   );
 
   return (
-    <ThemedView className="flex-1 pt-2">
+    <ThemedView className="flex-1 pt-1">
       <Header 
         leftElement={leftHeaderElement}
         rightElement={rightHeaderElement} 
@@ -268,22 +279,22 @@ export default function ChatList() {
 
       {/* Improved Filter and Sort Section */}
       <ThemedView 
-        className="px-4 py-3"
+        className="px-4 py-2"
       >
         <ThemedView className="flex-row items-center justify-between">
           {/* Filter Buttons */}
           <ThemedView className="flex-row items-center">
             {[
-              { id: 'all', label: 'Tout', icon: 'chatbubbles-outline', count: messageData.filter(m => !m.isArchived).length },
-              { id: 'unread', label: 'Non lus', icon: 'mail-unread-outline', count: totalUnreadChats },
-              { id: 'archived', label: 'Archivés', icon: 'archive-outline', count: messageData.filter(m => m.isArchived).length || 0 },
+              { id: 'all' as FilterType, label: 'Tout', icon: 'chatbubbles-outline', count: chatListData.filter(m => !m.isArchived).length },
+              { id: 'unread' as FilterType, label: 'Non lus', icon: 'mail-unread-outline', count: totalUnreadChats },
+              { id: 'archived' as FilterType, label: 'Archivés', icon: 'archive-outline', count: chatListData.filter(m => m.isArchived).length },
             ].map((filter, index) => (
               <TouchableOpacity
                 key={filter.id}
                 onPress={() => setActiveFilter(filter.id)}
-                className="mr-3 px-4 py-2 rounded-full flex-row items-center"
+                className="mr-2 px-2 py-2 rounded-full flex-row items-center"
                 style={{ 
-                  backgroundColor: activeFilter === filter.id ? theme.primary : theme.surfaceVariant,
+                  backgroundColor: activeFilter === filter.id ? theme.primary +'90' : theme.surfaceVariant,
                   minHeight: 36,
                 }}
               >
@@ -369,7 +380,7 @@ export default function ChatList() {
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 24 }}
-            renderItem={({ item }) => (
+            renderItem={({ item }: { item: ChatListItem }) => (
               <TouchableOpacity
                 onPress={() =>
                   router.navigate({
@@ -391,21 +402,23 @@ export default function ChatList() {
                     exit={{ opacity: 0, translateY: 10 }}
                     transition={{ type: 'timing', duration: 300 }}
                   >
-                    <ThemedView variant ="surfaceVariant"
-                      className="flex-row items-center px-4 py-4 rounded-2xl"
+                    <ThemedView 
+                      className="flex-row items-center px-4 py-2 "
                       style={{
                         // backgroundColor: item.count > 0 ? theme.primary + '08' : theme.surfaceVariant,
                         shadowColor: theme.onSurface,
                         shadowOpacity: 0.08,
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowRadius: 8,
-                        elevation: 2,
-                        borderLeftWidth: item.count > 0 ? 3 : 0,
-                        borderLeftColor: theme.primary,
+                        shadowOffset: { width: 0, height: 1 },
+                        borderBottomWidth:1,
+                        borderBottomColor:theme.outline
+                        // shadowRadius: 8,
+                        // elevation: 1,
+                        // borderLeftWidth: item.count > 0 ? 3 : 0,
+                        // borderLeftColor: theme.surface,
                       }}
                     >
                       {/* Avatar */}
-                      <ThemedView variant ="surfaceVariant"
+                      <ThemedView 
                         className="w-14 h-14 rounded-full overflow-hidden mr-4 relative"
                         style={{
                           borderColor: item.status === 'online' ? theme.success : theme.outline,
@@ -425,23 +438,26 @@ export default function ChatList() {
                       </ThemedView>
 
                       {/* Content */}
-                      <ThemedView variant ="surfaceVariant" className="flex-1 mr-3">
-                        <ThemedView variant ="surfaceVariant" className="flex-row items-center mb-1">
+                      <ThemedView className="flex-1 mr-3">
+                        <ThemedView className="flex-row items-center mb-1">
                           <ThemedText 
-                            className="text-base font-semibold flex-1" 
+                            // className="text-base font-semibold flex-1" 
                             style={{ 
                               color: theme.onSurface,
-                              fontWeight: item.count > 0 ? '700' : '600'
+                              fontWeight: item.count > 0 ? '700' : '600',
+                              // fontSize:12
                             }}
                           >
                             {item.sender.name}
                           </ThemedText>
+
+                          
                           {item.isBot && (
-                            <ThemedView variant ="surfaceVariant"
+                            <ThemedView 
                               className="ml-2 px-2 py-0.5 rounded-full"
                               style={{ backgroundColor: theme.primary + '20' }}
                             >
-                              <ThemedText className="text-xs font-bold" style={{ color: theme.primary }}>
+                              <ThemedText  style={{ color: theme.primary }}>
                                 IA
                               </ThemedText>
                             </ThemedView>
@@ -460,14 +476,14 @@ export default function ChatList() {
                         </ThemedText>
 
                         {item.status && item.status !== 'online' && (
-                          <ThemedText className="text-xs mt-1" style={{ color: theme.success }}>
+                          <ThemedText intensity = "strong" className=" mt-1" style={{ color: theme.success, fontSize:10 }}>
                             {item.status}
                           </ThemedText>
                         )}
                       </ThemedView>
 
                       {/* Right Side Info */}
-                      <ThemedView variant ="surfaceVariant" className="items-end justify-center min-w-[60px]">
+                      <ThemedView className="items-end justify-center min-w-[60px]">
                         <ThemedText className="text-xs mb-1" style={{ color: theme.onSurface + '60' }}>
                           {item.timestamp}
                         </ThemedText>
@@ -481,9 +497,9 @@ export default function ChatList() {
                           >
                             <ThemedView variant ="surfaceVariant"
                               className="px-2 py-1 rounded-full items-center justify-center min-w-[24px]"
-                              style={{ backgroundColor: theme.primary }}
+                              style={{ backgroundColor: theme.success }}
                             >
-                              <ThemedText className="text-xs text-white font-bold">
+                              <ThemedText intensity='strong' style = {{color:theme.surface}}>
                                 {item.count > 99 ? '99+' : item.count}
                               </ThemedText>
                             </ThemedView>
@@ -493,10 +509,10 @@ export default function ChatList() {
                         {/* Message Status */}
                         {item.isSentByCurrentUser && !item.count && (
                           <ThemedView variant = "surfaceVariant" className="mt-1">
-                            {item.statusIcon === 'sent' && <ThemedText className="text-xs">✓</ThemedText>}
-                            {item.statusIcon === 'delivered' && <ThemedText className="text-xs">✓✓</ThemedText>}
+                            {item.statusIcon === 'sent' && <ThemedText style={{ color: theme.star }} className="text-xs">✓</ThemedText>}
+                            {item.statusIcon === 'delivered' && <ThemedText  className="text-xs">✓</ThemedText>}
                             {item.statusIcon === 'read' && (
-                              <ThemedText className="text-xs" style={{ color: theme.primary }}>✓✓</ThemedText>
+                              <ThemedText className="text-xs" style={{ color: theme.success }}>✓✓</ThemedText>
                             )}
                           </ThemedView>
                         )}

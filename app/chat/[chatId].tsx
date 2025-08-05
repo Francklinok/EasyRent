@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, Alert, Keyboard, Dimensions } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import MessageDisplay from '@/components/messages/chat/MessageBody';
 import MessageFooter from '@/components/messages/chat/MessageFooter';
@@ -9,85 +9,80 @@ import { RouteProp } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { messageService } from '@/services/messageService/chatService';
+import messageData from '@/assets/data/messagedata';
+import chatListData from '@/assets/data/chatListData';
 
 export default function ChatComponent() {
   const route = useRoute<RouteProp<RootStackParamList, 'Chat'>>();
   const { chatId, name, image, status } = route.params;
   
-  // Simuler un userId - à remplacer par l'authentification réelle
   const userId = "current_user_id"; 
   
   const [messages, setMessages] = useState<FrontendMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [replyTo, setReplyTo] = useState<FrontendMessage | undefined>(undefined);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
-    // Messages de test pour le développement
-    const testMessages: FrontendMessage[] = [
-      {
-        msgId: "msg_1",
-        senderId: "other_user",
-        conversationId: chatId,
-        messageType: "text",
-        content: "Salut ! Comment ça va ?",
-        reactions: [],
-        mentions: [],
-        status: {
-          sent: new Date().toISOString(),
-          delivered: [],
-          read: []
-        },
-        isDeleted: false,
-        deletedFor: [],
-        canRestore: true,
-        isEdited: false,
-        editHistory: [],
-        createdAt: new Date(Date.now() - 3600000).toISOString()
-      },
-      {
-        msgId: "msg_2",
-        senderId: userId,
-        conversationId: chatId,
-        messageType: "text",
-        content: "Ça va bien merci ! Et toi ?",
-        reactions: [],
-        mentions: [],
-        status: {
-          sent: new Date().toISOString(),
-          delivered: [],
-          read: []
-        },
-        isDeleted: false,
-        deletedFor: [],
-        canRestore: true,
-        isEdited: false,
-        editHistory: [],
-        createdAt: new Date(Date.now() - 1800000).toISOString()
-      },
-      {
-        msgId: "msg_3",
-        senderId: "other_user",
-        conversationId: chatId,
-        messageType: "text",
-        content: "Super ! Tu veux qu'on se voit demain ?",
-        reactions: [],
-        mentions: [],
-        status: {
-          sent: new Date().toISOString(),
-          delivered: [],
-          read: []
-        },
-        isDeleted: false,
-        deletedFor: [],
-        canRestore: true,
-        isEdited: false,
-        editHistory: [],
-        createdAt: new Date(Date.now() - 900000).toISOString()
-      }
-    ];
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    const chatMessages = messageData.filter(msg => {
+      const chatInfo = chatListData.find(chat => chat.id === chatId);
+      if (!chatInfo) return false;
+      
+      return msg.sender?.name === chatInfo.sender.name || 
+             msg.senderId === userId ||
+             msg.conversationId === chatId;
+    });
     
-    setMessages(testMessages);
+    if (chatMessages.length === 0) {
+      const chatInfo = chatListData.find(chat => chat.id === chatId);
+      if (chatInfo) {
+        const sampleMessages: FrontendMessage[] = [
+          {
+            msgId: `${chatId}_1`,
+            senderId: chatInfo.sender.name === 'EasyBot' ? 'bot-001' : 'other_user',
+            sender: chatInfo.sender,
+            conversationId: chatId,
+            messageType: 'text',
+            content: chatInfo.content,
+            reactions: [],
+            mentions: [],
+            status: {
+              sent: new Date().toISOString(),
+              delivered: [],
+              read: []
+            },
+            isDeleted: false,
+            deletedFor: [],
+            canRestore: true,
+            isEdited: false,
+            editHistory: [],
+            createdAt: new Date(Date.now() - 1800000).toISOString(),
+            isBot: chatInfo.isBot
+          }
+        ];
+        setMessages(sampleMessages);
+      }
+    } else {
+      const sortedMessages = chatMessages.sort((a, b) => 
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      setMessages(sortedMessages);
+    }
   }, [chatId, userId]);
 
   const handleSendMessage = async (
@@ -99,7 +94,6 @@ export default function ChatComponent() {
   ) => {
     if (!content.trim() && messageType === 'text') return;
 
-    // Créer un message temporaire pour l'affichage immédiat
     const tempMessage: FrontendMessage = {
       msgId: `temp_${Date.now()}`,
       senderId: userId,
@@ -123,13 +117,9 @@ export default function ChatComponent() {
       createdAt: new Date().toISOString()
     };
 
-    // Ajouter immédiatement le message à la liste
-    setMessages(prevMessages => [tempMessage, ...prevMessages]);
-    
-    // Réinitialiser la réponse
+    setMessages(prevMessages => [...prevMessages, tempMessage]);
     setReplyTo(undefined);
 
-    // En production, envoyer au serveur
     try {
       let result;
 
@@ -178,14 +168,12 @@ export default function ChatComponent() {
       }
 
       if (result?.success && result.message) {
-        // Remplacer le message temporaire par le message confirmé
         setMessages(prevMessages => 
           prevMessages.map(msg => 
             msg.msgId === tempMessage.msgId ? result.message! : msg
           )
         );
       } else if (result?.error) {
-        // En cas d'erreur, retirer le message temporaire
         setMessages(prevMessages => 
           prevMessages.filter(msg => msg.msgId !== tempMessage.msgId)
         );
@@ -193,7 +181,6 @@ export default function ChatComponent() {
       }
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
-      // En mode développement sans serveur, garder le message temporaire
       console.log('Mode développement : message gardé localement');
     }
   };
@@ -212,7 +199,6 @@ export default function ChatComponent() {
     try {
       const success = await messageService.markAsRead(messageId, userId);
       if (success) {
-        // Mettre à jour le statut local du message
         setMessages(prevMessages =>
           prevMessages.map(msg =>
             msg.msgId === messageId
@@ -290,47 +276,36 @@ export default function ChatComponent() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
-    >
-      <ThemedView className="flex-1 justify-between">
-        <StatusBar hidden={true} />
-
-        <ThemedView className="pt-2">
-          <FlatList
-            data={messages}
-            keyExtractor={(item) => item.msgId}
-            renderItem={({ item }) => (
-              <MessageDisplay 
-                message={item}
-                currentUserId={userId}
-                onReply={() => handleReply(item)}
-                onDelete={() => handleDeleteMessage(item.msgId)}
-                onReact={(emoji: string) => handleReactToMessage(item.msgId, emoji)}
-                onMarkAsRead={() => handleMarkAsRead(item.msgId)}
-              />
-            )}
-            inverted
-            showsVerticalScrollIndicator={false}
-            refreshing={isLoading}
-            onRefresh={() => {
-              console.log('Mode développement : pas de rechargement serveur');
-            }}
-          />
-        </ThemedView>
-
-        <ThemedView className="px-2 pb-4 ">
-          <MessageFooter 
-            onSend={handleSendMessage}
-            onTypingChange={handleTypingStatusChange}
-            isLoading={isLoading}
-            replyTo={replyTo}
-            onCancelReply={handleCancelReply}
-          />
-        </ThemedView>
+    <ThemedView className="flex-1 pb-14">
+      <StatusBar hidden={true} />
+      <ThemedView style={{ flex: 1, paddingBottom: keyboardHeight }}>
+        <FlatList
+          data={messages}
+          keyExtractor={(item) => item.msgId}
+          renderItem={({ item }) => (
+            <MessageDisplay 
+              message={item}
+              currentUserId={userId}
+              onReply={() => handleReply(item)}
+              onDelete={() => handleDeleteMessage(item.msgId)}
+              onReact={(emoji: string) => handleReactToMessage(item.msgId, emoji)}
+              onMarkAsRead={() => handleMarkAsRead(item.msgId)}
+            />
+          )}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingVertical: 8, paddingBottom: 16 }}
+          style={{ flex: 1 }}
+          keyboardShouldPersistTaps="handled"
+        />
+        
+        <MessageFooter
+          onSendMessage={handleSendMessage}
+          onTypingStatusChange={handleTypingStatusChange}
+          replyTo={replyTo}
+          onCancelReply={handleCancelReply}
+          isLoading={isLoading}
+        />
       </ThemedView>
-    </KeyboardAvoidingView>
+    </ThemedView>
   );
 }

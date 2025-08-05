@@ -76,6 +76,7 @@ export interface FrontendMessage {
   };
   createdAt: string;
   updatedAt?: string;
+  isBot?: boolean
 }
 
 export interface FrontendConversation {
