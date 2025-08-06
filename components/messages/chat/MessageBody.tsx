@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,10 +11,11 @@ import {
   Dimensions,
   Vibration,
   TextInput,
+  Linking,
+  Clipboard,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { MessageBodyProps } from "@/types/MessageTypes";
 import { ThemedText } from "@/components/ui/ThemedText";
 import { ThemedView } from "@/components/ui/ThemedView";
@@ -35,66 +36,48 @@ const MessageDisplay = ({
   const [showEditModal, setShowEditModal] = useState(false);
   const [editText, setEditText] = useState(message.content);
   const [isPressed, setIsPressed] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const contextMenuScale = useRef(new Animated.Value(0)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const actionsOpacity = useRef(new Animated.Value(0)).current;
 
   const isSent = message.senderId === currentUserId;
   const senderAvatar = message.sender?.avatar || `https://ui-avatars.com/api/?name=${message.sender?.name || 'User'}&background=random`;
   const senderName = message.sender?.name || 'Unknown';
   const { theme } = useTheme();
 
-  const messageColors = isSent 
-    ? {
-        background: theme.primary,
-        text: '#FFFFFF',
-        textSecondary: 'rgba(255,255,255,0.8)',
-        border: theme.primary + '20'
-      }
-    : {
-        background: theme.surfaceVariant,
-        text: theme.onSurface,
-        textSecondary: theme.onSurface + '80',
-        border: theme.outline + '30'
-      };
-
-  const reactionEmojis = [
-    '👍', '❤️', '😂', '😮', '😢', '😡', '🔥', '👀'
-  ];
-
-  const handlePressIn = () => {
-    setIsPressed(true);
-    Animated.spring(scaleAnim, {
-      toValue: 0.98,
-      useNativeDriver: true,
-    }).start();
-
-    longPressTimer.current = setTimeout(() => {
-      if (isPressed) {
-        Vibration.vibrate(50);
-        showContextMenuAnimated();
-      }
-    }, 600);
+  const colors = {
+    primary: '#1DA1F2',
+    primaryHover: '#1A91DA',
+    background: theme.surface,
+    backgroundHover: theme.surfaceVariant + '30',
+    text: theme.onSurface,
+    textSecondary: theme.onSurface + '70',
+    textMuted: theme.onSurface + '50',
+    border: theme.outline + '20',
+    like: '#F91880',
+    retweet: '#17BF63',
+    verified: '#1DA1F2',
+    link: '#1DA1F2'
   };
 
-  const handlePressOut = () => {
-    setIsPressed(false);
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start();
+  const reactionEmojis = ['❤️', '😂', '😮', '😢', '😡', '👍', '👎', '🔥'];
 
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
+  useEffect(() => {
+    if (onMarkAsRead && !isSent) {
+      onMarkAsRead();
     }
+  }, []);
+
+  const handleLongPress = () => {
+    Vibration.vibrate(50);
+    showContextMenuAnimated();
   };
 
   const showContextMenuAnimated = () => {
     setShowContextMenu(true);
-    
     Animated.parallel([
       Animated.timing(overlayOpacity, {
         toValue: 1,
@@ -126,43 +109,51 @@ const MessageDisplay = ({
     });
   };
 
+  const showActionsAnimated = () => {
+    setShowActions(true);
+    Animated.timing(actionsOpacity, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const hideActions = () => {
+    Animated.timing(actionsOpacity, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowActions(false);
+    });
+  };
+
   const handleReaction = (emoji: string) => {
     onReact?.(emoji);
     hideContextMenu();
-    
-    Animated.sequence([
-      Animated.spring(scaleAnim, {
-        toValue: 1.05,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-      })
-    ]).start();
+  };
+
+  const handleCopy = async () => {
+    await Clipboard.setStringAsync(message.content);
+    hideContextMenu();
+    Alert.alert("Copié", "Message copié dans le presse-papiers");
   };
 
   const handleDelete = () => {
     hideContextMenu();
-    setTimeout(() => {
-      Alert.alert(
-        "Supprimer le message",
-        "Êtes-vous sûr de vouloir supprimer ce message ?",
-        [
-          { text: "Annuler", style: "cancel" },
-          {
-            text: "Supprimer",
-            style: "destructive",
-            onPress: () => onDelete?.()
-          }
-        ]
-      );
-    }, 200);
+    Alert.alert(
+      "Supprimer le message",
+      "Êtes-vous sûr de vouloir supprimer ce message ?",
+      [
+        { text: "Annuler", style: "cancel" },
+        { text: "Supprimer", style: "destructive", onPress: () => onDelete?.() }
+      ]
+    );
   };
 
   const handleEdit = () => {
     hideContextMenu();
-    setTimeout(() => setShowEditModal(true), 200);
+    setShowEditModal(true);
   };
 
   const handleReply = () => {
@@ -170,54 +161,155 @@ const MessageDisplay = ({
     onReply?.();
   };
 
+  const parseTextContent = (text: string) => {
+    const linkRegex = /(https?:\/\/[^\s]+)/g;
+    const mentionRegex = /@(\w+)/g;
+    const hashtagRegex = /#(\w+)/g;
+    
+    const parts = [];
+    let lastIndex = 0;
+
+    const allMatches = [
+      ...Array.from(text.matchAll(linkRegex)).map(m => ({ ...m, type: 'link' })),
+      ...Array.from(text.matchAll(mentionRegex)).map(m => ({ ...m, type: 'mention' })),
+      ...Array.from(text.matchAll(hashtagRegex)).map(m => ({ ...m, type: 'hashtag' })),
+    ].sort((a, b) => a.index! - b.index!);
+
+    allMatches.forEach((match, i) => {
+      if (match.index! > lastIndex) {
+        parts.push({
+          type: 'text',
+          content: text.slice(lastIndex, match.index),
+          key: `text-${i}`
+        });
+      }
+
+      parts.push({
+        type: match.type,
+        content: match[0],
+        key: `${match.type}-${i}`
+      });
+
+      lastIndex = match.index! + match[0].length;
+    });
+
+    if (lastIndex < text.length) {
+      parts.push({
+        type: 'text',
+        content: text.slice(lastIndex),
+        key: 'text-end'
+      });
+    }
+
+    return parts.length > 0 ? parts : [{ type: 'text', content: text, key: 'text-only' }];
+  };
+
+  const renderTextPart = (part: any) => {
+    switch (part.type) {
+      case 'link':
+        return (
+          <ThemedText
+            key={part.key}
+            style={{ color: colors.link, textDecorationLine: 'underline' }}
+            onPress={() => Linking.openURL(part.content)}
+          >
+            {part.content}
+          </ThemedText>
+        );
+      case 'mention':
+        return (
+          <ThemedText
+            key={part.key}
+            style={{ color: colors.primary, fontWeight: '500' }}
+          >
+            {part.content}
+          </ThemedText>
+        );
+      case 'hashtag':
+        return (
+          <ThemedText
+            key={part.key}
+            style={{ color: colors.primary, fontWeight: '500' }}
+          >
+            {part.content}
+          </ThemedText>
+        );
+      default:
+        return (
+          <ThemedText key={part.key} style={{ color: colors.text }}>
+            {part.content}
+          </ThemedText>
+        );
+    }
+  };
+
   const renderMessageContent = () => {
     switch (message.messageType) {
       case "text":
+        const textParts = parseTextContent(message.content);
         return (
-          <ThemedText 
-            style={{ 
-              color: messageColors.text,
-              fontSize: 16,
-              lineHeight: 22
-            }}
-          >
-            {message.content}
+          <ThemedText style={{ fontSize: 15, lineHeight: 20, marginTop: 2 }}>
+            {textParts.map(renderTextPart)}
           </ThemedText>
         );
 
       case "image":
         return (
-          <View style={{ marginTop: 4, borderRadius: 12, overflow: 'hidden' }}>
+          <View style={{ 
+            marginTop: 12, 
+            borderRadius: 16, 
+            overflow: 'hidden', 
+            borderWidth: 1,
+            borderColor: colors.border
+          }}>
             <Image
               source={{ uri: message.content }}
               style={{ 
-                width: screenWidth * 0.65, 
-                height: 200,
-                borderRadius: 12
+                width: '100%', 
+                height: 200, 
+                borderRadius: 16 
               }}
               resizeMode="cover"
             />
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.3)']}
-              style={{
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: 40,
-                justifyContent: 'flex-end',
-                paddingHorizontal: 12,
-                paddingBottom: 8
-              }}
-            >
-              <Ionicons name="expand" size={16} color="white" />
-            </LinearGradient>
           </View>
+        );
+
+      case "video":
+        return (
+          <ThemedView style={{
+            marginTop: 12,
+            borderRadius: 16,
+            backgroundColor: colors.backgroundHover,
+            padding: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            borderWidth: 1,
+            borderColor: colors.border
+          }}>
+            <ThemedView style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: colors.primary,
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Ionicons name="play" size={20} color="white" />
+            </ThemedView>
+            <ThemedView style={{ marginLeft: 12, flex: 1 }}>
+              <ThemedText style={{ color: colors.text, fontWeight: '600', fontSize: 15 }}>
+                Vidéo
+              </ThemedText>
+              <ThemedText style={{ color: colors.textSecondary, fontSize: 13 }}>
+                Cliquer pour lire
+              </ThemedText>
+            </ThemedView>
+          </ThemedView>
         );
 
       default:
         return (
-          <ThemedText style={{ color: messageColors.text }}>
+          <ThemedText style={{ color: colors.text, fontSize: 15, lineHeight: 20 }}>
             {message.content}
           </ThemedText>
         );
@@ -226,146 +318,263 @@ const MessageDisplay = ({
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const now = new Date();
+    const diffInMinutes = (now.getTime() - date.getTime()) / (1000 * 60);
+    
+    if (diffInMinutes < 1) return "maintenant";
+    if (diffInMinutes < 60) return `${Math.floor(diffInMinutes)}m`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
+  const getVerifiedBadge = () => {
+    if (message.isBot) {
+      return (
+        <Ionicons 
+          name="checkmark-circle" 
+          size={16} 
+          color={colors.verified} 
+          style={{ marginLeft: 4 }}
+        />
+      );
+    }
+    return null;
   };
 
   return (
     <>
-      <View style={{
-        marginBottom: 8,
-        paddingHorizontal: 16,
-        alignItems: isSent ? 'flex-end' : 'flex-start'
-      }}>
-        <View style={{
-          flexDirection: isSent ? 'row-reverse' : 'row',
-          maxWidth: '85%',
-          alignItems: 'flex-end'
-        }}>
-          {/* Avatar */}
-          {!isSent && (
-            <View style={{ marginRight: 8, marginBottom: 4 }}>
+      <Pressable
+        onLongPress={handleLongPress}
+        onPressIn={() => {
+          Animated.spring(scaleAnim, {
+            toValue: 0.98,
+            useNativeDriver: true,
+          }).start();
+          showActionsAnimated();
+        }}
+        onPressOut={() => {
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+          }).start();
+          setTimeout(hideActions, 2000);
+        }}
+      >
+        <Animated.View
+          style={{
+            transform: [{ scale: scaleAnim }],
+            backgroundColor: colors.background,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            borderBottomWidth: 0.5,
+            borderBottomColor: colors.border
+          }}
+        >
+          <ThemedView style={{ flexDirection: 'row' }}>
+            {/* Avatar */}
+            <TouchableOpacity style={{ marginRight: 12 }}>
               <Image
                 source={{ uri: senderAvatar }}
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  borderWidth: 2,
-                  borderColor: theme.outline + '30'
+                  width: 40,
+                  height: 40,
+                  borderRadius: 24
                 }}
               />
-            </View>
-          )}
+            </TouchableOpacity>
 
-          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-            <Pressable
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
-            >
-              {/* Message bubble */}
-              <View style={{
-                backgroundColor: messageColors.background,
-                borderRadius: 20,
-                borderBottomLeftRadius: isSent ? 20 : 6,
-                borderBottomRightRadius: isSent ? 6 : 20,
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                borderWidth: 1,
-                borderColor: messageColors.border,
-                shadowColor: theme.onSurface,
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 3
+            {/* Content */}
+            <ThemedView style={{ flex: 1, minWidth: 0 }}>
+              {/* Header */}
+              <ThemedView style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                marginBottom: 2,
+                flexWrap: 'wrap'
               }}>
-                {/* Sender name for received messages */}
-                {!isSent && (
-                  <ThemedText 
-                    style={{ 
-                      color: theme.primary,
-                      fontSize: 12,
-                      fontWeight: '600',
-                      marginBottom: 4
-                    }}
-                  >
-                    {senderName}
-                  </ThemedText>
-                )}
+                <ThemedText style={{
+                  color: colors.text,
+                  fontWeight: '700',
+                  fontSize: 15,
+                  marginRight: 4
+                }}>
+                  {senderName}
+                </ThemedText>
+                {getVerifiedBadge()}
+                <ThemedText style={{
+                  color: colors.textSecondary,
+                  fontSize: 15,
+                  marginLeft: 4
+                }}>
+                  @{senderName.toLowerCase().replace(' ', '')}
+                </ThemedText>
+                <ThemedText style={{
+                  color: colors.textMuted,
+                  fontSize: 15,
+                  marginLeft: 4
+                }}>
+                  · {formatTime(message.createdAt)}
+                  {message.isEdited && " · modifié"}
+                </ThemedText>
+              </ThemedView>
 
-                {/* Message content */}
+              {/* Message Content */}
+              <ThemedView style={{ marginBottom: 8 }}>
                 {renderMessageContent()}
+              </ThemedView>
 
-                {/* Reactions */}
-                {message.reactions && message.reactions.length > 0 && (
-                  <View style={{
-                    flexDirection: 'row',
-                    flexWrap: 'wrap',
-                    marginTop: 8,
-                    marginBottom: -4
-                  }}>
-                    {message.reactions.map((reaction, index) => (
-                      <View
-                        key={index}
-                        style={{
-                          backgroundColor: theme.surface,
-                          borderRadius: 12,
-                          paddingHorizontal: 8,
-                          paddingVertical: 4,
-                          marginRight: 4,
-                          marginBottom: 4,
-                          borderWidth: 1,
-                          borderColor: theme.outline + '20'
-                        }}
-                      >
-                        <Text style={{ fontSize: 14 }}>{reaction.emoji}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
+              {/* Reactions */}
+              {message.reactions && message.reactions.length > 0 && (
+                <ThemedView style={{ 
+                  flexDirection: 'row', 
+                  flexWrap: 'wrap', 
+                  marginBottom: 8 
+                }}>
+                  {message.reactions.map((reaction, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      onPress={() => handleReaction(reaction.emoji)}
+                      style={{
+                        backgroundColor: colors.backgroundHover,
+                        borderRadius: 16,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                        marginRight: 6,
+                        marginBottom: 4,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        borderWidth: 1,
+                        borderColor: colors.border
+                      }}
+                    >
+                      <Text style={{ fontSize: 14, marginRight: 4 }}>
+                        {reaction.emoji}
+                      </Text>
+                      <ThemedText style={{ 
+                        color: colors.textSecondary, 
+                        fontSize: 12, 
+                        fontWeight: '500' 
+                      }}>
+                        1
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </ThemedView>
+              )}
 
-                {/* Footer */}
-                <View style={{
+              {/*  Action Bar */}
+              
+              {/* <Animated.View
+                style={{
                   flexDirection: 'row',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  marginTop: 6
-                }}>
-                  <ThemedText 
-                    style={{ 
-                      color: messageColors.textSecondary,
-                      fontSize: 11,
-                      fontWeight: '500'
-                    }}
-                  >
-                    {formatTime(message.createdAt)}
-                    {message.isEdited && " • modifié"}
+                  paddingTop: 4,
+                  opacity: showActions ? actionsOpacity : 0.7,
+                  maxWidth: 425
+                }}
+              >
+                <TouchableOpacity
+                  onPress={handleReply}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    padding: 8,
+                    borderRadius: 20,
+                    minWidth: 60
+                  }}
+                >
+                  <Ionicons 
+                    name="chatbubble-outline" 
+                    size={18} 
+                    color={colors.textMuted} 
+                  />
+                  <ThemedText style={{ 
+                    color: colors.textMuted, 
+                    fontSize: 13, 
+                    marginLeft: 4,
+                    fontWeight: '500'
+                  }}>
+                    {Math.floor(Math.random() * 10)}
                   </ThemedText>
-                  
-                  {isSent && (
-                    <View style={{ marginLeft: 8 }}>
-                      <Ionicons
-                        name={message.status?.read?.length ? "checkmark-done" : "checkmark"}
-                        size={14}
-                        color={message.status?.read?.length ? theme.success : messageColors.textSecondary}
-                      />
-                    </View>
-                  )}
-                </View>
-              </View>
-            </Pressable>
-          </Animated.View>
-        </View>
-      </View>
+                </TouchableOpacity>
 
-      {/* Context Menu Modal */}
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    padding: 8,
+                    borderRadius: 20,
+                    minWidth: 60
+                  }}
+                >
+                  <Ionicons 
+                    name="repeat-outline" 
+                    size={18} 
+                    color={colors.textMuted} 
+                  />
+                  <Text style={{ 
+                    color: colors.textMuted, 
+                    fontSize: 13, 
+                    marginLeft: 4,
+                    fontWeight: '500'
+                  }}>
+                    {Math.floor(Math.random() * 20)}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => handleReaction('❤️')}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    padding: 8,
+                    borderRadius: 20,
+                    minWidth: 60
+                  }}
+                >
+                  <Ionicons 
+                    name={message.reactions?.some(r => r.emoji === '❤️') ? "heart" : "heart-outline"}
+                    size={18} 
+                    color={message.reactions?.some(r => r.emoji === '❤️') ? colors.like : colors.textMuted}
+                  />
+                  <ThemedText style={{ 
+                    color: message.reactions?.some(r => r.emoji === '❤️') ? colors.like : colors.textMuted,
+                    fontSize: 13, 
+                    marginLeft: 4,
+                    fontWeight: '500'
+                  }}>
+                    {Math.floor(Math.random() * 50)}
+                  </ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setShowContextMenu(true)}
+                  style={{
+                    padding: 8,
+                    borderRadius: 20
+                  }}
+                >
+                  <Ionicons 
+                    name="share-outline" 
+                    size={18} 
+                    color={colors.textMuted} 
+                  />
+                </TouchableOpacity>
+              </Animated.View> */}
+
+
+            </ThemedView>
+          </ThemedView>
+        </Animated.View>
+      </Pressable>
+
+      {/* Context Menu */}
       <Modal transparent visible={showContextMenu} animationType="none">
         <Animated.View
-          style={{ 
-            flex: 1, 
-            backgroundColor: 'rgba(0,0,0,0.5)',
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.4)',
             opacity: overlayOpacity
           }}
         >
@@ -374,19 +583,19 @@ const MessageDisplay = ({
             onPress={hideContextMenu}
             activeOpacity={1}
           >
-            <View style={{
-              flex: 1,
-              justifyContent: 'center',
-              alignItems: 'center',
-              paddingHorizontal: 20
+            <ThemedView style={{ 
+              flex: 1, 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              paddingHorizontal: 20 
             }}>
               <Animated.View
                 style={{
                   transform: [{ scale: contextMenuScale }],
                   backgroundColor: theme.surface,
                   borderRadius: 16,
-                  padding: 16,
-                  minWidth: 280,
+                  padding: 8,
+                  minWidth: 240,
                   shadowColor: theme.onSurface,
                   shadowOffset: { width: 0, height: 8 },
                   shadowOpacity: 0.25,
@@ -395,173 +604,183 @@ const MessageDisplay = ({
                 }}
               >
                 {/* Quick Reactions */}
-                <View style={{
+                <ThemedView style={{
                   flexDirection: 'row',
                   justifyContent: 'center',
-                  marginBottom: 16,
-                  paddingHorizontal: 8
+                  paddingVertical: 12,
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.border,
+                  marginBottom: 8
                 }}>
                   {reactionEmojis.slice(0, 6).map((emoji, index) => (
                     <TouchableOpacity
                       key={index}
                       onPress={() => handleReaction(emoji)}
                       style={{
-                        width: 40,
-                        height: 40,
+                        padding: 8,
                         borderRadius: 20,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginHorizontal: 4,
-                        backgroundColor: theme.surfaceVariant
+                        marginHorizontal: 4
                       }}
                     >
                       <Text style={{ fontSize: 20 }}>{emoji}</Text>
                     </TouchableOpacity>
                   ))}
-                </View>
+                </ThemedView>
 
-                {/* Separator */}
-                <View style={{
-                  height: 1,
-                  backgroundColor: theme.outline + '30',
-                  marginBottom: 12
-                }} />
-
-                {/* Action buttons */}
                 <TouchableOpacity
                   onPress={handleReply}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingVertical: 12,
-                    paddingHorizontal: 16,
-                    borderRadius: 8
+                  style={{ 
+                    flexDirection: 'row', 
+                    alignItems: 'center', 
+                    padding: 16, 
+                    borderRadius: 8 
                   }}
                 >
-                  <Ionicons name="arrow-undo-outline" size={20} color={theme.onSurface} />
-                  <ThemedText style={{ marginLeft: 12, fontSize: 16, fontWeight: '500' }}>
+                  <Ionicons name="chatbubble-outline" size={20} color={colors.text} />
+                  <ThemedText style={{ 
+                    marginLeft: 12, 
+                    color: colors.text, 
+                    fontSize: 16,
+                    fontWeight: '500'
+                  }}>
                     Répondre
+                  </ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleCopy}
+                  style={{ 
+                    flexDirection: 'row', 
+                    alignItems: 'center', 
+                    padding: 16, 
+                    borderRadius: 8 
+                  }}
+                >
+                  <Ionicons name="copy-outline" size={20} color={colors.text} />
+                  <ThemedText style={{ 
+                    marginLeft: 12, 
+                    color: colors.text, 
+                    fontSize: 16,
+                    fontWeight: '500'
+                  }}>
+                    Copier le message
                   </ThemedText>
                 </TouchableOpacity>
 
                 {isSent && message.messageType === "text" && (
                   <TouchableOpacity
                     onPress={handleEdit}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingVertical: 12,
-                      paddingHorizontal: 16,
-                      borderRadius: 8
+                    style={{ 
+                      flexDirection: 'row', 
+                      alignItems: 'center', 
+                      padding: 16, 
+                      borderRadius: 8 
                     }}
                   >
-                    <Ionicons name="create-outline" size={20} color={theme.onSurface} />
-                    <ThemedText style={{ marginLeft: 12, fontSize: 16, fontWeight: '500' }}>
+                    <Ionicons name="create-outline" size={20} color={colors.text} />
+                    <ThemedText style={{ 
+                      marginLeft: 12, 
+                      color: colors.text, 
+                      fontSize: 16,
+                      fontWeight: '500'
+                    }}>
                       Modifier
                     </ThemedText>
                   </TouchableOpacity>
                 )}
 
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingVertical: 12,
-                    paddingHorizontal: 16,
-                    borderRadius: 8
-                  }}
-                >
-                  <Ionicons name="copy-outline" size={20} color={theme.onSurface} />
-                  <ThemedText style={{ marginLeft: 12, fontSize: 16, fontWeight: '500' }}>
-                    Copier
-                  </ThemedText>
-                </TouchableOpacity>
-
                 {isSent && (
                   <TouchableOpacity
                     onPress={handleDelete}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingVertical: 12,
-                      paddingHorizontal: 16,
-                      borderRadius: 8
+                    style={{ 
+                      flexDirection: 'row', 
+                      alignItems: 'center', 
+                      padding: 16, 
+                      borderRadius: 8 
                     }}
                   >
-                    <Ionicons name="trash-outline" size={20} color={theme.error} />
+                    <Ionicons name="trash-outline" size={20} color="#F91880" />
                     <ThemedText style={{ 
                       marginLeft: 12, 
-                      fontSize: 16, 
-                      fontWeight: '500',
-                      color: theme.error 
+                      color: "#F91880", 
+                      fontSize: 16,
+                      fontWeight: '500'
                     }}>
                       Supprimer
                     </ThemedText>
                   </TouchableOpacity>
                 )}
               </Animated.View>
-            </View>
+            </ThemedView>
           </TouchableOpacity>
         </Animated.View>
       </Modal>
 
       {/* Edit Modal */}
       <Modal transparent visible={showEditModal} animationType="slide">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-            <View style={{
+        <ThemedView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <ThemedView style={{ flex: 1, justifyContent: 'flex-end' }}>
+            <ThemedView style={{
               backgroundColor: theme.surface,
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              padding: 24,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              padding: 20,
               paddingBottom: 40
             }}>
-              <ThemedText style={{ 
-                fontSize: 20, 
-                fontWeight: '600', 
-                marginBottom: 16,
+              <Text style={{
+                fontSize: 20,
+                fontWeight: '700',
+                color: colors.text,
+                marginBottom: 20,
                 textAlign: 'center'
               }}>
                 Modifier le message
-              </ThemedText>
-              
+              </Text>
+
               <TextInput
                 value={editText}
                 onChangeText={setEditText}
                 multiline
                 style={{
-                  backgroundColor: theme.surfaceVariant,
+                  backgroundColor: colors.backgroundHover,
                   borderRadius: 12,
-                  padding: 16,
-                  color: theme.onSurface,
-                  fontSize: 16,
-                  minHeight: 100,
+                  padding: 14,
+                  color: colors.text,
+                  fontSize: 14,
+                  minHeight: 120,
                   textAlignVertical: 'top',
                   borderWidth: 1,
-                  borderColor: theme.outline + '30'
+                  borderColor: colors.primary + '20'
                 }}
-                placeholder="Tapez votre message..."
-                placeholderTextColor={theme.onSurface + '60'}
+                placeholder="Que se passe-t-il ?"
+                placeholderTextColor={colors.textMuted}
               />
-              
-              <View style={{
-                flexDirection: 'row',
-                justifyContent: 'flex-end',
-                marginTop: 20,
-                gap: 12
+
+              <ThemedView style={{ 
+                flexDirection: 'row', 
+                justifyContent: 'flex-end', 
+                marginTop: 20, 
+                gap: 12 
               }}>
                 <TouchableOpacity
                   onPress={() => setShowEditModal(false)}
                   style={{
                     paddingHorizontal: 24,
                     paddingVertical: 12,
-                    borderRadius: 24,
-                    backgroundColor: theme.surfaceVariant
+                    borderRadius: 25,
+                    borderWidth: 1,
+                    borderColor: colors.border
                   }}
                 >
-                  <ThemedText style={{ fontWeight: '600' }}>Annuler</ThemedText>
+                  <Text style={{ 
+                    color: colors.text, 
+                    fontWeight: '700',
+                    fontSize: 15
+                  }}>
+                    Annuler
+                  </Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   onPress={() => {
                     onEdit?.(editText);
@@ -570,18 +789,22 @@ const MessageDisplay = ({
                   style={{
                     paddingHorizontal: 24,
                     paddingVertical: 12,
-                    borderRadius: 24,
-                    backgroundColor: theme.primary
+                    borderRadius: 25,
+                    backgroundColor: colors.primary
                   }}
                 >
-                  <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>
+                  <ThemedText style={{ 
+                    color: 'white', 
+                    fontWeight: '700',
+                    fontSize: 15
+                  }}>
                     Sauvegarder
-                  </Text>
+                  </ThemedText>
                 </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </View>
+              </ThemedView>
+            </ThemedView>
+          </ThemedView>
+        </ThemedView>
       </Modal>
     </>
   );

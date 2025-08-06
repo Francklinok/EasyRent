@@ -41,7 +41,7 @@ export default function ArchivedChats() {
         padding: 16,
         flexDirection: 'row',
         alignItems: 'center',
-        shadowColor: theme.shadowColor,
+        shadowColor: theme.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
