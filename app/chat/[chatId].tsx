@@ -11,6 +11,7 @@ import { ThemedView } from '@/components/ui/ThemedView';
 import { messageService } from '@/services/messageService/chatService';
 import messageData from '@/assets/data/messagedata';
 import chatListData from '@/assets/data/chatListData';
+import VisitRequestMessage from '@/components/messages/visit/VisitRequestMessage';
 
 export default function ChatComponent() {
   const route = useRoute<RouteProp<RootStackParamList, 'Chat'>>();
@@ -283,14 +284,31 @@ export default function ChatComponent() {
           data={messages}
           keyExtractor={(item) => item.msgId}
           renderItem={({ item }) => (
-            <MessageDisplay 
-              message={item}
-              currentUserId={userId}
-              onReply={() => handleReply(item)}
-              onDelete={() => handleDeleteMessage(item.msgId)}
-              onReact={(emoji: string) => handleReactToMessage(item.msgId, emoji)}
-              onMarkAsRead={() => handleMarkAsRead(item.msgId)}
-            />
+            item.messageType === 'visit_request' ? (
+              <VisitRequestMessage
+                visitData={item.visitData}
+                propertyData={item.propertyData}
+                isOwner={item.senderId !== userId}
+                onAccept={() => {
+                  console.log('Visit accepted');
+                  if ((global as any).updateProfileVisitStatus) {
+                    (global as any).updateProfileVisitStatus('Visit Accepted');
+                  }
+                }}
+                onReject={() => {
+                  console.log('Visit rejected');
+                }}
+              />
+            ) : (
+              <MessageDisplay 
+                message={item}
+                currentUserId={userId}
+                onReply={() => handleReply(item)}
+                onDelete={() => handleDeleteMessage(item.msgId)}
+                onReact={(emoji: string) => handleReactToMessage(item.msgId, emoji)}
+                onMarkAsRead={() => handleMarkAsRead(item.msgId)}
+              />
+            )
           )}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingVertical: 8, paddingBottom: 16 }}

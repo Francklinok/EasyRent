@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import 'react-native-reanimated';
 import { ThemeProvider } from '@/components/contexts/theme/themeContext';
+import { NotificationProvider } from '@/components/contexts/notifications/NotificationContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -62,13 +63,15 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider initialTheme="system">
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="Auth/Login" options={{ headerShown: false }} />
-        <Stack.Screen name="Auth/Register" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" options={{ title: 'Page Introuvable' }} />
-      </Stack>
-      <StatusBar style="auto" />
+      <NotificationProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="Auth/Login" options={{ headerShown: false }} />
+          <Stack.Screen name="Auth/Register" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" options={{ title: 'Page Introuvable' }} />
+        </Stack>
+        <StatusBar style="auto" />
+      </NotificationProvider>
     </ThemeProvider>
   );
 }

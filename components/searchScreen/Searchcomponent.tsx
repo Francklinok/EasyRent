@@ -170,16 +170,13 @@ const AdvancedHousingSearch = () => {
       paddingBottom: 20,
       backgroundColor: 'transparent'
     }}>
-      <ThemedText style={{
-        fontSize: 28,
-        fontWeight: '700',
+      <ThemedText type = "title" intensity= "strong" style={{
         color: theme.onSurface,
         marginBottom: 8
       }}>
         Find Your Home
       </ThemedText>
-      <ThemedText style={{
-        fontSize: 16,
+      <ThemedText type = "body" style={{
         color: theme.onSurface + '80',
         marginBottom: 20
       }}>
@@ -190,12 +187,12 @@ const AdvancedHousingSearch = () => {
       <ThemedView style={{
         backgroundColor: theme.surface,
         borderRadius: 16,
-        padding: 4,
+        padding: 2,
         shadowColor: theme.onSurface,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 12,
-        elevation: 8,
+        elevation: 2,
         borderWidth: 1,
         borderColor: theme.outline + '20'
       }}>
@@ -203,7 +200,7 @@ const AdvancedHousingSearch = () => {
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: 16,
-          paddingVertical: 12
+          paddingVertical: 8
         }}>
           <Ionicons name="search" size={20} color={theme.primary} />
           <TextInput

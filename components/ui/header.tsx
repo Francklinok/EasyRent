@@ -18,6 +18,8 @@ import { ThemedText } from "./ThemedText";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/components/contexts/theme/themehook";
 import { MotiView, AnimatePresence } from "moti";
+import { useNotifications } from "@/components/contexts/notifications/NotificationContext";
+import NotificationSystem from "@/components/notifications/NotificationSystem";
 
 export type HeaderProps = {
   leftElement?: ReactNode;
@@ -39,9 +41,19 @@ const Header = memo(({
   backgroundColor,
 }: HeaderProps) => {
   const { theme } = useTheme();
+  const { notifications, unreadCount, addNotification, markAsRead } = useNotifications();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [selectedTransaction, setSelectedTransaction] =
     useState<"VENTE" | "LOCATION">("VENTE");
+
+  // Expose global notification function
+  React.useEffect(() => {
+    (global as any).addGlobalNotification = addNotification;
+    return () => {
+      delete (global as any).addGlobalNotification;
+    };
+  }, [addNotification]);
 
   const insets = useSafeAreaInsets();
 
@@ -83,6 +95,7 @@ const Header = memo(({
         transition={{ delay: 200, type: "spring", stiffness: 400 }}
       >
         <TouchableOpacity
+          onPress={() => setShowNotifications(true)}
           style={[
             styles.notificationButton,
             {
@@ -93,14 +106,18 @@ const Header = memo(({
           activeOpacity={0.8}
         >
           <Ionicons name="notifications-outline" size={20} color={theme.primary} />
-          <MotiView
-            from={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 400, type: "spring", stiffness: 600 }}
-            style={[styles.badge, { backgroundColor: theme.error }]}
-          >
-            <ThemedText style={styles.badgeText}>3</ThemedText>
-          </MotiView>
+          {unreadCount > 0 && (
+            <MotiView
+              from={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 400, type: "spring", stiffness: 600 }}
+              style={[styles.badge, { backgroundColor: theme.error }]}
+            >
+              <ThemedText style={styles.badgeText}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </ThemedText>
+            </MotiView>
+          )}
         </TouchableOpacity>
       </MotiView>
 
@@ -243,6 +260,14 @@ const Header = memo(({
           </BlurView>
         </MotiView>
       </SafeAreaView>
+      
+      {/* Global Notification System */}
+      <NotificationSystem 
+        visible={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        notifications={notifications}
+        onMarkAsRead={markAsRead}
+      />
     </>
   );
 });

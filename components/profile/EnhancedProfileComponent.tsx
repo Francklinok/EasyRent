@@ -107,6 +107,11 @@ interface UserRole {
   permissions: string[];
 }
 
+interface User {
+  visitStatus: 'none' | 'Visit Scheduled' | 'Visit Accepted' | 'Visit Active';
+  [key: string]: any;
+}
+
 // Demo Data
 const demoUser = {
   id: '1',
@@ -118,6 +123,7 @@ const demoUser = {
   joinDate: '2023-01-15',
   isVerified: true,
   isPremium: true,
+  visitStatus: 'none', // 'none' | 'Visit Scheduled' | 'Visit Accepted' | 'Visit Active'
   wallet: {
     balance: 15750.50,
     currency: 'EUR',
@@ -678,14 +684,45 @@ const getRoleIcon = (type: string) => {
   return icons[type] || 'account';
 };
 
+const getVisitStatusColor = (status: string) => {
+  switch (status) {
+    case 'Visit Scheduled': return '#FF9500';
+    case 'Visit Accepted': return '#34C759';
+    case 'Visit Active': return '#007AFF';
+    default: return '#6B7280';
+  }
+};
+
+const getVisitStatusIcon = (status: string) => {
+  switch (status) {
+    case 'Visit Scheduled': return 'calendar-clock';
+    case 'Visit Accepted': return 'calendar-check';
+    case 'Visit Active': return 'calendar-star';
+    default: return 'calendar';
+  }
+};
+
 // Main Component
 const EnhancedProfileComponent: React.FC = () => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const [user] = useState(demoUser);
+  const [user, setUser] = useState(demoUser);
   const [activeRole, setActiveRole] = useState(user.roles[0]);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Update visit status function
+  const updateVisitStatus = (newStatus: string) => {
+    setUser(prev => ({ ...prev, visitStatus: newStatus }));
+  };
+  
+  // Expose function globally for other components to use
+  React.useEffect(() => {
+    (global as any).updateProfileVisitStatus = updateVisitStatus;
+    return () => {
+      delete (global as any).updateProfileVisitStatus;
+    };
+  }, []);
   
   const onRefresh = () => {
     setRefreshing(true);
@@ -753,22 +790,48 @@ const EnhancedProfileComponent: React.FC = () => {
               {user.location}
             </ThemedText>
             
-            {user.isPremium && (
-              <ThemedView style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center', 
-                backgroundColor: theme.primary + '20', 
-                paddingHorizontal: 12, 
-                paddingVertical: 6, 
-                borderRadius: 16, 
-                marginTop: 8 
-              }}>
-                <MaterialCommunityIcons name="crown" size={16} color={theme.primary} />
-                <ThemedText style={{ marginLeft: 4, color: theme.primary, fontWeight: '600', fontSize: 12 }}>
-                  Membre Premium
-                </ThemedText>
-              </ThemedView>
-            )}
+            <ThemedView style={{ flexDirection: 'row', gap: 8, marginTop: 8, backgroundColor: 'transparent' }}>
+              {user.isPremium && (
+                <ThemedView style={{ 
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  backgroundColor: theme.primary + '20', 
+                  paddingHorizontal: 12, 
+                  paddingVertical: 6, 
+                  borderRadius: 16
+                }}>
+                  <MaterialCommunityIcons name="crown" size={16} color={theme.primary} />
+                  <ThemedText style={{ marginLeft: 4, color: theme.primary, fontWeight: '600', fontSize: 12 }}>
+                    Membre Premium
+                  </ThemedText>
+                </ThemedView>
+              )}
+              
+              {user.visitStatus !== 'none' && (
+                <ThemedView style={{ 
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  backgroundColor: getVisitStatusColor(user.visitStatus) + '20', 
+                  paddingHorizontal: 12, 
+                  paddingVertical: 6, 
+                  borderRadius: 16
+                }}>
+                  <MaterialCommunityIcons 
+                    name={getVisitStatusIcon(user.visitStatus)} 
+                    size={16} 
+                    color={getVisitStatusColor(user.visitStatus)} 
+                  />
+                  <ThemedText style={{ 
+                    marginLeft: 4, 
+                    color: getVisitStatusColor(user.visitStatus), 
+                    fontWeight: '600', 
+                    fontSize: 12 
+                  }}>
+                    {user.visitStatus}
+                  </ThemedText>
+                </ThemedView>
+              )}
+            </ThemedView>
           </ThemedView>
         </LinearGradient>
         
