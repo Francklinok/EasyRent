@@ -13,7 +13,11 @@ import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { sendGlobalNotification } from '@/components/contexts/notifications/NotificationContext';
-
+import { LinearGradient } from 'expo-linear-gradient';
+import { MotiView } from 'moti';
+import { BackButton } from '@/components/ui/BackButton';
+import { useTheme } from '@/components/contexts/theme/themehook';
+import { ThemeColors } from '@/components/contexts/theme/themeTypes';
 type RootStackParamList = {
 
   Reservation: { property: Property };
@@ -44,6 +48,7 @@ const ReservationScreen = () => {
   const route = useRoute<ReservationScreenRouteProp>();
   const navigation = useNavigation<NavigationProp>();
   const { property } = route.params;
+  const { theme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [bookingMode, setBookingMode] = useState<BookingMode>('direct');
   const [visit, setVisit] = useState<Visit | null>(null);
@@ -269,35 +274,124 @@ const ReservationScreen = () => {
     return (property.monthlyRent || 0) + (property.depositAmount || 0);
   };
 
-  const renderModeSelector = () => (
-    <ThemedView className="mb-6">
-      <ThemedText className="text-lg font-semibold mb-4">Comment souhaitez-vous procéder ?</ThemedText>
-      <ThemedView className="flex-row gap-3">
-        <TouchableOpacity
-          onPress={() => {
-            setBookingMode('direct');
-            setShowBookingForm(true);
-          }}
-          className={`flex-1 p-4 rounded-lg border-2 ${bookingMode === 'direct' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
-        >
-          <MaterialCommunityIcons name="flash" size={24} color={bookingMode === 'direct' ? '#3B82F6' : '#6B7280'} />
-          <ThemedText className={`font-medium mt-2 ${bookingMode === 'direct' ? 'text-blue-600' : 'text-gray-600'}`}>Réservation directe</ThemedText>
-          <ThemedText className="text-sm text-gray-500 mt-1">Réserver immédiatement sans visite</ThemedText>
-        </TouchableOpacity>
+  const renderModeSelector = (color:ThemeColors) => (
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: 'spring', damping: 15 }}
+      style={{ marginBottom: 24 }}
+    >
+      <ThemedView style={{
+        backgroundColor: color.surface,
+        borderRadius: 20,
+        padding: 20,
+        shadowColor: color.shadowColor || '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 8,
+      }}>
+        <ThemedText style={{
+          fontSize: 20,
+          fontWeight: '700',
+          color: color.onSurface,
+          marginBottom: 16,
+          textAlign: 'center'
+        }}>Comment souhaitez-vous procéder ?</ThemedText>
         
-        <TouchableOpacity
-          onPress={() => {
-            setBookingMode('visit');
-            setShowBookingForm(false);
-          }}
-          className={`flex-1 p-4 rounded-lg border-2 ${bookingMode === 'visit' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}
-        >
-          <MaterialCommunityIcons name="calendar-check" size={24} color={bookingMode === 'visit' ? '#10B981' : '#6B7280'} />
-          <ThemedText className={`font-medium mt-2 ${bookingMode === 'visit' ? 'text-green-600' : 'text-gray-600'}`}>Programmer une visite</ThemedText>
-          <ThemedText className="text-sm text-gray-500 mt-1">Visiter avant de réserver</ThemedText>
-        </TouchableOpacity>
+        <ThemedView style={{ flexDirection: 'row', gap: 12 }}>
+          <TouchableOpacity
+            onPress={() => {
+              setBookingMode('direct');
+              setShowBookingForm(true);
+            }}
+            style={{
+              flex: 1,
+              borderRadius: 16,
+              overflow: 'hidden',
+              borderWidth: 2,
+              borderColor: bookingMode === 'direct' ? color.primary : color.outline + '30'
+            }}
+          >
+            <LinearGradient
+              colors={bookingMode === 'direct' ? [theme.primary + '20', theme.primary + '10'] : [theme.surfaceVariant, theme.surface]}
+              style={{ padding: 20, alignItems: 'center' }}
+            >
+              <ThemedView style={{
+                backgroundColor: bookingMode === 'direct' ? color.primary : color.outline + '40',
+                borderRadius: 20,
+                padding: 12,
+                marginBottom: 12
+              }}>
+                <MaterialCommunityIcons 
+                  name="flash" 
+                  size={28} 
+                  color={bookingMode === 'direct' ? 'white' : color.onSurface + '60'} 
+                />
+              </ThemedView>
+              <ThemedText style={{
+                fontWeight: '700',
+                fontSize: 16,
+                color: bookingMode === 'direct' ? color.primary : color.onSurface,
+                marginBottom: 8,
+                textAlign: 'center'
+              }}>Réservation directe</ThemedText>
+              <ThemedText style={{
+                fontSize: 12,
+                color: color.onSurface + '70',
+                textAlign: 'center',
+                lineHeight: 16
+              }}>Réserver immédiatement sans visite</ThemedText>
+            </LinearGradient>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            onPress={() => {
+              setBookingMode('visit');
+              setShowBookingForm(false);
+            }}
+            style={{
+              flex: 1,
+              borderRadius: 16,
+              overflow: 'hidden',
+              borderWidth: 2,
+              borderColor: bookingMode === 'visit' ? color.success : color.outline + '30'
+            }}
+          >
+            <LinearGradient
+              colors={bookingMode === 'visit' ? [color.success + '20', color.success + '10'] : [color.surfaceVariant, color.surface]}
+              style={{ padding: 20, alignItems: 'center' }}
+            >
+              <ThemedView style={{
+                backgroundColor: bookingMode === 'visit' ? color.success : color.outline + '40',
+                borderRadius: 20,
+                padding: 12,
+                marginBottom: 12
+              }}>
+                <MaterialCommunityIcons 
+                  name="calendar-check" 
+                  size={28} 
+                  color={bookingMode === 'visit' ? 'white' : color.onSurface + '60'} 
+                />
+              </ThemedView>
+              <ThemedText style={{
+                fontWeight: '700',
+                fontSize: 16,
+                color: bookingMode === 'visit' ? color.success : color.onSurface,
+                marginBottom: 8,
+                textAlign: 'center'
+              }}>Programmer une visite</ThemedText>
+              <ThemedText style={{
+                fontSize: 12,
+                color: color.onSurface + '70',
+                textAlign: 'center',
+                lineHeight: 16
+              }}>Visiter avant de réserver</ThemedText>
+            </LinearGradient>
+          </TouchableOpacity>
+        </ThemedView>
       </ThemedView>
-    </ThemedView>
+    </MotiView>
   );
 
   const renderVisitScheduling = () => (
@@ -410,13 +504,41 @@ const ReservationScreen = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <ScrollView className="flex-1 px-4 pt-2">
-        <ThemedText className="text-2xl font-bold mb-6 mt-2">
-          Réserver {property?.title || 'ce logement'}
-        </ThemedText>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+      <LinearGradient
+        colors={[theme.primary + '10', theme.background]}
+        style={{ flex: 1 }}
+      >
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+          <MotiView
+            from={{ opacity: 0, translateY: -20 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'spring', damping: 15 }}
+            style={{ marginBottom: 24, alignItems: 'center' }}
+          >
+            <ThemedView className="flex-row gap-6">
+               <BackButton/>
+            <ThemedText style={{
+              fontSize: 28,
+              fontWeight: '800',
+              color: theme.onSurface,
+              textAlign: 'center',
+              marginBottom: 8
+            }}>
+              Réserver ce logement
+            </ThemedText>
+            </ThemedView>
+           
+            <ThemedText style={{
+              fontSize: 16,
+              color: theme.onSurface + '70',
+              textAlign: 'center'
+            }}>
+              {property?.title || 'Propriété sélectionnée'}
+            </ThemedText>
+          </MotiView>
         
-        {renderModeSelector()}
+        {renderModeSelector(theme)}
         
         {bookingMode === 'visit' && !visit && renderVisitScheduling()}
         
@@ -427,26 +549,52 @@ const ReservationScreen = () => {
             <ThemedText className="text-lg font-semibold mb-4">Détails de la réservation</ThemedText>
           
           <ThemedView className="mb-4">
-            <ThemedText className="mb-2 font-medium">Date de début</ThemedText>
-            <DatePicker
-              date={formik.values.startDate}
-              onDateChange={(date) => formik.setFieldValue('startDate', date)}
-              minimumDate={new Date()}
-            />
+            <ThemedText style={{
+              marginBottom: 8,
+              fontWeight: '600',
+              fontSize: 16,
+              color: theme.onSurface
+            }}>Date de début</ThemedText>
+            <ThemedView style={{
+              backgroundColor: theme.surface,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: theme.outline + '30',
+              padding: 12
+            }}>
+              <DatePicker
+                date={formik.values.startDate}
+                onDateChange={(date) => formik.setFieldValue('startDate', date)}
+                minimumDate={new Date()}
+              />
+            </ThemedView>
             {formik.errors.startDate && formik.touched.startDate && (
-              <ThemedText className="text-red-500">{formik.errors.startDate}</ThemedText>
+              <ThemedText style={{ color: '#ef4444', marginTop: 4 }}>{String(formik.errors.startDate)}</ThemedText>
             )}
           </ThemedView>
           
           <ThemedView className="mb-4">
-            <ThemedText className="mb-2 font-medium">Date de fin</ThemedText>
-            <DatePicker
-              date={formik.values.endDate}
-              onDateChange={(date) => formik.setFieldValue('endDate', date)}
-              minimumDate={formik.values.startDate}
-            />
+            <ThemedText style={{
+              marginBottom: 8,
+              fontWeight: '600',
+              fontSize: 16,
+              color: theme.onSurface
+            }}>Date de fin</ThemedText>
+            <ThemedView style={{
+              backgroundColor: theme.surface,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: theme.outline + '30',
+              padding: 12
+            }}>
+              <DatePicker
+                date={formik.values.endDate}
+                onDateChange={(date) => formik.setFieldValue('endDate', date)}
+                minimumDate={formik.values.startDate}
+              />
+            </ThemedView>
             {formik.errors.endDate && formik.touched.endDate && (
-              <ThemedText className="text-red-500">{formik.errors.endDate}</ThemedText>
+              <ThemedText style={{ color: '#ef4444', marginTop: 4 }}>{String(formik.errors.endDate)}</ThemedText>
             )}
           </ThemedView>
           
@@ -526,7 +674,8 @@ const ReservationScreen = () => {
             />
           </ThemedView>
         )}
-      </ScrollView>
+        </ScrollView>
+      </LinearGradient>
     </SafeAreaView>
   );
 };

@@ -20,6 +20,7 @@ import { useTheme } from "@/components/contexts/theme/themehook";
 import { ThemeColors } from "@/components/contexts/theme/themeTypes";
 import { Availability } from "@/types/ItemType";
 import { ExtendedItemTypes } from "@/types/ItemType";
+import { useFavorites, FavoriteItem } from "@/components/contexts/favorites/FavoritesContext";
 
 const { width } = Dimensions.get('window');
 
@@ -455,7 +456,10 @@ const RenderItem: React.FC<Props> = ({
   const [imageLoaded, setImageLoaded] = useState(false);
 
   // Performance: Memoize expensive computations
-  const isFavorite = useMemo(() => favorites.includes(item.id), [favorites, item.id]);
+  const isFavorite = useMemo(() => {
+    if (!checkIsFavorite) return false;
+    return checkIsFavorite(item.id);
+  }, [checkIsFavorite, item.id]);
   
   const truncatedReview = useMemo(() => 
     item.review?.length > 120 ? `${item.review.substring(0, 120)}...` : item.review,
@@ -550,7 +554,14 @@ const RenderItem: React.FC<Props> = ({
     });
   }, [item, navigateToInfo, animRefs.scaleAnim]);
 
+  const favoritesContext = useFavorites();
+  const { toggleFavorite: toggleFav, isFavorite: checkIsFavorite } = favoritesContext || {};
+  
   const handleToggleFavorite = useCallback(() => {
+    if (!toggleFav) {
+      console.warn('Favorites context not available');
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     Animated.sequence([
@@ -566,15 +577,22 @@ const RenderItem: React.FC<Props> = ({
       }),
     ]).start();
 
-    toggleFavorite({
+    const favoriteItem: FavoriteItem = {
       id: item.id,
-      lottieRef,
-      favorites,
-      setFavorites,
-    });
-
+      title: item.title || 'Property',
+      price: typeof item.price === 'string' ? parseFloat(item.price.replace(/[^0-9.]/g, '')) : item.price,
+      location: item.location,
+      image: item.imageAvif || item.imageWebP || item.avatar,
+      type: item.type,
+      bedrooms: item.generalInfo?.bedrooms,
+      bathrooms: item.generalInfo?.bathrooms,
+      area: item.generalInfo?.surface,
+      addedAt: new Date().toISOString()
+    };
+    
+    toggleFav(favoriteItem);
     setAnimatingElement(item.id);
-  }, [item.id, setAnimatingElement, animRefs.rotateAnim, lottieRef, favorites, setFavorites]);
+  }, [item, toggleFav, setAnimatingElement, animRefs.rotateAnim]);
 
   return (
     <MotiView

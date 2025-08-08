@@ -1,26 +1,17 @@
 import React from 'react';
-import { Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { Image, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { useTheme } from '@/components/contexts/theme/themehook';
-
-type FavoriteItemType = {
-  id: string;
-  title: string;
-  type: string;
-  location: string;
-  price: string;
-  surface: string;
-  rooms: number | null;
-  imageUrl: string;
-};
+import { useFavorites, FavoriteItem as FavoriteItemType } from '@/components/contexts/favorites/FavoritesContext';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 type Props = {
   item: FavoriteItemType;
   onRemove: (id: string) => void;
 };
 
-const FavoriteItem = ({ item, onRemove }: Props) => {
+const FavoriteItemCard = ({ item, onRemove }: Props) => {
   const { theme } = useTheme();
 
   if (!item) return null; // Sécurité
@@ -33,7 +24,7 @@ const FavoriteItem = ({ item, onRemove }: Props) => {
   return (
     <ThemedView style={[styles.container, { backgroundColor: theme.surface as string }]}>
       <Image
-        source={{ uri: item.imageUrl }}
+        source={{ uri: item.image }}
         style={styles.image}
         resizeMode="cover"
       />
@@ -50,11 +41,11 @@ const FavoriteItem = ({ item, onRemove }: Props) => {
       </ThemedText>
 
       <ThemedText style={[ { color: primary }]}>
-        {item.price}
+        {item.price}€
       </ThemedText>
 
       <ThemedText style={[styles.details, { color: onSurfaceVariant }]}>
-        Surface : {item.surface} {item.rooms !== null ? `• ${item.rooms} pièce(s)` : ''}
+        {item.area && `Surface : ${item.area}m²`} {item.bedrooms && `• ${item.bedrooms} ch.`} {item.bathrooms && `• ${item.bathrooms} sdb`}
       </ThemedText>
 
       <TouchableOpacity
@@ -71,15 +62,57 @@ const FavoriteItem = ({ item, onRemove }: Props) => {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    padding: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  clearButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  clearText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  listContainer: {
+    paddingBottom: 20,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  itemContainer: {
     borderRadius: 12,
     padding: 8,
     marginBottom: 12,
-    // ombre iOS
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
-    // elevation Android
     elevation: 1,
   },
   image: {
@@ -114,4 +147,61 @@ const styles = StyleSheet.create({
   },
 });
 
-export default FavoriteItem;
+export { FavoriteItemCard };
+
+const FavoritesComponent = () => {
+  const { theme } = useTheme();
+  const { favorites, removeFromFavorites, clearFavorites } = useFavorites();
+
+  const renderFavoriteItem = ({ item }: { item: FavoriteItemType }) => (
+    <FavoriteItemCard item={item} onRemove={removeFromFavorites} />
+  );
+
+  if (favorites.length === 0) {
+    return (
+      <ThemedView style={styles.emptyContainer}>
+        <MaterialCommunityIcons 
+          name="heart-outline" 
+          size={64} 
+          color={theme.onSurface + '40'} 
+        />
+        <ThemedText style={[styles.emptyTitle, { color: theme.onSurface }]}>
+          Aucun favori
+        </ThemedText>
+        <ThemedText style={[styles.emptySubtitle, { color: theme.onSurface + '60' }]}>
+          Ajoutez des propriétés à vos favoris en cliquant sur le cœur
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
+  return (
+    <ThemedView style={styles.container}>
+      <ThemedView style={styles.header}>
+        <ThemedText style={[styles.headerTitle, { color: theme.onSurface }]}>
+          Mes Favoris ({favorites.length})
+        </ThemedText>
+        {favorites.length > 0 && (
+          <TouchableOpacity 
+            onPress={clearFavorites}
+            style={[styles.clearButton, { backgroundColor: theme.error + '20' }]}
+          >
+            <ThemedText style={[styles.clearText, { color: theme.error }]}>
+              Tout supprimer
+            </ThemedText>
+          </TouchableOpacity>
+        )}
+      </ThemedView>
+      
+      <FlatList
+        data={favorites}
+        keyExtractor={(item) => item.id}
+        renderItem={renderFavoriteItem}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContainer}
+      />
+    </ThemedView>
+  );
+};
+
+export default FavoritesComponent;
