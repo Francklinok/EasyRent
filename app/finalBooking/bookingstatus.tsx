@@ -7,17 +7,9 @@ import { fr } from 'date-fns/locale';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
-interface Reservation {
-  id: string;
-  propertyTitle: string;
-  status: string;
-  createdAt: string;
-  startDate: string;
-  endDate: string;
-  monthlyRent: number;
-  landlordId: string;
-  propertyId: string;
-}
+import { useBooking, BookingReservation } from '@/components/contexts/booking/BookingContext';
+import { useNotifications } from '@/components/contexts/notifications/NotificationContext';
+// Using BookingReservation from context
 
 const statusMap = {
   pending: { text: 'En attente', color: 'bg-yellow-100 text-yellow-800' },
@@ -30,75 +22,85 @@ const statusMap = {
   completed: { text: 'Terminé', color: 'bg-gray-100 text-gray-800' },
 };
 
-const  ReservationStatusScreen = () => {
-  const [reservations, setReservations] = useState<Reservation[]>([]);
+const ReservationStatusScreen = () => {
+  const { reservations, getUserReservations, getOwnerReservations, approveReservation, rejectReservation } = useBooking();
+  const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   
   const userType = 'tenant'; // Ou 'landlord' pour tester l'autre rôle
+  const currentUserId = 'user123'; // Mock user ID
+  
+  const [userReservations, setUserReservations] = useState<BookingReservation[]>([]);
 
   useEffect(() => {
-    // Simuler le chargement des données depuis une API
+    // Get user's reservations from context and remove duplicates
     setTimeout(() => {
-      // Données de réservation de démonstration
-      const mockReservations: Reservation[] = [
-        {
-          id: '1',
-          propertyTitle: 'Appartement T2 au centre-ville',
-          status: 'pending',
-          createdAt: new Date(2025, 2, 15).toISOString(),
-          startDate: new Date(2025, 4, 1).toISOString(),
-          endDate: new Date(2026, 4, 1).toISOString(),
-          monthlyRent: 950,
-          landlordId: 'landlord123',
-          propertyId: 'property123'
-        },
-        {
-          id: '2',
-          propertyTitle: 'Studio meublé près de la gare',
-          status: 'documents_submitted',
-          createdAt: new Date(2025, 2, 10).toISOString(),
-          startDate: new Date(2025, 3, 15).toISOString(),
-          endDate: new Date(2026, 3, 15).toISOString(),
-          monthlyRent: 750,
-          landlordId: 'landlord456',
-          propertyId: 'property456'
-        },
-        {
-          id: '3',
-          propertyTitle: 'Maison avec jardin',
-          status: 'approved',
-          createdAt: new Date(2025, 2, 5).toISOString(),
-          startDate: new Date(2025, 4, 15).toISOString(),
-          endDate: new Date(2026, 4, 15).toISOString(),
-          monthlyRent: 1200,
-          landlordId: 'landlord789',
-          propertyId: 'property789'
-        },
-        {
-          id: '3',
-          propertyTitle: 'Maison avec jardin',
-          status: 'contract_generated',
-          createdAt: new Date(2025, 2, 5).toISOString(),
-          startDate: new Date(2025, 4, 15).toISOString(),
-          endDate: new Date(2026, 4, 15).toISOString(),
-          monthlyRent: 1200,
-          landlordId: 'landlord789',
-          propertyId: 'property789'
-        }
-      ];
+      const userBookings = getUserReservations(currentUserId);
       
-      setReservations(mockReservations);
+      // Remove duplicates based on propertyId - keep only the latest reservation per property
+      const uniqueReservations = userBookings.reduce((acc, current) => {
+        const existingIndex = acc.findIndex(item => item.propertyId === current.propertyId);
+        
+        if (existingIndex === -1) {
+          // No existing reservation for this property, add it
+          acc.push(current);
+        } else {
+          // Compare dates and keep the most recent one
+          const existing = acc[existingIndex];
+          if (new Date(current.createdAt) > new Date(existing.createdAt)) {
+            acc[existingIndex] = current;
+          }
+        }
+        
+        return acc;
+      }, [] as BookingReservation[]);
+      
+      // Sort by creation date (most recent first)
+      const sortedReservations = uniqueReservations.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      setUserReservations(sortedReservations);
       setLoading(false);
-    }, 1500); // Simuler un délai de chargement
-  }, []);
+    }, 500);
+  }, [reservations, getUserReservations]);
 
-  const handleReservationPress = (reservation: Reservation) => {
-    if (userType === 'landlord') {
-      router.push({
-        pathname: '/application-review',
-        params: { reservationId: reservation.id }
+  const handleOwnerApproval = (reservation: BookingReservation, approve: boolean) => {
+    if (approve) {
+      approveReservation(reservation.id, reservation.landlordId);
+      // Send notification to client
+      addNotification({
+        type: 'booking_confirmed',
+        title: 'Réservation approuvée',
+        message: `Votre réservation pour ${reservation.propertyTitle} a été approuvée. Vous pouvez maintenant procéder au paiement.`,
+        data: {
+          reservationId: reservation.id,
+          propertyId: reservation.propertyId,
+          status: 'approved'
+        }
       });
+      Alert.alert('Approuvé', 'La réservation a été approuvée. Le client a été notifié.');
+    } else {
+      rejectReservation(reservation.id, reservation.landlordId);
+      Alert.alert('Rejeté', 'La réservation a été rejetée.');
+    }
+  };
+
+  const handleReservationPress = (reservation: BookingReservation) => {
+    if (userType === 'landlord') {
+      // Show owner approval options
+      if (reservation.status === 'pending' || reservation.status === 'documents_submitted') {
+        Alert.alert(
+          'Examiner la demande',
+          `Demande de réservation pour ${reservation.propertyTitle}\n\nOccupants: ${reservation.numberOfOccupants}\nRevenu: ${reservation.monthlyIncome}€\nGarant: ${reservation.hasGuarantor ? 'Oui' : 'Non'}`,
+          [
+            { text: 'Rejeter', style: 'destructive', onPress: () => handleOwnerApproval(reservation, false) },
+            { text: 'Annuler', style: 'cancel' },
+            { text: 'Approuver', onPress: () => handleOwnerApproval(reservation, true) }
+          ]
+        );
+      }
       return;
     }
 
@@ -136,7 +138,17 @@ const  ReservationStatusScreen = () => {
 
   const getNextAction = (status: string) => {
     if (userType === 'landlord') {
-      return 'Voir les détails';
+      switch (status) {
+        case 'pending':
+        case 'documents_submitted':
+          return 'Examiner la demande';
+        case 'approved':
+          return 'Approuvé - En attente de paiement';
+        case 'rejected':
+          return 'Demande rejetée';
+        default:
+          return 'Voir les détails';
+      }
     }
     
     switch (status) {
@@ -167,7 +179,7 @@ const  ReservationStatusScreen = () => {
     }
   };
 
-  const renderItem = ({ item }: { item: Reservation }) => {
+  const renderItem = ({ item }: { item: BookingReservation }) => {
     const statusInfo = statusMap[item.status] || statusMap.pending;
     
     return (
@@ -178,9 +190,15 @@ const  ReservationStatusScreen = () => {
         <ThemedView className="p-4">
           <ThemedView className="flex-row justify-between items-center mb-2">
             <ThemedText className="text-lg font-semibold">{item.propertyTitle}</ThemedText>
-            <ThemedText className={`px-2 py-1 rounded-full ${statusInfo.color}`}>
+            {item.documentsSubmitted && (
+              <ThemedView className="flex-row items-center mt-1">
+                <Ionicons name="document-text" size={14} color="#10b981" />
+                <ThemedText className="text-xs text-green-600 ml-1">Documents soumis</ThemedText>
+              </ThemedView>
+            )}
+            <ThemedView className={`px-2 py-1 rounded-full ${statusInfo.color}`}>
               <ThemedText className="text-xs font-medium">{statusInfo.text}</ThemedText>
-            </ThemedText>
+            </ThemedView>
           </ThemedView>
           
           <ThemedView className="mb-3">
@@ -193,13 +211,27 @@ const  ReservationStatusScreen = () => {
             <ThemedText className="text-gray-600 text-sm">
               Loyer mensuel: {item.monthlyRent} €
             </ThemedText>
+            <ThemedText className="text-gray-600 text-sm">
+              Occupants: {item.numberOfOccupants} | Garant: {item.hasGuarantor ? 'Oui' : 'Non'}
+            </ThemedText>
           </ThemedView>
           
           <ThemedView className="flex-row justify-between items-center border-t border-gray-200 pt-3">
-            <ThemedText className="text-blue-600 font-medium">
+            <ThemedText className={`font-medium ${
+              item.status === 'approved' ? 'text-green-600' : 
+              item.status === 'rejected' ? 'text-red-600' : 'text-blue-600'
+            }`}>
               {getNextAction(item.status)}
             </ThemedText>
-            <Ionicons name="chevron-forward" size={20} color="#4B5563" />
+            {item.status === 'approved' && userType === 'tenant' && (
+              <Ionicons name="card" size={20} color="#10b981" />
+            )}
+            {(item.status === 'pending' || item.status === 'documents_submitted') && (
+              <Ionicons name="time" size={20} color="#f59e0b" />
+            )}
+            {item.status !== 'approved' && item.status !== 'pending' && item.status !== 'documents_submitted' && (
+              <Ionicons name="chevron-forward" size={20} color="#4B5563" />
+            )}
           </ThemedView>
         </ThemedView>
       </TouchableOpacity>
@@ -219,7 +251,7 @@ const  ReservationStatusScreen = () => {
       <ThemedView className="p-4">
         <Text className="text-2xl font-bold mb-4">Mes réservations</Text>
         
-        {reservations.length === 0 ? (
+        {userReservations.length === 0 ? (
           <ThemedView className="bg-white rounded-lg shadow-sm p-6 items-center justify-center">
             <Ionicons name="calendar-outline" size={48} color="#9CA3AF" />
             <ThemedText className="text-lg font-medium text-gray-700 mt-4 mb-2">
@@ -244,7 +276,7 @@ const  ReservationStatusScreen = () => {
           </ThemedView>
         ) : (
           <FlatList
-            data={reservations}
+            data={userReservations}
             renderItem={renderItem}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}

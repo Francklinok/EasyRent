@@ -12,12 +12,15 @@ import { router } from 'expo-router';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { sendGlobalNotification } from '@/components/contexts/notifications/NotificationContext';
+import { useNotifications } from '@/components/contexts/notifications/NotificationContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import { BackButton } from '@/components/ui/BackButton';
 import { useTheme } from '@/components/contexts/theme/themehook';
 import { ThemeColors } from '@/components/contexts/theme/themeTypes';
+import { useBooking } from '@/components/contexts/booking/BookingContext';
+
+
 type RootStackParamList = {
 
   Reservation: { property: Property };
@@ -49,6 +52,8 @@ const ReservationScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const { property } = route.params;
   const { theme } = useTheme();
+  const { addNotification } = useNotifications();
+  const { addReservation } = useBooking();
   const [loading, setLoading] = useState(false);
   const [bookingMode, setBookingMode] = useState<BookingMode>('direct');
   const [visit, setVisit] = useState<Visit | null>(null);
@@ -138,38 +143,11 @@ const ReservationScreen = () => {
       return;
     }
     
-    sendGlobalNotification({
+    addNotification({
       type: 'visit_request',
       title: 'Nouvelle demande de visite',
       message: `${MOCK_USER.fullName} souhaite visiter ${property.title || 'votre propriété'}`,
-      userId: property.ownerId || property.owner?.id || 'unknown',
-      data: { visit, property },
-      actions: [
-        {
-          id: 'accept',
-          label: 'Accepter',
-          type: 'accept',
-          onPress: () => {
-            console.log('Visit accepted from notification');
-            if (visit) {
-              setVisit({ ...visit, status: 'confirmed' });
-              updateProfileStatus('client', 'Visit Accepted');
-              updateProfileStatus('owner', 'Visit Accepted');
-            }
-          }
-        },
-        {
-          id: 'reject',
-          label: 'Refuser',
-          type: 'reject',
-          onPress: () => {
-            console.log('Visit rejected from notification');
-            if (visit) {
-              setVisit({ ...visit, status: 'cancelled' });
-            }
-          }
-        }
-      ]
+      data: { visit, property }
     });
     
     console.log('Notification sent to owner ID:', property.ownerId || property.owner?.id);
@@ -282,10 +260,8 @@ const ReservationScreen = () => {
       style={{ marginBottom: 24 }}
     >
       <ThemedView style={{
-        backgroundColor: color.surface,
         borderRadius: 20,
         padding: 20,
-        shadowColor: color.shadowColor || '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 12,
@@ -360,7 +336,7 @@ const ReservationScreen = () => {
           >
             <LinearGradient
               colors={bookingMode === 'visit' ? [color.success + '20', color.success + '10'] : [color.surfaceVariant, color.surface]}
-              style={{ padding: 20, alignItems: 'center' }}
+              style={{ padding:22, alignItems: 'center' }}
             >
               <ThemedView style={{
                 backgroundColor: bookingMode === 'visit' ? color.success : color.outline + '40',
@@ -377,7 +353,7 @@ const ReservationScreen = () => {
               <ThemedText style={{
                 fontWeight: '700',
                 fontSize: 16,
-                color: bookingMode === 'visit' ? color.success : color.onSurface,
+                color: bookingMode === 'visit' ? color.surface : color.onSurface,
                 marginBottom: 8,
                 textAlign: 'center'
               }}>Programmer une visite</ThemedText>
@@ -504,11 +480,11 @@ const ReservationScreen = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-      <LinearGradient
-        colors={[theme.primary + '10', theme.background]}
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.surface }}>
+      {/* <LinearGradient
+        colors={[theme.buttonGradient]}
         style={{ flex: 1 }}
-      >
+      > */}
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
           <MotiView
             from={{ opacity: 0, translateY: -20 }}
@@ -518,9 +494,7 @@ const ReservationScreen = () => {
           >
             <ThemedView className="flex-row gap-6">
                <BackButton/>
-            <ThemedText style={{
-              fontSize: 28,
-              fontWeight: '800',
+            <ThemedText type = "title" intensity ="strong" style={{
               color: theme.onSurface,
               textAlign: 'center',
               marginBottom: 8
@@ -652,21 +626,41 @@ const ReservationScreen = () => {
             <CustomButton
               title={bookingMode === 'visit' && visit?.status === 'completed' ? 'Finaliser la réservation' : 'Continuer vers les documents'}
               onPress={() => {
+                // Create reservation in booking system
+                const reservationId = addReservation({
+                  propertyId: property?.id || 'unknown',
+                  propertyTitle: property?.title || 'Propriété',
+                  landlordId: property?.ownerId || property?.owner?.id || 'unknown',
+                  tenantId: MOCK_USER.uid,
+                  startDate: formik.values.startDate.toISOString(),
+                  endDate: formik.values.endDate.toISOString(),
+                  monthlyRent: property?.monthlyRent || 0,
+                  depositAmount: property?.depositAmount || 0,
+                  numberOfOccupants: formik.values.numberOfOccupants,
+                  hasGuarantor: formik.values.hasGuarantor,
+                  monthlyIncome: formik.values.monthlyIncome,
+                  status: 'pending',
+                  documentsSubmitted: false,
+                  documentsApproved: false,
+                  visitCompleted: visit?.status === 'completed'
+                });
+                
                 // Send booking notification
-                sendGlobalNotification({
+                addNotification({
                   type: 'booking_request',
                   title: 'Nouvelle demande de réservation',
                   message: `${MOCK_USER.fullName} a soumis une demande de réservation pour ${property?.title || 'votre propriété'}`,
-                  userId: property?.ownerId || property?.owner?.id || 'unknown',
                   data: { 
+                    reservationId,
                     property, 
                     bookingDetails: formik.values,
                     clientName: MOCK_USER.fullName
                   }
                 });
                 
-                router.navigate({
-                  pathname:"/documentsubmit/DocumentUploadFile"
+                router.push({
+                  pathname: '/documentsubmit/DocumentUploadFile',
+                  params: { reservationId, property: JSON.stringify(property) }
                 });
               }}
               loading={loading}
@@ -675,7 +669,7 @@ const ReservationScreen = () => {
           </ThemedView>
         )}
         </ScrollView>
-      </LinearGradient>
+      {/* </LinearGradient> */}
     </SafeAreaView>
   );
 };

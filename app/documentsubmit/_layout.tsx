@@ -6,9 +6,9 @@ export default function DocLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: true,
+        headerShown: false,
         headerStyle: {
-          backgroundColor: "white",
+          backgroundColor: "transparent"
         },
       }}
     />

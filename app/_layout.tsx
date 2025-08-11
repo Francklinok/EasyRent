@@ -7,6 +7,7 @@ import 'react-native-reanimated';
 import { ThemeProvider } from '@/components/contexts/theme/themeContext';
 import { NotificationProvider } from '@/components/contexts/notifications/NotificationContext';
 import { FavoritesProvider } from '@/components/contexts/favorites/FavoritesContext';
+import { BookingProvider } from '@/components/contexts/booking/BookingContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -66,13 +67,15 @@ export default function RootLayout() {
     <ThemeProvider initialTheme="system">
       <NotificationProvider>
         <FavoritesProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="Auth/Login" options={{ headerShown: false }} />
-            <Stack.Screen name="Auth/Register" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" options={{ title: 'Page Introuvable' }} />
-          </Stack>
-          <StatusBar style="auto" />
+          <BookingProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="Auth/Login" options={{ headerShown: false }} />
+              <Stack.Screen name="Auth/Register" options={{ headerShown: false }} />
+              <Stack.Screen name="+not-found" options={{ title: 'Page Introuvable' }} />
+            </Stack>
+            <StatusBar style="auto" />
+          </BookingProvider>
         </FavoritesProvider>
       </NotificationProvider>
     </ThemeProvider>

@@ -2,7 +2,8 @@
 import React from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, View } from 'react-native';
 import { ReactNode } from 'react';
-
+import { ThemedView } from './ThemedView';
+import { ThemedText } from './ThemedText';
 type ButtonType = 'primary' | 'secondary' | 'outline' | 'danger';
 
 interface CustomButtonProps {
@@ -61,9 +62,9 @@ const CustomButton: React.FC<CustomButtonProps> = ({
       {loading ? (
         <ActivityIndicator size="small" color={type === 'outline' ? '#3B82F6' : '#FFFFFF'} />
       ) : (
-        <View className="flex-row items-center">
+        <View  className="flex-row items-center">
           {icon && <View className="mr-2">{icon}</View>}
-          <Text className={`font-medium ${getTextStyle()}`}>{title}</Text>
+          <ThemedText  className={`font-medium ${getTextStyle()}`}>{title}</ThemedText>
         </View>
       )}
     </TouchableOpacity>
