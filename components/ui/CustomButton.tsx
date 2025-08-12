@@ -4,6 +4,10 @@ import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, View } from 'rea
 import { ReactNode } from 'react';
 import { ThemedView } from './ThemedView';
 import { ThemedText } from './ThemedText';
+import { useTheme } from '../contexts/theme/themehook';
+
+
+
 type ButtonType = 'primary' | 'secondary' | 'outline' | 'danger';
 
 interface CustomButtonProps {
@@ -50,6 +54,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
         return 'text-white';
     }
   };
+  const   {theme} = useTheme()
 
   return (
     <TouchableOpacity
@@ -64,7 +69,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
       ) : (
         <View  className="flex-row items-center">
           {icon && <View className="mr-2">{icon}</View>}
-          <ThemedText  className={`font-medium ${getTextStyle()}`}>{title}</ThemedText>
+          <ThemedText style ={{color:theme.surface}} >{title}</ThemedText>
         </View>
       )}
     </TouchableOpacity>

@@ -613,9 +613,9 @@ const ProfileScreen: React.FC = () => {
 >
       <ScrollView >
         {/* Header Section */}
-        <ThemedView variant  = "primary"  className="flex-row items-center  gap-6  p-4  px-0">
+        <ThemedView   className="flex-row items-center  gap-6  p-4  px-0">
           <BackButton/>
-          <ThemedView variant  = "primary" className="flex-row items-center gap-4">
+          <ThemedView  className="flex-row items-center gap-4">
             <Image
               source={{ uri: user.profilePictureUrl || 'https://via.placeholder.com/150' }}
               className="w-16 h-16 rounded-full border-2 border-primary"
@@ -634,10 +634,7 @@ const ProfileScreen: React.FC = () => {
             className="p-1 rounded-full bg-surface-variant"
           >
             <Edit3 size={24} color = {theme.surface} />
-          </TouchableOpacity>
-
-            {/* User Badges */}
-       
+          </TouchableOpacity>       
         </ThemedView>
         <ThemedView variant  = "primary" className="items-center rounded-b-3xl mb-4">
           <UserBadges user={user} />

@@ -9,7 +9,8 @@ import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useBooking, BookingReservation } from '@/components/contexts/booking/BookingContext';
 import { useNotifications } from '@/components/contexts/notifications/NotificationContext';
-// Using BookingReservation from context
+import { BackButton } from '@/components/ui/BackButton';
+import { useTheme } from '@/components/contexts/theme/themehook';
 
 const statusMap = {
   pending: { text: 'En attente', color: 'bg-yellow-100 text-yellow-800' },
@@ -27,6 +28,7 @@ const ReservationStatusScreen = () => {
   const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const {theme} = useTheme()
   
   const userType = 'tenant'; // Ou 'landlord' pour tester l'autre rôle
   const currentUserId = 'user123'; // Mock user ID
@@ -184,7 +186,7 @@ const ReservationStatusScreen = () => {
     
     return (
       <TouchableOpacity
-        className="bg-white rounded-lg shadow-sm mb-4 overflow-hidden"
+        className=" rounded-lg shadow-sm mb-4 overflow-hidden"
         onPress={() => handleReservationPress(item)}
       >
         <ThemedView className="p-4">
@@ -192,7 +194,7 @@ const ReservationStatusScreen = () => {
             <ThemedText className="text-lg font-semibold">{item.propertyTitle}</ThemedText>
             {item.documentsSubmitted && (
               <ThemedView className="flex-row items-center mt-1">
-                <Ionicons name="document-text" size={14} color="#10b981" />
+                <Ionicons name="document-text" size={14} color={theme.success} />
                 <ThemedText className="text-xs text-green-600 ml-1">Documents soumis</ThemedText>
               </ThemedView>
             )}
@@ -202,32 +204,32 @@ const ReservationStatusScreen = () => {
           </ThemedView>
           
           <ThemedView className="mb-3">
-            <ThemedText className="text-gray-600 text-sm">
+            <ThemedText className="text-gray-600">
               Demande créée le {formatDate(item.createdAt)}
             </ThemedText>
-            <ThemedText className="text-gray-600 text-sm">
+            <ThemedText className="text-gray-600">
               Période: {formatDate(item.startDate)} - {formatDate(item.endDate)}
             </ThemedText>
-            <ThemedText className="text-gray-600 text-sm">
+            <ThemedText className="text-gray-600">
               Loyer mensuel: {item.monthlyRent} €
             </ThemedText>
-            <ThemedText className="text-gray-600 text-sm">
+            <ThemedText className="text-gray-600">
               Occupants: {item.numberOfOccupants} | Garant: {item.hasGuarantor ? 'Oui' : 'Non'}
             </ThemedText>
           </ThemedView>
           
           <ThemedView className="flex-row justify-between items-center border-t border-gray-200 pt-3">
             <ThemedText className={`font-medium ${
-              item.status === 'approved' ? 'text-green-600' : 
-              item.status === 'rejected' ? 'text-red-600' : 'text-blue-600'
+              item.status === 'approved' ? theme.success : 
+              item.status === 'rejected' ?theme.error: theme.primary
             }`}>
               {getNextAction(item.status)}
             </ThemedText>
             {item.status === 'approved' && userType === 'tenant' && (
-              <Ionicons name="card" size={20} color="#10b981" />
+              <Ionicons name="card" size={20} color={theme.success} />
             )}
             {(item.status === 'pending' || item.status === 'documents_submitted') && (
-              <Ionicons name="time" size={20} color="#f59e0b" />
+              <Ionicons name="time" size={20} color={theme.star} />
             )}
             {item.status !== 'approved' && item.status !== 'pending' && item.status !== 'documents_submitted' && (
               <Ionicons name="chevron-forward" size={20} color="#4B5563" />
@@ -241,20 +243,24 @@ const ReservationStatusScreen = () => {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-white justify-center items-center">
-        <ActivityIndicator size="large" color="#4F46E5" />
+        <ActivityIndicator size="large" color={theme.primary} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1"
+    style = {{backgroundColor: theme.surface}}>
       <ThemedView className="p-4">
-        <Text className="text-2xl font-bold mb-4">Mes réservations</Text>
+        <ThemedView className = "flex-row gap-6">
+          <BackButton/>
+          <ThemedText type = "title" intensity = "strong" className=" mb-4">Mes réservations</ThemedText>
+        </ThemedView>
         
         {userReservations.length === 0 ? (
-          <ThemedView className="bg-white rounded-lg shadow-sm p-6 items-center justify-center">
-            <Ionicons name="calendar-outline" size={48} color="#9CA3AF" />
-            <ThemedText className="text-lg font-medium text-gray-700 mt-4 mb-2">
+          <ThemedView className=" rounded-lg shadow-sm p-6 items-center justify-center">
+            <Ionicons name="calendar-outline" size={48} color={theme.accent} />
+            <ThemedText type = "normal" className=" mt-4 mb-2">
               Aucune réservation trouvée
             </ThemedText>
             <ThemedText className="text-gray-500 text-center mb-4">
@@ -270,7 +276,7 @@ const ReservationStatusScreen = () => {
                 className="bg-blue-600 py-3 px-4 rounded-lg"
                 onPress={() => router.push("/home/home")}
               >
-                <Text className="text-white font-medium">Chercher un logement</Text>
+                <ThemedText >Chercher un logement</ThemedText>
               </TouchableOpacity>
             )}
           </ThemedView>

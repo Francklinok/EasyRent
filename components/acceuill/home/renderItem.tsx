@@ -328,10 +328,10 @@ const ActionButtons = React.memo(({
   }), []);
 
   return (
-    <ThemedView style={{ flexDirection: 'row', gap: 8, paddingBottom:8}}>
+    <ThemedView style={{ flexDirection: 'row', gap: 6, paddingBottom: 4 }}>
       <TouchableOpacity
         onPress={onPress}
-        style={{ flex: 1, borderRadius: 16, overflow: 'hidden' }}
+        style={{ flex: 1, borderRadius: 12, overflow: 'hidden' }}
         accessibilityLabel="Explorer la propriété"
         accessibilityRole="button"
         activeOpacity={0.9}
@@ -341,7 +341,7 @@ const ActionButtons = React.memo(({
             colors={theme.buttonGradient}
             start={gradientStyle.start}
             end={gradientStyle.end}
-            style={{ paddingVertical: 10, alignItems: 'center', position: 'relative' }}
+            style={{ paddingVertical: 8, alignItems: 'center', position: 'relative' }}
           >
             <Animated.View
               style={{
@@ -363,14 +363,14 @@ const ActionButtons = React.memo(({
                 }],
               }}
             />
-            <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'transparent' }}>
-              <MaterialCommunityIcons name="rocket-launch" size={16} color={theme.surface} />
+            <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'transparent' }}>
+              <MaterialCommunityIcons name="rocket-launch" size={14} color={theme.surface} />
               <ThemedText
                 style={{
                   color: theme.surface,
                   fontWeight: '800',
-                  fontSize: 12,
-                  letterSpacing: 0.5
+                  fontSize: 10,
+                  letterSpacing: 0.3
                 }}
               >
                 DÉCOUVRIR
@@ -387,8 +387,8 @@ const ActionButtons = React.memo(({
       >
         <TouchableOpacity
           style={{
-            borderRadius: 16,
-            padding: 10,
+            borderRadius: 12,
+            padding: 8,
             backgroundColor: theme.surface,
             borderWidth: 1,
             borderColor: theme.outline + '30'
@@ -397,7 +397,7 @@ const ActionButtons = React.memo(({
           accessibilityRole="button"
           activeOpacity={0.8}
         >
-          <MaterialIcons name="share" size={18} color={theme.onSurface} />
+          <MaterialIcons name="share" size={16} color={theme.onSurface} />
         </TouchableOpacity>
       </MotiView>
       
@@ -409,8 +409,8 @@ const ActionButtons = React.memo(({
         >
           <TouchableOpacity
             style={{
-              borderRadius: 16,
-              padding: 10,
+              borderRadius: 12,
+              padding: 8,
               backgroundColor: theme.primary + '10',
               borderWidth: 1,
               borderColor: theme.primary + '30',
@@ -421,16 +421,16 @@ const ActionButtons = React.memo(({
             activeOpacity={0.8}
           >
             <Animated.View style={{ transform: [{ scale: breatheAnim }] }}>
-              <MaterialCommunityIcons name="virtual-reality" size={18} color={theme.primary} />
+              <MaterialCommunityIcons name="virtual-reality" size={16} color={theme.primary} />
             </Animated.View>
             <ThemedView
               style={{
                 position: 'absolute',
-                top: -2,
-                right: -2,
-                width: 8,
-                height: 8,
-                borderRadius: 4,
+                top: -1,
+                right: -1,
+                width: 6,
+                height: 6,
+                borderRadius: 3,
                 backgroundColor: theme.error
               }}
             />
@@ -667,7 +667,7 @@ const RenderItem: React.FC<Props> = ({
           />
 
           {/* Compact Content Section */}
-          <ThemedView style={{ padding: 12, gap: 8 }}>
+          <ThemedView style={{ padding: 10, gap: 6 }}>
             {/* Compact Header: Type, Location & Rating in one row */}
 
             <MotiView
@@ -678,56 +678,52 @@ const RenderItem: React.FC<Props> = ({
               <ThemedView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <ThemedView style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                   <ThemedView style={{
-                    backgroundColor: theme.primary + '20',
-                    paddingHorizontal: 6,
-                    paddingVertical: 2,
-                    borderRadius: 8,
-                    marginRight: 6
+                    backgroundColor: theme.primary + '15',
+                    paddingHorizontal: 5,
+                    paddingVertical: 1,
+                    borderRadius: 6,
+                    marginRight: 4
                   }}>
                     <ThemedText style={{
-                      fontSize: 9,
-                      fontWeight: '700',
+                      fontSize: 8,
+                      fontWeight: '800',
                       color: theme.primary,
-                      textTransform: 'uppercase'
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.3
                     }}>
                       {item.type}
                     </ThemedText>
-
                   </ThemedView>
-                  <MaterialIcons name="location-on" size={14} color={theme.error} />
+                  <MaterialIcons name="location-on" size={12} color={theme.error} />
                   <ThemedText style={{
-                    fontSize: 13,
-                    fontWeight: '600',
+                    fontSize: 11,
+                    fontWeight: '500',
                     color: theme.typography.body,
-                    marginLeft: 2,
+                    marginLeft: 1,
                     flex: 1
                   }} numberOfLines={1}>
                     {item.location}
                   </ThemedText>
-
                 </ThemedView>
 
-                <LinearGradient
-                  colors={[theme.star + '20', theme.star + '10']}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingHorizontal: 8,
-                    paddingVertical: 3,
-                    borderRadius: 12,
-                    gap: 3
-                  }}
-                >
-                  <FontAwesome5 name="star" size={12} color={theme.star} />
+                <ThemedView style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: theme.star + '15',
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                  borderRadius: 8,
+                  gap: 2
+                }}>
+                  <FontAwesome5 name="star" size={10} color={theme.star} />
                   <ThemedText style={{
-                    fontSize: 12,
+                    fontSize: 10,
                     fontWeight: '700',
                     color: theme.star
                   }}>
                     {item.stars}
                   </ThemedText>
-                </LinearGradient>
-                
+                </ThemedView>
               </ThemedView>
             </MotiView>
             
@@ -737,36 +733,35 @@ const RenderItem: React.FC<Props> = ({
               animate={{ opacity: 1, translateY: 0 }}
               transition={{ delay: 600, type: 'spring' }}
             >
-              
               <ThemedView style={{
                 flexDirection: 'row',
-                justifyContent: 'space-between',
-                backgroundColor: theme.surfaceVariant + '25',
-                borderRadius: 10,
-                paddingVertical: 2,
-                paddingHorizontal: 12
+                justifyContent: 'space-around',
+                backgroundColor: theme.surfaceVariant + '20',
+                borderRadius: 8,
+                paddingVertical: 6,
+                paddingHorizontal: 8
               }}>
-                <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                  <MaterialCommunityIcons name="bed" size={14} color={theme.primary} />
-                  <ThemedText style={{ fontSize: 11, fontWeight: '600', color: theme.typography.body }}>
+                <ThemedView style={{ alignItems: 'center', gap: 1 }}>
+                  <MaterialCommunityIcons name="bed" size={12} color={theme.primary} />
+                  <ThemedText style={{ fontSize: 9, fontWeight: '700', color: theme.typography.body }}>
                     {item.generalInfo?.bedrooms || 'N/A'}
                   </ThemedText>
                 </ThemedView>
-                <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                  <MaterialCommunityIcons name="shower" size={14} color={theme.primary} />
-                  <ThemedText style={{ fontSize: 11, fontWeight: '600', color: theme.typography.body }}>
+                <ThemedView style={{ alignItems: 'center', gap: 1 }}>
+                  <MaterialCommunityIcons name="shower" size={12} color={theme.primary} />
+                  <ThemedText style={{ fontSize: 9, fontWeight: '700', color: theme.typography.body }}>
                     {item.generalInfo?.bathrooms || 'N/A'}
                   </ThemedText>
                 </ThemedView>
-                <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                  <MaterialCommunityIcons name="ruler-square" size={14} color={theme.primary} />
-                  <ThemedText style={{ fontSize: 11, fontWeight: '600', color: theme.typography.body }}>
+                <ThemedView style={{ alignItems: 'center', gap: 1 }}>
+                  <MaterialCommunityIcons name="ruler-square" size={12} color={theme.primary} />
+                  <ThemedText style={{ fontSize: 9, fontWeight: '700', color: theme.typography.body }}>
                     {item.generalInfo?.surface}m²
                   </ThemedText>
                 </ThemedView>
-                <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                  <MaterialCommunityIcons name="home-group" size={14} color={theme.primary} />
-                  <ThemedText style={{ fontSize: 11, fontWeight: '600', color: theme.typography.body }}>
+                <ThemedView style={{ alignItems: 'center', gap: 1 }}>
+                  <MaterialCommunityIcons name="home-group" size={12} color={theme.primary} />
+                  <ThemedText style={{ fontSize: 9, fontWeight: '700', color: theme.typography.body }}>
                     {item.generalInfo?.rooms}P
                   </ThemedText>
                 </ThemedView>
@@ -781,16 +776,16 @@ const RenderItem: React.FC<Props> = ({
                 transition={{ delay: 700, type: 'spring' }}
               >
                 <ThemedView style={{
-                  backgroundColor: theme.surface + '60',
+                  backgroundColor: theme.surface + '40',
                   borderRadius: 6,
-                  padding: 8,
+                  padding: 6,
                   borderLeftWidth: 2,
-                  borderLeftColor: theme.primary
+                  borderLeftColor: theme.primary + '60'
                 }}>
                   <ThemedText style={{
-                    fontSize: 12,
-                    lineHeight: 16,
-                    color: theme.typography.body,
+                    fontSize: 10,
+                    lineHeight: 14,
+                    color: theme.typography.body + '90',
                     fontStyle: 'italic'
                   }} numberOfLines={2}>
                     {truncatedReview}

@@ -12,7 +12,8 @@ import { ThemedText } from '../ui/ThemedText';
 import { useTheme } from '../contexts/theme/themehook';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '../ui/BackButton';
-
+import { useBooking, BookingReservation } from '../contexts/booking/BookingContext';
+import { useNotifications } from '../contexts/notifications/NotificationContext';
 const { width, height } = Dimensions.get('window');
 
 // Enhanced Types
@@ -112,9 +113,9 @@ interface User {
   [key: string]: any;
 }
 
-// Demo Data
+// Demo Data with enhanced booking integration
 const demoUser = {
-  id: '1',
+  id: 'user123',
   name: 'Alexandre Martin',
   email: 'alexandre.martin@example.com',
   phone: '+33 6 12 34 56 78',
@@ -123,7 +124,8 @@ const demoUser = {
   joinDate: '2023-01-15',
   isVerified: true,
   isPremium: true,
-  visitStatus: 'none', // 'none' | 'Visit Scheduled' | 'Visit Accepted' | 'Visit Active'
+  userType: 'tenant', // 'tenant' | 'landlord' | 'agent'
+  visitStatus: 'none',
   wallet: {
     balance: 15750.50,
     currency: 'EUR',
@@ -160,30 +162,31 @@ const demoUser = {
   roles: [
     {
       id: '1',
-      type: 'agent' as const,
-      name: 'Agent Immobilier',
+      type: 'tenant' as const,
+      name: 'Locataire',
       isActive: true,
-      level: 'professional' as const,
-      stats: {
-        totalTransactions: 45,
-        successRate: 92,
-        rating: 4.8,
-        earnings: 125000
-      },
-      permissions: ['list_property', 'manage_clients', 'view_analytics']
-    },
-    {
-      id: '2',
-      type: 'buyer' as const,
-      name: 'Acheteur',
-      isActive: false,
       level: 'intermediate' as const,
       stats: {
         totalTransactions: 3,
         successRate: 100,
-        rating: 4.5
+        rating: 4.5,
+        earnings: 0
       },
-      permissions: ['search_properties', 'make_offers']
+      permissions: ['search_properties', 'make_bookings', 'submit_documents']
+    },
+    {
+      id: '2',
+      type: 'landlord' as const,
+      name: 'Propriétaire',
+      isActive: false,
+      level: 'beginner' as const,
+      stats: {
+        totalTransactions: 0,
+        successRate: 0,
+        rating: 0,
+        earnings: 0
+      },
+      permissions: ['list_property', 'manage_tenants']
     }
   ],
   subscriptions: [
@@ -197,53 +200,38 @@ const demoUser = {
       isActive: true,
       nextBilling: '2024-02-15',
       icon: 'crown'
-    },
-    {
-      id: '2',
-      name: 'Marketing Boost',
-      description: 'Boostez vos annonces',
-      price: 49,
-      period: 'monthly' as const,
-      features: ['Mise en avant', 'Photos professionnelles', 'Visite virtuelle'],
-      isActive: false,
-      icon: 'rocket'
     }
   ],
-  propertyTransactions: [
-    {
-      id: '1',
-      type: 'sell' as const,
-      property: {
-        id: '1',
-        title: 'Appartement 3P - Marais',
-        address: '15 Rue des Rosiers, Paris 4e',
-        price: 850000,
-        image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=300&h=200&fit=crop',
-        type: 'Appartement'
-      },
-      status: 'completed' as const,
-      date: '2024-01-10',
-      commission: 25500
-    }
-  ],
-  propertyServices: [
-    {
-      id: '1',
-      propertyId: 'villa_1',
-      propertyTitle: 'Villa Monaco - Vue Mer',
-      services: [
-        { key: 'concierge', title: 'Service de conciergerie', description: 'Conciergerie 24h/24', icon: 'concierge-bell', included: true, subscribed: true, price: 'Inclus' },
-        { key: 'housekeeping', title: 'Ménage hebdomadaire', description: 'Service de ménage professionnel', icon: 'broom', included: false, subscribed: true, price: '200€/semaine' },
-        { key: 'chef', title: 'Chef à domicile', description: 'Chef privé sur demande', icon: 'chef-hat', included: false, subscribed: false, price: '150€/repas' },
-        { key: 'security', title: 'Sécurité renforcée', description: 'Surveillance 24h/24', icon: 'security', included: true, subscribed: true, price: 'Inclus' }
-      ]
-    }
-  ],
+  propertyTransactions: [],
+  propertyServices: [],
   availableServices: [
     { key: 'maintenance', title: 'Maintenance Premium', description: 'Interventions prioritaires', icon: 'wrench', price: '99€/mois' },
-    { key: 'insurance', title: 'Assurance Premium', description: 'Couverture étendue', icon: 'shield', price: '149€/mois' },
-    { key: 'legal', title: 'Assistance Juridique', description: 'Conseil juridique 24h/7j', icon: 'balance-scale', price: '79€/mois' },
-    { key: 'energy', title: 'Audit Énergétique', description: 'Optimisation énergétique', icon: 'leaf', price: '299€/an' }
+    { key: 'insurance', title: 'Assurance Premium', description: 'Couverture étendue', icon: 'shield', price: '149€/mois' }
+  ],
+  // Seller properties (if user is a landlord)
+  ownedProperties: [
+    {
+      id: 'prop1',
+      title: 'Appartement 2P - République',
+      address: '25 Rue de la République, Paris 11e',
+      price: 1200,
+      type: 'rent',
+      image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=300&h=200&fit=crop',
+      status: 'available',
+      tenantRequests: 2,
+      monthlyIncome: 1200
+    },
+    {
+      id: 'prop2',
+      title: 'Studio - Bastille',
+      address: '12 Place de la Bastille, Paris 4e',
+      price: 850,
+      type: 'rent',
+      image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=300&h=200&fit=crop',
+      status: 'rented',
+      tenantRequests: 0,
+      monthlyIncome: 850
+    }
   ]
 };
 
@@ -702,14 +690,65 @@ const getVisitStatusIcon = (status: string) => {
   }
 };
 
+// Menu Items Interface
+interface MenuItem {
+  id: string;
+  title: string;
+  icon: string;
+  color: string;
+  component: 'dashboard' | 'bookings' | 'properties' | 'wallet' | 'roles' | 'stats' | 'subscriptions' | 'transactions' | 'services' | 'available-services' | 'actions';
+}
+
+const menuItems: MenuItem[] = [
+  { id: '1', title: 'Tableau de Bord', icon: 'view-dashboard', color: '#007AFF', component: 'dashboard' },
+  { id: '2', title: 'Réservations', icon: 'calendar-check', color: '#34C759', component: 'bookings' },
+  { id: '3', title: 'Mes Propriétés', icon: 'home-group', color: '#FF9500', component: 'properties' },
+  { id: '4', title: 'Portefeuille', icon: 'wallet', color: '#AF52DE', component: 'wallet' },
+  { id: '5', title: 'Statistiques', icon: 'chart-line', color: '#FF3B30', component: 'stats' },
+  { id: '6', title: 'Mes Rôles', icon: 'account-tie', color: '#5AC8FA', component: 'roles' },
+  { id: '7', title: 'Abonnements', icon: 'crown', color: '#FFCC02', component: 'subscriptions' },
+  { id: '8', title: 'Actions Rapides', icon: 'flash', color: '#FF6B35', component: 'actions' }
+];
+
 // Main Component
 const EnhancedProfileComponent: React.FC = () => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { getUserReservations, getOwnerReservations } = useBooking();
+  const { notifications } = useNotifications();
   const [user, setUser] = useState(demoUser);
   const [activeRole, setActiveRole] = useState(user.roles[0]);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [selectedComponent, setSelectedComponent] = useState<string | null>('dashboard');
+  const [userReservations, setUserReservations] = useState<BookingReservation[]>([]);
+  const [ownerReservations, setOwnerReservations] = useState<BookingReservation[]>([]);
+  
+  // Load booking data
+  useEffect(() => {
+    const userBookings = getUserReservations(user.id);
+    const ownerBookings = getOwnerReservations(user.id);
+    
+    // Remove duplicates and sort
+    const uniqueUserReservations = userBookings.reduce((acc, current) => {
+      const existingIndex = acc.findIndex(item => item.propertyId === current.propertyId);
+      if (existingIndex === -1) {
+        acc.push(current);
+      } else if (new Date(current.createdAt) > new Date(acc[existingIndex].createdAt)) {
+        acc[existingIndex] = current;
+      }
+      return acc;
+    }, [] as BookingReservation[]);
+    
+    setUserReservations(uniqueUserReservations.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    ));
+    
+    setOwnerReservations(ownerBookings.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    ));
+  }, [getUserReservations, getOwnerReservations, user.id]);
   
   // Update visit status function
   const updateVisitStatus = (newStatus: string) => {
@@ -729,6 +768,407 @@ const EnhancedProfileComponent: React.FC = () => {
     setTimeout(() => setRefreshing(false), 2000);
   };
   
+  const getBookingStatusInfo = (status: string) => {
+    const statusMap = {
+      pending: { text: 'En attente', color: theme.warning, icon: 'clock' },
+      documents_submitted: { text: 'Documents soumis', color: theme.primary, icon: 'file-document' },
+      approved: { text: 'Approuvé', color: theme.success, icon: 'check-circle' },
+      rejected: { text: 'Rejeté', color: theme.error, icon: 'close-circle' },
+      payment_pending: { text: 'Paiement en attente', color: theme.warning, icon: 'credit-card-clock' },
+      payment_completed: { text: 'Paiement effectué', color: theme.success, icon: 'credit-card-check' },
+      contract_generated: { text: 'Contrat généré', color: theme.success, icon: 'file-check' },
+      completed: { text: 'Terminé', color: theme.typography.caption, icon: 'check-all' }
+    };
+    return statusMap[status as keyof typeof statusMap] || statusMap.pending;
+  };
+
+  const renderSelectedComponent = () => {
+    switch (selectedComponent) {
+      case 'dashboard':
+        return (
+          <ThemedView style={{ marginHorizontal: 16, marginBottom: 20 }}>
+            <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 16, color: theme.typography.body }}>
+              Tableau de Bord
+            </ThemedText>
+            
+            {/* Current Booking Status */}
+            {userReservations.length > 0 && (
+              <ThemedView style={{ backgroundColor: theme.surface, borderRadius: 16, padding: 16, marginBottom: 16 }}>
+                <ThemedText style={{ fontSize: 16, fontWeight: '600', marginBottom: 12, color: theme.typography.body }}>
+                  Réservation en Cours
+                </ThemedText>
+                {userReservations.slice(0, 2).map((reservation) => {
+                  const statusInfo = getBookingStatusInfo(reservation.status);
+                  return (
+                    <ThemedView key={reservation.id} style={{ 
+                      backgroundColor: theme.background, 
+                      borderRadius: 12, 
+                      padding: 12, 
+                      marginBottom: 8,
+                      borderLeftWidth: 4,
+                      borderLeftColor: statusInfo.color
+                    }}>
+                      <ThemedView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <ThemedView style={{ flex: 1 }}>
+                          <ThemedText style={{ fontSize: 14, fontWeight: '600', color: theme.typography.body }}>
+                            {reservation.propertyTitle}
+                          </ThemedText>
+                          <ThemedText style={{ fontSize: 12, color: theme.typography.caption, marginTop: 2 }}>
+                            Loyer: {reservation.monthlyRent}€/mois
+                          </ThemedText>
+                        </ThemedView>
+                        <ThemedView style={{ 
+                          flexDirection: 'row', 
+                          alignItems: 'center', 
+                          backgroundColor: statusInfo.color + '20', 
+                          paddingHorizontal: 8, 
+                          paddingVertical: 4, 
+                          borderRadius: 12 
+                        }}>
+                          <MaterialCommunityIcons name={statusInfo.icon as any} size={12} color={statusInfo.color} />
+                          <ThemedText style={{ marginLeft: 4, fontSize: 10, fontWeight: '600', color: statusInfo.color }}>
+                            {statusInfo.text}
+                          </ThemedText>
+                        </ThemedView>
+                      </ThemedView>
+                    </ThemedView>
+                  );
+                })}
+              </ThemedView>
+            )}
+            
+            {/* Landlord Properties */}
+            {user.userType === 'landlord' && user.ownedProperties && (
+              <ThemedView style={{ backgroundColor: theme.surface, borderRadius: 16, padding: 16, marginBottom: 16 }}>
+                <ThemedText style={{ fontSize: 16, fontWeight: '600', marginBottom: 12, color: theme.typography.body }}>
+                  Mes Propriétés ({user.ownedProperties.length})
+                </ThemedText>
+                {user.ownedProperties.map((property) => (
+                  <ThemedView key={property.id} style={{ 
+                    backgroundColor: theme.background, 
+                    borderRadius: 12, 
+                    padding: 12, 
+                    marginBottom: 8,
+                    flexDirection: 'row',
+                    alignItems: 'center'
+                  }}>
+                    <Image source={{ uri: property.image }} style={{ width: 50, height: 50, borderRadius: 8, marginRight: 12 }} />
+                    <ThemedView style={{ flex: 1 }}>
+                      <ThemedText style={{ fontSize: 14, fontWeight: '600', color: theme.typography.body }}>
+                        {property.title}
+                      </ThemedText>
+                      <ThemedText style={{ fontSize: 12, color: theme.typography.caption }}>
+                        {property.price}€/mois • {property.status === 'available' ? 'Disponible' : 'Loué'}
+                      </ThemedText>
+                    </ThemedView>
+                    {property.tenantRequests > 0 && (
+                      <ThemedView style={{ 
+                        backgroundColor: theme.error + '20', 
+                        paddingHorizontal: 8, 
+                        paddingVertical: 4, 
+                        borderRadius: 12 
+                      }}>
+                        <ThemedText style={{ fontSize: 10, fontWeight: '600', color: theme.error }}>
+                          {property.tenantRequests} demandes
+                        </ThemedText>
+                      </ThemedView>
+                    )}
+                  </ThemedView>
+                ))}
+              </ThemedView>
+            )}
+            
+            {/* Quick Stats */}
+            <ThemedView style={{ backgroundColor: theme.surface, borderRadius: 16, padding: 16 }}>
+              <ThemedText style={{ fontSize: 16, fontWeight: '600', marginBottom: 12, color: theme.typography.body }}>
+                Statistiques Rapides
+              </ThemedText>
+              <ThemedView style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+                <ThemedView style={{ alignItems: 'center' }}>
+                  <ThemedText style={{ fontSize: 20, fontWeight: '800', color: theme.primary }}>
+                    {userReservations.length}
+                  </ThemedText>
+                  <ThemedText style={{ fontSize: 10, color: theme.typography.caption }}>
+                    Réservations
+                  </ThemedText>
+                </ThemedView>
+                <ThemedView style={{ alignItems: 'center' }}>
+                  <ThemedText style={{ fontSize: 20, fontWeight: '800', color: theme.success }}>
+                    {notifications.length}
+                  </ThemedText>
+                  <ThemedText style={{ fontSize: 10, color: theme.typography.caption }}>
+                    Notifications
+                  </ThemedText>
+                </ThemedView>
+                <ThemedView style={{ alignItems: 'center' }}>
+                  <ThemedText style={{ fontSize: 20, fontWeight: '800', color: theme.star }}>
+                    {activeRole.stats.rating || 0}
+                  </ThemedText>
+                  <ThemedText style={{ fontSize: 10, color: theme.typography.caption }}>
+                    Note
+                  </ThemedText>
+                </ThemedView>
+              </ThemedView>
+            </ThemedView>
+          </ThemedView>
+        );
+      case 'wallet':
+        return <WalletCard wallet={user.wallet} onPress={() => setShowWalletModal(true)} />;
+      case 'roles':
+        return <RoleSwitcher roles={user.roles} activeRole={activeRole} onRoleChange={setActiveRole} />;
+      case 'bookings':
+        return (
+          <ThemedView style={{ marginHorizontal: 16, marginBottom: 20 }}>
+            <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: theme.typography.body }}>
+              Mes Réservations ({userReservations.length})
+            </ThemedText>
+            {userReservations.length === 0 ? (
+              <ThemedView style={{ backgroundColor: theme.surface, borderRadius: 16, padding: 20, alignItems: 'center' }}>
+                <MaterialCommunityIcons name="calendar-blank" size={48} color={theme.typography.caption} />
+                <ThemedText style={{ fontSize: 16, fontWeight: '600', color: theme.typography.caption, marginTop: 12 }}>
+                  Aucune réservation
+                </ThemedText>
+              </ThemedView>
+            ) : (
+              userReservations.map((reservation) => {
+                const statusInfo = getBookingStatusInfo(reservation.status);
+                return (
+                  <ThemedView key={reservation.id} style={{ 
+                    backgroundColor: theme.surface, 
+                    borderRadius: 16, 
+                    padding: 16, 
+                    marginBottom: 12,
+                    borderLeftWidth: 4,
+                    borderLeftColor: statusInfo.color
+                  }}>
+                    <ThemedView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <ThemedView style={{ flex: 1 }}>
+                        <ThemedText style={{ fontSize: 16, fontWeight: '600', color: theme.typography.body }}>
+                          {reservation.propertyTitle}
+                        </ThemedText>
+                        <ThemedText style={{ fontSize: 12, color: theme.typography.caption, marginTop: 2 }}>
+                          Loyer: {reservation.monthlyRent}€ • Occupants: {reservation.numberOfOccupants}
+                        </ThemedText>
+                        <ThemedText style={{ fontSize: 12, color: theme.typography.caption }}>
+                          Créé le {new Date(reservation.createdAt).toLocaleDateString('fr-FR')}
+                        </ThemedText>
+                      </ThemedView>
+                      <ThemedView style={{ 
+                        flexDirection: 'row', 
+                        alignItems: 'center', 
+                        backgroundColor: statusInfo.color + '20', 
+                        paddingHorizontal: 8, 
+                        paddingVertical: 4, 
+                        borderRadius: 12 
+                      }}>
+                        <MaterialCommunityIcons name={statusInfo.icon as any} size={14} color={statusInfo.color} />
+                        <ThemedText style={{ marginLeft: 4, fontSize: 11, fontWeight: '600', color: statusInfo.color }}>
+                          {statusInfo.text}
+                        </ThemedText>
+                      </ThemedView>
+                    </ThemedView>
+                  </ThemedView>
+                );
+              })
+            )}
+          </ThemedView>
+        );
+      case 'properties':
+        return (
+          <ThemedView style={{ marginHorizontal: 16, marginBottom: 20 }}>
+            <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: theme.typography.body }}>
+              Mes Propriétés ({user.ownedProperties?.length || 0})
+            </ThemedText>
+            {!user.ownedProperties || user.ownedProperties.length === 0 ? (
+              <ThemedView style={{ backgroundColor: theme.surface, borderRadius: 16, padding: 20, alignItems: 'center' }}>
+                <MaterialCommunityIcons name="home-plus" size={48} color={theme.typography.caption} />
+                <ThemedText style={{ fontSize: 16, fontWeight: '600', color: theme.typography.caption, marginTop: 12 }}>
+                  Aucune propriété
+                </ThemedText>
+              </ThemedView>
+            ) : (
+              user.ownedProperties.map((property) => (
+                <ThemedView key={property.id} style={{ 
+                  backgroundColor: theme.surface, 
+                  borderRadius: 16, 
+                  padding: 16, 
+                  marginBottom: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center'
+                }}>
+                  <Image source={{ uri: property.image }} style={{ width: 80, height: 80, borderRadius: 12, marginRight: 16 }} />
+                  <ThemedView style={{ flex: 1 }}>
+                    <ThemedText style={{ fontSize: 16, fontWeight: '600', color: theme.typography.body }}>
+                      {property.title}
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 12, color: theme.typography.caption, marginTop: 2 }}>
+                      {property.address}
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 14, fontWeight: '700', color: theme.primary, marginTop: 4 }}>
+                      {property.price}€/mois
+                    </ThemedText>
+                    <ThemedView style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                      <ThemedView style={{ 
+                        backgroundColor: property.status === 'available' ? theme.success + '20' : theme.warning + '20', 
+                        paddingHorizontal: 8, 
+                        paddingVertical: 2, 
+                        borderRadius: 8, 
+                        marginRight: 8 
+                      }}>
+                        <ThemedText style={{ 
+                          fontSize: 10, 
+                          fontWeight: '600', 
+                          color: property.status === 'available' ? theme.success : theme.warning 
+                        }}>
+                          {property.status === 'available' ? 'Disponible' : 'Loué'}
+                        </ThemedText>
+                      </ThemedView>
+                      {property.tenantRequests > 0 && (
+                        <ThemedView style={{ 
+                          backgroundColor: theme.error + '20', 
+                          paddingHorizontal: 8, 
+                          paddingVertical: 2, 
+                          borderRadius: 8 
+                        }}>
+                          <ThemedText style={{ fontSize: 10, fontWeight: '600', color: theme.error }}>
+                            {property.tenantRequests} demandes
+                          </ThemedText>
+                        </ThemedView>
+                      )}
+                    </ThemedView>
+                  </ThemedView>
+                </ThemedView>
+              ))
+            )}
+          </ThemedView>
+        );
+      case 'stats':
+        return (
+          <ThemedView style={{ marginHorizontal: 16, marginBottom: 20 }}>
+            <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: theme.typography.body }}>
+              Statistiques - {activeRole.name}
+            </ThemedText>
+            <ThemedView style={{ backgroundColor: theme.surface, borderRadius: 16, padding: 16 }}>
+              <ThemedView style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <ThemedView style={{ alignItems: 'center', flex: 1 }}>
+                  <ThemedText style={{ fontSize: 24, fontWeight: '800', color: theme.primary }}>
+                    {userReservations.length}
+                  </ThemedText>
+                  <ThemedText style={{ fontSize: 12, color: theme.typography.caption, textAlign: 'center' }}>
+                    Réservations
+                  </ThemedText>
+                </ThemedView>
+                <ThemedView style={{ alignItems: 'center', flex: 1 }}>
+                  <ThemedText style={{ fontSize: 24, fontWeight: '800', color: theme.success }}>
+                    {Math.round((userReservations.filter(r => r.status === 'approved' || r.status === 'completed').length / Math.max(userReservations.length, 1)) * 100)}%
+                  </ThemedText>
+                  <ThemedText style={{ fontSize: 12, color: theme.typography.caption, textAlign: 'center' }}>
+                    Taux d'approbation
+                  </ThemedText>
+                </ThemedView>
+                <ThemedView style={{ alignItems: 'center', flex: 1 }}>
+                  <ThemedView style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <ThemedText style={{ fontSize: 24, fontWeight: '800', color: theme.star }}>
+                      {activeRole.stats.rating || 0}
+                    </ThemedText>
+                    <MaterialCommunityIcons name="star" size={20} color={theme.star} style={{ marginLeft: 4 }} />
+                  </ThemedView>
+                  <ThemedText style={{ fontSize: 12, color: theme.typography.caption, textAlign: 'center' }}>
+                    Note moyenne
+                  </ThemedText>
+                </ThemedView>
+              </ThemedView>
+            </ThemedView>
+          </ThemedView>
+        );
+      case 'subscriptions':
+        return (
+          <ThemedView style={{ marginHorizontal: 16, marginBottom: 20 }}>
+            <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: theme.typography.body }}>
+              Mes Abonnements
+            </ThemedText>
+            {user.subscriptions.map((subscription) => (
+              <SubscriptionCard
+                key={subscription.id}
+                subscription={subscription}
+                onSubscribe={() => Alert.alert('Abonnement', `S'abonner à ${subscription.name}`)}
+                onCancel={() => Alert.alert('Annulation', `Annuler ${subscription.name}`)}
+              />
+            ))}
+          </ThemedView>
+        );
+      case 'transactions':
+        return (
+          <ThemedView style={{ marginHorizontal: 16, marginBottom: 20 }}>
+            <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: theme.typography.body }}>
+              Mes Transactions Immobilières
+            </ThemedText>
+            {user.propertyTransactions.map((transaction) => (
+              <TransactionItem key={transaction.id} transaction={transaction} />
+            ))}
+          </ThemedView>
+        );
+      case 'services':
+        return (
+          <ThemedView style={{ marginHorizontal: 16, marginBottom: 20 }}>
+            <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: theme.typography.body }}>
+              Services de mes Propriétés
+            </ThemedText>
+            {user.propertyServices.map((propertyService) => (
+              <PropertyServicesCard key={propertyService.id} propertyService={propertyService} />
+            ))}
+          </ThemedView>
+        );
+      case 'available-services':
+        return (
+          <ThemedView style={{ marginHorizontal: 16, marginBottom: 20 }}>
+            <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: theme.typography.body }}>
+              Services Disponibles
+            </ThemedText>
+            <ThemedView style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+              {user.availableServices.map((service) => (
+                <AvailableServiceCard key={service.key} service={service} />
+              ))}
+            </ThemedView>
+          </ThemedView>
+        );
+      case 'actions':
+        return (
+          <ThemedView style={{ marginHorizontal: 16, marginBottom: 20 }}>
+            <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: theme.typography.body }}>
+              Actions Rapides
+            </ThemedText>
+            <ThemedView style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+              {[
+                { icon: 'home-plus', label: 'Ajouter Propriété', color: theme.primary },
+                { icon: 'account-group', label: 'Mes Clients', color: theme.secondary },
+                { icon: 'chart-line', label: 'Analytics', color: theme.success },
+                { icon: 'message-text', label: 'Messages', color: theme.star },
+              ].map((action, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={{
+                    backgroundColor: theme.surface,
+                    borderRadius: 12,
+                    padding: 16,
+                    alignItems: 'center',
+                    width: (width - 56) / 2,
+                  }}
+                >
+                  <MaterialCommunityIcons name={action.icon as any} size={32} color={action.color} />
+                  <ThemedText style={{ marginTop: 8, fontSize: 12, fontWeight: '600', textAlign: 'center', color: theme.typography.body }}>
+                    {action.label}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </ThemedView>
+          </ThemedView>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background, paddingTop: insets.top }}>
       <ScrollView
@@ -736,10 +1176,10 @@ const EnhancedProfileComponent: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <LinearGradient
+        {/* <LinearGradient
           colors={[theme.primary + '20', theme.background]}
           style={{ paddingBottom: 20 }}
-        >
+        > */}
           <ThemedView style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: 'transparent' }}>
             <BackButton />
             <ThemedView style={{ flex: 1, alignItems: 'center', backgroundColor: 'transparent' }}>
@@ -747,12 +1187,16 @@ const EnhancedProfileComponent: React.FC = () => {
                 Mon Profil
               </ThemedText>
             </ThemedView>
-            <TouchableOpacity>
-              <MaterialCommunityIcons name="cog" size={24} color={theme.typography.body} />
+            <TouchableOpacity onPress={() => setShowMenu(!showMenu)}>
+              <MaterialCommunityIcons 
+                name={showMenu ? 'close' : 'menu'} 
+                size={24} 
+                color={theme.typography.body} 
+              />
             </TouchableOpacity>
           </ThemedView>
           
-          {/* Profile Info */}
+          {/* Compact Profile Info */}
           <ThemedView style={{ alignItems: 'center', paddingHorizontal: 16, backgroundColor: 'transparent' }}>
             <MotiView
               from={{ scale: 0.8, opacity: 0 }}
@@ -762,10 +1206,10 @@ const EnhancedProfileComponent: React.FC = () => {
               <Image
                 source={{ uri: user.avatar }}
                 style={{ 
-                  width: 100, 
-                  height: 100, 
-                  borderRadius: 50, 
-                  borderWidth: 4, 
+                  width: 80, 
+                  height: 80, 
+                  borderRadius: 40, 
+                  borderWidth: 3, 
                   borderColor: theme.primary 
                 }}
               />
@@ -775,34 +1219,34 @@ const EnhancedProfileComponent: React.FC = () => {
                   bottom: 0, 
                   right: 0, 
                   backgroundColor: theme.success, 
-                  borderRadius: 12, 
-                  padding: 4 
+                  borderRadius: 10, 
+                  padding: 3 
                 }}>
-                  <MaterialCommunityIcons name="check" size={16} color="white" />
+                  <MaterialCommunityIcons name="check" size={14} color="white" />
                 </ThemedView>
               )}
             </MotiView>
             
-            <ThemedText style={{ fontSize: 24, fontWeight: '800', marginTop: 12, color: theme.typography.body }}>
+            <ThemedText style={{ fontSize: 20, fontWeight: '800', marginTop: 8, color: theme.typography.body }}>
               {user.name}
             </ThemedText>
-            <ThemedText style={{ fontSize: 14, color: theme.typography.caption, marginTop: 4 }}>
+            <ThemedText style={{ fontSize: 12, color: theme.typography.caption, marginTop: 2 }}>
               {user.location}
             </ThemedText>
             
-            <ThemedView style={{ flexDirection: 'row', gap: 8, marginTop: 8, backgroundColor: 'transparent' }}>
+            <ThemedView style={{ flexDirection: 'row', gap: 6, marginTop: 6, backgroundColor: 'transparent' }}>
               {user.isPremium && (
                 <ThemedView style={{ 
                   flexDirection: 'row', 
                   alignItems: 'center', 
                   backgroundColor: theme.primary + '20', 
-                  paddingHorizontal: 12, 
-                  paddingVertical: 6, 
-                  borderRadius: 16
+                  paddingHorizontal: 8, 
+                  paddingVertical: 4, 
+                  borderRadius: 12
                 }}>
-                  <MaterialCommunityIcons name="crown" size={16} color={theme.primary} />
-                  <ThemedText style={{ marginLeft: 4, color: theme.primary, fontWeight: '600', fontSize: 12 }}>
-                    Membre Premium
+                  <MaterialCommunityIcons name="crown" size={12} color={theme.primary} />
+                  <ThemedText style={{ marginLeft: 3, color: theme.primary, fontWeight: '600', fontSize: 10 }}>
+                    Premium
                   </ThemedText>
                 </ThemedView>
               )}
@@ -812,20 +1256,20 @@ const EnhancedProfileComponent: React.FC = () => {
                   flexDirection: 'row', 
                   alignItems: 'center', 
                   backgroundColor: getVisitStatusColor(user.visitStatus) + '20', 
-                  paddingHorizontal: 12, 
-                  paddingVertical: 6, 
-                  borderRadius: 16
+                  paddingHorizontal: 8, 
+                  paddingVertical: 4, 
+                  borderRadius: 12
                 }}>
                   <MaterialCommunityIcons 
                     name={getVisitStatusIcon(user.visitStatus)} 
-                    size={16} 
+                    size={12} 
                     color={getVisitStatusColor(user.visitStatus)} 
                   />
                   <ThemedText style={{ 
-                    marginLeft: 4, 
+                    marginLeft: 3, 
                     color: getVisitStatusColor(user.visitStatus), 
                     fontWeight: '600', 
-                    fontSize: 12 
+                    fontSize: 10 
                   }}>
                     {user.visitStatus}
                   </ThemedText>
@@ -833,169 +1277,142 @@ const EnhancedProfileComponent: React.FC = () => {
               )}
             </ThemedView>
           </ThemedView>
-        </LinearGradient>
+        {/* </LinearGradient> */}
         
-        {/* Wallet Card */}
-        <WalletCard wallet={user.wallet} onPress={() => setShowWalletModal(true)} />
-        
-        {/* Role Switcher */}
-        <RoleSwitcher 
-          roles={user.roles} 
-          activeRole={activeRole} 
-          onRoleChange={setActiveRole} 
-        />
-        
-        {/* Role Stats */}
-        <ThemedView style={{ marginHorizontal: 16, marginBottom: 20 }}>
-          <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: theme.typography.body }}>
-            Statistiques - {activeRole.name}
-          </ThemedText>
-          
-          <ThemedView style={{ 
-            backgroundColor: theme.surface, 
-            borderRadius: 16, 
-            padding: 16,
-            shadowColor: theme.shadowColor || '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 3,
-          }}>
-            <ThemedView style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <ThemedView style={{ alignItems: 'center', flex: 1 }}>
-                <ThemedText style={{ fontSize: 24, fontWeight: '800', color: theme.primary }}>
-                  {activeRole.stats.totalTransactions}
-                </ThemedText>
-                <ThemedText style={{ fontSize: 12, color: theme.typography.caption, textAlign: 'center' }}>
-                  Transactions
-                </ThemedText>
-              </ThemedView>
-              
-              <ThemedView style={{ alignItems: 'center', flex: 1 }}>
-                <ThemedText style={{ fontSize: 24, fontWeight: '800', color: theme.success }}>
-                  {activeRole.stats.successRate}%
-                </ThemedText>
-                <ThemedText style={{ fontSize: 12, color: theme.typography.caption, textAlign: 'center' }}>
-                  Taux de réussite
-                </ThemedText>
-              </ThemedView>
-              
-              <ThemedView style={{ alignItems: 'center', flex: 1 }}>
-                <ThemedView style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <ThemedText style={{ fontSize: 24, fontWeight: '800', color: theme.star }}>
-                    {activeRole.stats.rating}
+        {/* Menu Grid */}
+        {showMenu && (
+          <MotiView
+            from={{ opacity: 0, translateY: -20 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            exit={{ opacity: 0, translateY: -20 }}
+            transition={{ type: 'spring', damping: 15 }}
+            style={{ marginHorizontal: 16, marginBottom: 20 }}
+          >
+            <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: theme.typography.body }}>
+              Profil Insights
+            </ThemedText>
+            
+            <ThemedView style={{ 
+              flexDirection: 'row', 
+              flexWrap: 'wrap', 
+              gap: 8,
+              backgroundColor: theme.surface,
+              borderRadius: 16,
+              padding: 12
+            }}>
+              {menuItems.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  onPress={() => {
+                    setSelectedComponent(selectedComponent === item.component ? null : item.component);
+                    setShowMenu(false);
+                  }}
+                  style={{
+                    backgroundColor: selectedComponent === item.component ? item.color + '20' : theme.background,
+                    borderRadius: 12,
+                    padding: 12,
+                    alignItems: 'center',
+                    width: (width - 80) / 4,
+                    borderWidth: selectedComponent === item.component ? 2 : 1,
+                    borderColor: selectedComponent === item.component ? item.color : theme.outline + '30'
+                  }}
+                >
+                  <MaterialCommunityIcons 
+                    name={item.icon as any} 
+                    size={20} 
+                    color={selectedComponent === item.component ? item.color : theme.typography.body} 
+                  />
+                  <ThemedText style={{ 
+                    marginTop: 4, 
+                    fontSize: 9, 
+                    fontWeight: '600', 
+                    textAlign: 'center',
+                    color: selectedComponent === item.component ? item.color : theme.typography.body
+                  }}>
+                    {item.title}
                   </ThemedText>
-                  <MaterialCommunityIcons name="star" size={20} color={theme.star} style={{ marginLeft: 4 }} />
-                </ThemedView>
-                <ThemedText style={{ fontSize: 12, color: theme.typography.caption, textAlign: 'center' }}>
-                  Note moyenne
-                </ThemedText>
-              </ThemedView>
-              
-              {activeRole.stats.earnings && (
-                <ThemedView style={{ alignItems: 'center', flex: 1 }}>
-                  <ThemedText style={{ fontSize: 20, fontWeight: '800', color: theme.primary }}>
-                    {(activeRole.stats.earnings / 1000).toFixed(0)}K€
-                  </ThemedText>
-                  <ThemedText style={{ fontSize: 12, color: theme.typography.caption, textAlign: 'center' }}>
-                    Revenus
-                  </ThemedText>
-                </ThemedView>
-              )}
+                </TouchableOpacity>
+              ))}
             </ThemedView>
-          </ThemedView>
-        </ThemedView>
+          </MotiView>
+        )}
         
-        {/* Subscriptions */}
-        <ThemedView style={{ marginHorizontal: 16, marginBottom: 20 }}>
-          <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: theme.typography.body }}>
-            Mes Abonnements
-          </ThemedText>
-          
-          {user.subscriptions.map((subscription) => (
-            <SubscriptionCard
-              key={subscription.id}
-              subscription={subscription}
-              onSubscribe={() => Alert.alert('Abonnement', `S'abonner à ${subscription.name}`)}
-              onCancel={() => Alert.alert('Annulation', `Annuler ${subscription.name}`)}
-            />
-          ))}
-        </ThemedView>
+
         
-        {/* Property Transactions */}
-        <ThemedView style={{ marginHorizontal: 16, marginBottom: 20 }}>
-          <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: theme.typography.body }}>
-            Mes Transactions Immobilières
-          </ThemedText>
-          
-          {user.propertyTransactions.map((transaction) => (
-            <TransactionItem key={transaction.id} transaction={transaction} />
-          ))}
-        </ThemedView>
-        
-        {/* Property Services */}
-        <ThemedView style={{ marginHorizontal: 16, marginBottom: 20 }}>
-          <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: theme.typography.body }}>
-            Services de mes Propriétés
-          </ThemedText>
-          
-          {user.propertyServices.map((propertyService) => (
-            <PropertyServicesCard key={propertyService.id} propertyService={propertyService} />
-          ))}
-        </ThemedView>
-        
-        {/* Available Services */}
-        <ThemedView style={{ marginHorizontal: 16, marginBottom: 20 }}>
-          <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: theme.typography.body }}>
-            Services Disponibles
-          </ThemedText>
-          
-          <ThemedView style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-            {user.availableServices.map((service) => (
-              <AvailableServiceCard key={service.key} service={service} />
-            ))}
-          </ThemedView>
-        </ThemedView>
-        
-        {/* Quick Actions */}
-        <ThemedView style={{ marginHorizontal: 16, marginBottom: 40 }}>
-          <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: theme.typography.body }}>
-            Actions Rapides
-          </ThemedText>
-          
-          <ThemedView style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-            {[
-              { icon: 'home-plus', label: 'Ajouter Propriété', color: theme.primary },
-              { icon: 'account-group', label: 'Mes Clients', color: theme.secondary },
-              { icon: 'chart-line', label: 'Analytics', color: theme.success },
-              { icon: 'message-text', label: 'Messages', color: theme.star },
-            ].map((action, index) => (
-              <TouchableOpacity
-                key={index}
-                style={{
-                  backgroundColor: theme.surface,
-                  borderRadius: 12,
-                  padding: 16,
-                  alignItems: 'center',
-                  width: (width - 56) / 2,
-                  shadowColor: theme.shadowColor || '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 4,
-                  elevation: 3,
-                }}
-              >
-                <MaterialCommunityIcons name={action.icon as any} size={32} color={action.color} />
-                <ThemedText style={{ marginTop: 8, fontSize: 12, fontWeight: '600', textAlign: 'center', color: theme.typography.body }}>
-                  {action.label}
-                </ThemedText>
-              </TouchableOpacity>
-            ))}
-          </ThemedView>
-        </ThemedView>
+        {/* Always show selected component */}
+        {selectedComponent && (
+          <MotiView
+            from={{ opacity: 0, translateY: 20 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            exit={{ opacity: 0, translateY: 20 }}
+            transition={{ type: 'spring', damping: 15 }}
+          >
+            {renderSelectedComponent()}
+          </MotiView>
+        )}
       </ScrollView>
+      
+      {/* Wallet Modal */}
+      <Modal
+        visible={showWalletModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowWalletModal(false)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+          <ThemedView style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: theme.outline + '30' }}>
+            <TouchableOpacity onPress={() => setShowWalletModal(false)}>
+              <MaterialCommunityIcons name="close" size={24} color={theme.typography.body} />
+            </TouchableOpacity>
+            <ThemedText style={{ flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '700', color: theme.typography.body }}>
+              Mon Portefeuille
+            </ThemedText>
+          </ThemedView>
+          
+          <ScrollView style={{ flex: 1, padding: 16 }}>
+            <ThemedText style={{ fontSize: 32, fontWeight: '800', color: theme.primary, textAlign: 'center', marginBottom: 20 }}>
+              {user.wallet.balance.toLocaleString('fr-FR', { style: 'currency', currency: user.wallet.currency })}
+            </ThemedText>
+            
+            <ThemedText style={{ fontSize: 16, fontWeight: '600', marginBottom: 12, color: theme.typography.body }}>
+              Transactions Récentes
+            </ThemedText>
+            
+            {user.wallet.transactions.map((transaction) => (
+              <ThemedView key={transaction.id} style={{ 
+                backgroundColor: theme.surface, 
+                borderRadius: 12, 
+                padding: 16, 
+                marginBottom: 12,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <ThemedView style={{ backgroundColor: 'transparent' }}>
+                  <ThemedText style={{ fontSize: 14, fontWeight: '600', color: theme.typography.body }}>
+                    {transaction.description}
+                  </ThemedText>
+                  <ThemedText style={{ fontSize: 12, color: theme.typography.caption }}>
+                    {transaction.date} • {transaction.category}
+                  </ThemedText>
+                </ThemedView>
+                
+                <ThemedText style={{ 
+                  fontSize: 16, 
+                  fontWeight: '700', 
+                  color: transaction.type === 'income' ? theme.success : theme.error 
+                }}>
+                  {transaction.type === 'income' ? '+' : '-'}{transaction.amount}€
+                </ThemedText>
+              </ThemedView>
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 export default EnhancedProfileComponent;
+
+

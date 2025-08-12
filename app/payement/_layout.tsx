@@ -6,7 +6,7 @@ export default function PayementLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: true,
+        headerShown: false,
         headerStyle: {
           backgroundColor: "white",
         },

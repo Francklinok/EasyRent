@@ -236,7 +236,7 @@ const DocumentUploadScreen = () => {
             transition={{ type: 'spring', damping: 15 }}
             style={{ marginBottom: 24, paddingHorizontal:2 }}
           >
-            <ThemedView  style={{ flexDirection: 'row', alignItems: 'space-between', gap: 10, marginBottom: 16 }}>
+            <ThemedView  style={{ flexDirection: 'row', alignItems: 'space-between', gap: 18, marginBottom: 16, paddingHorizontal:4 }}>
               <BackButton />
               <ThemedText type = "title" intensity="strong" style={{
                 color: theme.onSurface,
@@ -320,9 +320,7 @@ const DocumentUploadScreen = () => {
                 shadowRadius: 8,
                 elevation: 4
               }}>
-                <ThemedText style={{
-                  fontSize: 18,
-                  fontWeight: '600',
+                <ThemedText type = "normal" style={{
                   color: theme.onSurface,
                   marginBottom: 8
                 }}>
@@ -330,7 +328,6 @@ const DocumentUploadScreen = () => {
                 </ThemedText>
                 
                 <ThemedText style={{
-                  fontSize: 14,
                   color: theme.onSurface + '70',
                   marginBottom: 20
                 }}>
@@ -346,10 +343,10 @@ const DocumentUploadScreen = () => {
                     borderLeftWidth: 4,
                     borderLeftColor: '#fbbf24'
                   }}>
-                    <ThemedText style={{ color: '#92400e', fontSize: 14, fontWeight: '600' }}>
+                    <ThemedText style={{ color: '#92400e' }}>
                       ⏳ En attente d'approbation du propriétaire
                     </ThemedText>
-                    <ThemedText style={{ color: '#92400e', fontSize: 12, marginTop: 4 }}>
+                    <ThemedText style={{ color: '#92400e', marginTop: 4 }}>
                       Vos documents sont en cours d'examen
                     </ThemedText>
                   </ThemedView>
@@ -367,7 +364,7 @@ const DocumentUploadScreen = () => {
                     <ThemedText style={{ color: '#065f46', fontSize: 14, fontWeight: '600' }}>
                       ✅ Documents approuvés par le propriétaire
                     </ThemedText>
-                    <ThemedText style={{ color: '#065f46', fontSize: 12, marginTop: 4 }}>
+                    <ThemedText style={{ color: '#065f46', marginTop: 4 }}>
                       Vous pouvez maintenant continuer le processus
                     </ThemedText>
                   </ThemedView>
@@ -474,9 +471,7 @@ const DocumentUploadScreen = () => {
                   style={{ alignSelf: 'center', marginBottom: 16 }}
                 />
                 
-                <ThemedText style={{
-                  fontSize: 18,
-                  fontWeight: '600',
+                <ThemedText type = "normal" style={{
                   color: theme.onSurface,
                   textAlign: 'center',
                   marginBottom: 12
@@ -485,7 +480,6 @@ const DocumentUploadScreen = () => {
                 </ThemedText>
                 
                 <ThemedText style={{
-                  fontSize: 14,
                   color: theme.onSurface + '70',
                   textAlign: 'center',
                   marginBottom: 20,

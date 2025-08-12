@@ -6,7 +6,7 @@ export default function ContratLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: true,
+        headerShown: false,
         headerStyle: {
           backgroundColor: "white",
         },

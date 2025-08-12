@@ -60,8 +60,21 @@ const ReservationScreen = () => {
   const [visitDate, setVisitDate] = useState(new Date());
   const [visitTime, setVisitTime] = useState('10:00');
   const [showBookingForm, setShowBookingForm] = useState(false);
+  
+  // Detect if property is for sale or rent
+  const isForSale = property?.type === 'sale' || property?.listingType === 'sale' || property?.price > 50000;
+  const actionType = isForSale ? 'interest' : 'booking';
 
-  const validationSchema = Yup.object().shape({
+  const validationSchema = Yup.object().shape(isForSale ? {
+    // Sale validation schema
+    budget: Yup.number()
+      .min(property?.price * 0.8 || 0, 'Budget insuffisant pour cette propriété')
+      .required('Budget requis'),
+    financingType: Yup.string().required('Type de financement requis'),
+    timeframe: Yup.string().required('Délai d\'achat requis'),
+    currentSituation: Yup.string().required('Situation actuelle requise')
+  } : {
+    // Rent validation schema
     startDate: Yup.date().required('Date de début requise'),
     endDate: Yup.date().min(
       Yup.ref('startDate'),
@@ -198,7 +211,16 @@ const ReservationScreen = () => {
   };
 
   const formik = useFormik({
-    initialValues: {
+    initialValues: isForSale ? {
+      // Sale form values
+      budget: 0,
+      financingType: '',
+      timeframe: '',
+      currentSituation: '',
+      preApproved: false,
+      cashBuyer: false
+    } : {
+      // Rent form values
       startDate: new Date(),
       endDate: new Date(new Date().setMonth(new Date().getMonth() + 12)),
       numberOfOccupants: 1,
@@ -249,6 +271,9 @@ const ReservationScreen = () => {
 
   const calculateTotalAmount = () => {
     if (!property) return 0;
+    if (isForSale) {
+      return Math.round((property.price || 0) * 1.08); // Price + notary fees
+    }
     return (property.monthlyRent || 0) + (property.depositAmount || 0);
   };
 
@@ -267,13 +292,11 @@ const ReservationScreen = () => {
         shadowRadius: 12,
         elevation: 8,
       }}>
-        <ThemedText style={{
-          fontSize: 20,
-          fontWeight: '700',
+        <ThemedText type = "normal" intensity = "strong" style={{
           color: color.onSurface,
           marginBottom: 16,
           textAlign: 'center'
-        }}>Comment souhaitez-vous procéder ?</ThemedText>
+        }}>{isForSale ? 'Comment souhaitez-vous procéder ?' : 'Comment souhaitez-vous procéder ?'}</ThemedText>
         
         <ThemedView style={{ flexDirection: 'row', gap: 12 }}>
           <TouchableOpacity
@@ -305,19 +328,16 @@ const ReservationScreen = () => {
                   color={bookingMode === 'direct' ? 'white' : color.onSurface + '60'} 
                 />
               </ThemedView>
-              <ThemedText style={{
-                fontWeight: '700',
-                fontSize: 16,
+              <ThemedText type = "normal" intensity = "strong" style={{
                 color: bookingMode === 'direct' ? color.primary : color.onSurface,
                 marginBottom: 8,
                 textAlign: 'center'
-              }}>Réservation directe</ThemedText>
+              }}>{isForSale ? 'Intérêt direct' : 'Réservation directe'}</ThemedText>
               <ThemedText style={{
-                fontSize: 12,
                 color: color.onSurface + '70',
                 textAlign: 'center',
                 lineHeight: 16
-              }}>Réserver immédiatement sans visite</ThemedText>
+              }}>{isForSale ? 'Manifester immédiatement votre intérêt' : 'Réserver immédiatement sans visite'}</ThemedText>
             </LinearGradient>
           </TouchableOpacity>
           
@@ -350,15 +370,12 @@ const ReservationScreen = () => {
                   color={bookingMode === 'visit' ? 'white' : color.onSurface + '60'} 
                 />
               </ThemedView>
-              <ThemedText style={{
-                fontWeight: '700',
-                fontSize: 16,
+              <ThemedText type = "normal" intensity = "strong"  style={{
                 color: bookingMode === 'visit' ? color.surface : color.onSurface,
                 marginBottom: 8,
                 textAlign: 'center'
               }}>Programmer une visite</ThemedText>
               <ThemedText style={{
-                fontSize: 12,
                 color: color.onSurface + '70',
                 textAlign: 'center',
                 lineHeight: 16
@@ -490,7 +507,7 @@ const ReservationScreen = () => {
             from={{ opacity: 0, translateY: -20 }}
             animate={{ opacity: 1, translateY: 0 }}
             transition={{ type: 'spring', damping: 15 }}
-            style={{ marginBottom: 24, alignItems: 'center' }}
+            style={{ marginBottom: 24, }}
           >
             <ThemedView className="flex-row gap-6">
                <BackButton/>
@@ -499,7 +516,7 @@ const ReservationScreen = () => {
               textAlign: 'center',
               marginBottom: 8
             }}>
-              Réserver ce logement
+              {isForSale ? 'Manifester votre intérêt' : 'Réserver ce logement'}
             </ThemedText>
             </ThemedView>
            
@@ -520,111 +537,230 @@ const ReservationScreen = () => {
         
         {canShowBookingForm() && (
           <ThemedView>
-            <ThemedText className="text-lg font-semibold mb-4">Détails de la réservation</ThemedText>
+            <ThemedText className="text-lg font-semibold mb-4">{isForSale ? 'Détails de votre intérêt' : 'Détails de la réservation'}</ThemedText>
           
-          <ThemedView className="mb-4">
-            <ThemedText style={{
-              marginBottom: 8,
-              fontWeight: '600',
-              fontSize: 16,
-              color: theme.onSurface
-            }}>Date de début</ThemedText>
-            <ThemedView style={{
-              backgroundColor: theme.surface,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: theme.outline + '30',
-              padding: 12
-            }}>
-              <DatePicker
-                date={formik.values.startDate}
-                onDateChange={(date) => formik.setFieldValue('startDate', date)}
-                minimumDate={new Date()}
+          {isForSale ? (
+            // Sale form fields
+            <>
+              <CustomInput
+                label="Budget maximum (€)"
+                placeholder="Votre budget d'achat"
+                keyboardType="numeric"
+                value={formik.values.budget?.toString() || ''}
+                onChangeText={(value) => formik.setFieldValue('budget', parseInt(value) || 0)}
+                error={formik.touched.budget ? formik.errors.budget : undefined}
               />
-            </ThemedView>
-            {formik.errors.startDate && formik.touched.startDate && (
-              <ThemedText style={{ color: '#ef4444', marginTop: 4 }}>{String(formik.errors.startDate)}</ThemedText>
-            )}
-          </ThemedView>
-          
-          <ThemedView className="mb-4">
-            <ThemedText style={{
-              marginBottom: 8,
-              fontWeight: '600',
-              fontSize: 16,
-              color: theme.onSurface
-            }}>Date de fin</ThemedText>
-            <ThemedView style={{
-              backgroundColor: theme.surface,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: theme.outline + '30',
-              padding: 12
-            }}>
-              <DatePicker
-                date={formik.values.endDate}
-                onDateChange={(date) => formik.setFieldValue('endDate', date)}
-                minimumDate={formik.values.startDate}
+              
+              <ThemedView className="mb-4">
+                <ThemedText className="font-medium mb-2">Type de financement</ThemedText>
+                <ThemedView className="flex-row gap-2 flex-wrap">
+                  {['Crédit', 'Comptant', 'Mixte'].map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      onPress={() => formik.setFieldValue('financingType', type)}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 20,
+                        borderWidth: 1,
+                        borderColor: formik.values.financingType === type ? theme.primary : theme.outline + '30',
+                        backgroundColor: formik.values.financingType === type ? theme.primary + '20' : 'transparent'
+                      }}
+                    >
+                      <ThemedText style={{ color: formik.values.financingType === type ? theme.primary : theme.onSurface }}>
+                        {type}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </ThemedView>
+              </ThemedView>
+              
+              <ThemedView className="mb-4">
+                <ThemedText className="font-medium mb-2">Délai d'achat souhaité</ThemedText>
+                <ThemedView className="flex-row gap-2 flex-wrap">
+                  {['Immédiat', '3 mois', '6 mois', '1 an'].map((time) => (
+                    <TouchableOpacity
+                      key={time}
+                      onPress={() => formik.setFieldValue('timeframe', time)}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 20,
+                        borderWidth: 1,
+                        borderColor: formik.values.timeframe === time ? theme.success : theme.outline + '30',
+                        backgroundColor: formik.values.timeframe === time ? theme.success + '20' : 'transparent'
+                      }}
+                    >
+                      <ThemedText style={{ color: formik.values.timeframe === time ? theme.success : theme.onSurface }}>
+                        {time}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </ThemedView>
+              </ThemedView>
+              
+              <ThemedView className="mb-4">
+                <ThemedText className="font-medium mb-2">Situation actuelle</ThemedText>
+                <ThemedView className="flex-row gap-2 flex-wrap">
+                  {['Premier achat', 'Revente', 'Investissement'].map((situation) => (
+                    <TouchableOpacity
+                      key={situation}
+                      onPress={() => formik.setFieldValue('currentSituation', situation)}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 20,
+                        borderWidth: 1,
+                        borderColor: formik.values.currentSituation === situation ? theme.warning : theme.outline + '30',
+                        backgroundColor: formik.values.currentSituation === situation ? theme.warning + '20' : 'transparent'
+                      }}
+                    >
+                      <ThemedText style={{ color: formik.values.currentSituation === situation ? theme.warning : theme.onSurface }}>
+                        {situation}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </ThemedView>
+              </ThemedView>
+              
+              <ThemedView className="flex-row items-center mb-4">
+                <ThemedText className="font-medium flex-1">Pré-approuvé par une banque?</ThemedText>
+                <CustomButton
+                  title={formik.values.preApproved ? "Oui" : "Non"}
+                  onPress={() => formik.setFieldValue('preApproved', !formik.values.preApproved)}
+                  type={formik.values.preApproved ? "primary" : "outline"}
+                  className="w-20"
+                />
+              </ThemedView>
+              
+              <ThemedView className="bg-blue-50 p-4 rounded-lg my-4">
+                <ThemedText className="text-lg font-semibold mb-2">Informations sur la propriété</ThemedText>
+                <ThemedView className="flex-row justify-between mb-2">
+                  <ThemedText>Prix de vente</ThemedText>
+                  <ThemedText className="font-bold">{property?.price?.toLocaleString() || 0} €</ThemedText>
+                </ThemedView>
+                <ThemedView className="flex-row justify-between mb-2">
+                  <ThemedText>Frais de notaire (≈8%)</ThemedText>
+                  <ThemedText>{Math.round((property?.price || 0) * 0.08).toLocaleString()} €</ThemedText>
+                </ThemedView>
+                <ThemedView className="flex-row justify-between pt-2 border-t border-blue-200 mt-2">
+                  <ThemedText className="font-bold">Coût total estimé</ThemedText>
+                  <ThemedText className="font-bold">{Math.round((property?.price || 0) * 1.08).toLocaleString()} €</ThemedText>
+                </ThemedView>
+              </ThemedView>
+            </>
+          ) : (
+            // Rent form fields
+            <>
+              <ThemedView className="mb-4">
+                <ThemedText style={{
+                  marginBottom: 8,
+                  color: theme.onSurface
+                }}>Date de début</ThemedText>
+                <ThemedView style={{
+                  backgroundColor: theme.surface,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: theme.outline + '30',
+                  padding: 12
+                }}>
+                  <DatePicker
+                    date={formik.values.startDate}
+                    onDateChange={(date) => formik.setFieldValue('startDate', date)}
+                    minimumDate={new Date()}
+                  />
+                </ThemedView>
+                {formik.errors.startDate && formik.touched.startDate && (
+                  <ThemedText style={{ color: '#ef4444', marginTop: 4 }}>{String(formik.errors.startDate)}</ThemedText>
+                )}
+              </ThemedView>
+              
+              <ThemedView className="mb-4">
+                <ThemedText style={{
+                  marginBottom: 8,
+                  color: theme.onSurface
+                }}>Date de fin</ThemedText>
+                <ThemedView style={{
+                  backgroundColor: theme.surface,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: theme.outline + '30',
+                  padding: 12
+                }}>
+                  <DatePicker
+                    date={formik.values.endDate}
+                    onDateChange={(date) => formik.setFieldValue('endDate', date)}
+                    minimumDate={formik.values.startDate}
+                  />
+                </ThemedView>
+                {formik.errors.endDate && formik.touched.endDate && (
+                  <ThemedText style={{ color: '#ef4444', marginTop: 4 }}>{String(formik.errors.endDate)}</ThemedText>
+                )}
+              </ThemedView>
+              
+              <CustomInput
+                label="Nombre d'occupants"
+                placeholder="Nombre d'occupants"
+                keyboardType="numeric"
+                value={formik.values.numberOfOccupants?.toString() || ''}
+                onChangeText={(value) => formik.setFieldValue('numberOfOccupants', parseInt(value) || 0)}
+                error={formik.touched.numberOfOccupants ? formik.errors.numberOfOccupants : undefined}
               />
-            </ThemedView>
-            {formik.errors.endDate && formik.touched.endDate && (
-              <ThemedText style={{ color: '#ef4444', marginTop: 4 }}>{String(formik.errors.endDate)}</ThemedText>
-            )}
-          </ThemedView>
-          
-          <CustomInput
-            label="Nombre d'occupants"
-            placeholder="Nombre d'occupants"
-            keyboardType="numeric"
-            value={formik.values.numberOfOccupants.toString()}
-            onChangeText={(value) => formik.setFieldValue('numberOfOccupants', parseInt(value) || 0)}
-            error={formik.touched.numberOfOccupants ? formik.errors.numberOfOccupants : undefined}
-          />
-          
-          <CustomInput
-            label="Revenu mensuel (€)"
-            placeholder="Votre revenu mensuel"
-            keyboardType="numeric"
-            value={formik.values.monthlyIncome.toString()}
-            onChangeText={(value) => formik.setFieldValue('monthlyIncome', parseInt(value) || 0)}
-            error={formik.touched.monthlyIncome ? formik.errors.monthlyIncome : undefined}
-          />
-          
-          <ThemedView className="flex-row items-center mb-4">
-            <ThemedText className="font-medium flex-1">Avez-vous un garant?</ThemedText>
-            <CustomButton
-              title={formik.values.hasGuarantor ? "Oui" : "Non"}
-              onPress={() => formik.setFieldValue('hasGuarantor', !formik.values.hasGuarantor)}
-              type={formik.values.hasGuarantor ? "primary" : "outline"}
-              className="w-20"
-            />
-          </ThemedView>
-          
-          <ThemedView className="bg-gray-50 p-4 rounded-lg my-4">
-            <ThemedText className="text-lg font-semibold mb-2">Résumé des coûts</ThemedText>
-            <ThemedView className="flex-row justify-between mb-2">
-              <ThemedText>Loyer mensuel</ThemedText>
-              <ThemedText>{property?.monthlyRent || 0} €</ThemedText>
-            </ThemedView>
-            <ThemedView className="flex-row justify-between mb-2">
-              <ThemedText>Dépôt de garantie</ThemedText>
-              <ThemedText>{property?.depositAmount || 0} €</ThemedText>
-            </ThemedView>
-            <ThemedView className="flex-row justify-between pt-2 border-t border-gray-200 mt-2">
-              <ThemedText className="font-bold">Total à payer</ThemedText>
-              <ThemedText className="font-bold">{calculateTotalAmount()} €</ThemedText>
-            </ThemedView>
-          </ThemedView>
+              
+              <CustomInput
+                label="Revenu mensuel (€)"
+                placeholder="Votre revenu mensuel"
+                keyboardType="numeric"
+                value={formik.values.monthlyIncome?.toString() || ''}
+                onChangeText={(value) => formik.setFieldValue('monthlyIncome', parseInt(value) || 0)}
+                error={formik.touched.monthlyIncome ? formik.errors.monthlyIncome : undefined}
+              />
+              
+              <ThemedView className="flex-row items-center mb-4">
+                <ThemedText className="font-medium flex-1">Avez-vous un garant?</ThemedText>
+                <CustomButton
+                  title={formik.values.hasGuarantor ? "Oui" : "Non"}
+                  onPress={() => formik.setFieldValue('hasGuarantor', !formik.values.hasGuarantor)}
+                  type={formik.values.hasGuarantor ? "primary" : "outline"}
+                  className="w-20"
+                />
+              </ThemedView>
+              
+              <ThemedView className="bg-gray-50 p-4 rounded-lg my-4">
+                <ThemedText className="text-lg font-semibold mb-2">Résumé des coûts</ThemedText>
+                <ThemedView className="flex-row justify-between mb-2">
+                  <ThemedText>Loyer mensuel</ThemedText>
+                  <ThemedText>{property?.monthlyRent || 0} €</ThemedText>
+                </ThemedView>
+                <ThemedView className="flex-row justify-between mb-2">
+                  <ThemedText>Dépôt de garantie</ThemedText>
+                  <ThemedText>{property?.depositAmount || 0} €</ThemedText>
+                </ThemedView>
+                <ThemedView className="flex-row justify-between pt-2 border-t border-gray-200 mt-2">
+                  <ThemedText className="font-bold">Total à payer</ThemedText>
+                  <ThemedText className="font-bold">{calculateTotalAmount()} €</ThemedText>
+                </ThemedView>
+              </ThemedView>
+            </>
+          )}
           
             <ThemedText className="mb-4 text-sm text-gray-600">
-              {bookingMode === 'visit' && visit?.status === 'completed' 
-                ? 'Suite à votre visite confirmée, vous pouvez maintenant finaliser votre réservation.'
-                : 'En cliquant sur "Continuer", vous acceptez de soumettre votre dossier pour vérification.'}
-              Vous devrez télécharger les documents nécessaires à l'étape suivante.
+              {isForSale ? (
+                bookingMode === 'visit' && visit?.status === 'completed' 
+                  ? 'Suite à votre visite confirmée, vous pouvez maintenant manifester votre intérêt d\'achat.'
+                  : 'En manifestant votre intérêt, le vendeur sera notifié et pourra vous contacter pour organiser une négociation.'
+              ) : (
+                bookingMode === 'visit' && visit?.status === 'completed' 
+                  ? 'Suite à votre visite confirmée, vous pouvez maintenant finaliser votre réservation.'
+                  : 'En cliquant sur "Continuer", vous acceptez de soumettre votre dossier pour vérification. Vous devrez télécharger les documents nécessaires à l\'étape suivante.'
+              )}
             </ThemedText>
             
             <CustomButton
-              title={bookingMode === 'visit' && visit?.status === 'completed' ? 'Finaliser la réservation' : 'Continuer vers les documents'}
+              title={isForSale ? 
+                (bookingMode === 'visit' && visit?.status === 'completed' ? 'Manifester mon intérêt' : 'Envoyer ma manifestation d\'intérêt') :
+                (bookingMode === 'visit' && visit?.status === 'completed' ? 'Finaliser la réservation' : 'Continuer vers les documents')
+              }
               onPress={() => {
                 // Create reservation in booking system
                 const reservationId = addReservation({
@@ -645,23 +781,46 @@ const ReservationScreen = () => {
                   visitCompleted: visit?.status === 'completed'
                 });
                 
-                // Send booking notification
-                addNotification({
-                  type: 'booking_request',
-                  title: 'Nouvelle demande de réservation',
-                  message: `${MOCK_USER.fullName} a soumis une demande de réservation pour ${property?.title || 'votre propriété'}`,
-                  data: { 
-                    reservationId,
-                    property, 
-                    bookingDetails: formik.values,
-                    clientName: MOCK_USER.fullName
-                  }
-                });
-                
-                router.push({
-                  pathname: '/documentsubmit/DocumentUploadFile',
-                  params: { reservationId, property: JSON.stringify(property) }
-                });
+                if (isForSale) {
+                  // Send interest notification for sale
+                  addNotification({
+                    type: 'interest_request',
+                    title: 'Nouvelle manifestation d\'intérêt',
+                    message: `${MOCK_USER.fullName} manifeste son intérêt pour ${property?.title || 'votre propriété'}`,
+                    data: { 
+                      reservationId,
+                      property, 
+                      interestDetails: formik.values,
+                      clientName: MOCK_USER.fullName,
+                      budget: formik.values.budget,
+                      financingType: formik.values.financingType
+                    }
+                  });
+                  
+                  Alert.alert(
+                    'Intérêt manifesté !',
+                    'Votre manifestation d\'intérêt a été envoyée au vendeur. Il vous contactera sous 48h pour organiser une négociation.',
+                    [{ text: 'OK', onPress: () => router.back() }]
+                  );
+                } else {
+                  // Send booking notification for rent
+                  addNotification({
+                    type: 'booking_request',
+                    title: 'Nouvelle demande de réservation',
+                    message: `${MOCK_USER.fullName} a soumis une demande de réservation pour ${property?.title || 'votre propriété'}`,
+                    data: { 
+                      reservationId,
+                      property, 
+                      bookingDetails: formik.values,
+                      clientName: MOCK_USER.fullName
+                    }
+                  });
+                  
+                  router.push({
+                    pathname: '/documentsubmit/DocumentUploadFile',
+                    params: { reservationId, property: JSON.stringify(property) }
+                  });
+                }
               }}
               loading={loading}
               disabled={!formik.isValid || loading}
