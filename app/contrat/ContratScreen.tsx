@@ -24,6 +24,7 @@ import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { BackButton } from '@/components/ui/BackButton';
 import { useTheme } from '@/components/contexts/theme/themehook';
+import { useActivity } from '@/components/contexts/activity/ActivityContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -31,6 +32,7 @@ const ContractScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { theme } = useTheme();
+  const { addActivity } = useActivity();
   const { reservationId } = route.params as { reservationId: string };
   
   const [reservation, setReservation] = useState<Reservation | null>(null);
@@ -152,6 +154,21 @@ const ContractScreen = () => {
       
       setContractFileUri(uri);
       
+      // Log contract generation activity
+      addActivity({
+        userId: 'user123',
+        type: 'contract',
+        title: 'Contrat généré',
+        description: `Contrat intelligent généré avec succès pour ${property?.title}`,
+        status: 'completed',
+        propertyId: property?.id,
+        propertyTitle: property?.title,
+        metadata: {
+          contractId: contractId,
+          contractUri: uri
+        }
+      });
+      
       setReservation(prev => {
         if (!prev) return null;
         return {
@@ -187,6 +204,21 @@ const ContractScreen = () => {
           dialogTitle: `Contrat de location ${contractId}`,
           UTI: 'com.adobe.pdf'
         });
+        
+        // Log contract sharing activity
+        addActivity({
+          userId: 'user123',
+          type: 'contract',
+          title: 'Contrat partagé',
+          description: `Contrat ${contractId} partagé avec succès`,
+          status: 'completed',
+          propertyId: property?.id,
+          propertyTitle: property?.title,
+          metadata: {
+            contractId: contractId,
+            action: 'share'
+          }
+        });
       } else {
         Alert.alert("Partage non disponible", "Le partage n'est pas disponible sur cet appareil.");
       }
@@ -205,6 +237,21 @@ const ContractScreen = () => {
       }
       
       await Print.printAsync({ uri: uri });
+      
+      // Log contract viewing activity
+      addActivity({
+        userId: 'user123',
+        type: 'contract',
+        title: 'Contrat consulté',
+        description: `Contrat ${contractId} ouvert pour consultation`,
+        status: 'completed',
+        propertyId: property?.id,
+        propertyTitle: property?.title,
+        metadata: {
+          contractId: contractId,
+          action: 'view'
+        }
+      });
     } catch (error) {
       console.error('Contract viewing error:', error);
       Alert.alert('Erreur', 'Une erreur est survenue lors de l\'ouverture du contrat');
@@ -285,11 +332,11 @@ const ContractScreen = () => {
             animate={{ opacity: 1, translateY: 0 }}
             transition={{ type: 'spring', damping: 15 }}
           >
-            {/* <LinearGradient
+          {/* <LinearGradient
               colors={[theme.primary + '20', 'transparent']}
               style={{ borderRadius: 20, padding: 20, marginBottom: 24 }}
-            >
-              <ThemedView style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}> */}
+            > */}
+              <ThemedView style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}> 
                 <BackButton />
                 <ThemedView style={{ flex: 1, alignItems: 'center' }}>
                   <LinearGradient

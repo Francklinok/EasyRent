@@ -19,6 +19,7 @@ import { BackButton } from '@/components/ui/BackButton';
 import { useTheme } from '@/components/contexts/theme/themehook';
 import { ThemeColors } from '@/components/contexts/theme/themeTypes';
 import { useBooking } from '@/components/contexts/booking/BookingContext';
+import { useActivity } from '@/components/contexts/activity/ActivityContext';
 
 
 type RootStackParamList = {
@@ -54,6 +55,7 @@ const ReservationScreen = () => {
   const { theme } = useTheme();
   const { addNotification } = useNotifications();
   const { addReservation } = useBooking();
+  const { addActivity } = useActivity();
   const [loading, setLoading] = useState(false);
   const [bookingMode, setBookingMode] = useState<BookingMode>('direct');
   const [visit, setVisit] = useState<Visit | null>(null);
@@ -101,6 +103,21 @@ const ReservationScreen = () => {
         notes: 'Visite programmée'
       };
       setVisit(newVisit);
+      
+      // Log visit scheduling activity
+      addActivity({
+        userId: MOCK_USER.uid,
+        type: 'visit',
+        title: 'Visite programmée',
+        description: `Demande de visite pour ${property?.title || 'cette propriété'} le ${visitDate.toLocaleDateString()} à ${visitTime}`,
+        status: 'pending',
+        propertyId: property?.id,
+        propertyTitle: property?.title,
+        metadata: {
+          visitDate: visitDate.toISOString(),
+          visitTime: visitTime
+        }
+      });
       
       // Send automatic message to owner
       sendVisitRequestMessage(newVisit);
@@ -196,6 +213,22 @@ const ReservationScreen = () => {
   const confirmVisit = () => {
     if (visit) {
       setVisit({ ...visit, status: 'confirmed' });
+      
+      // Log visit confirmation
+      addActivity({
+        userId: MOCK_USER.uid,
+        type: 'visit',
+        title: 'Visite confirmée',
+        description: `Visite confirmée par le propriétaire pour ${property?.title}`,
+        status: 'completed',
+        propertyId: property?.id,
+        propertyTitle: property?.title,
+        metadata: {
+          visitDate: visit.date.toISOString(),
+          visitTime: visit.time
+        }
+      });
+      
       updateProfileStatus('client', 'Visit Accepted');
       updateProfileStatus('owner', 'Visit Accepted');
       Alert.alert('Visite confirmée', 'Votre visite a été confirmée par le propriétaire.');
@@ -205,6 +238,22 @@ const ReservationScreen = () => {
   const completeVisit = () => {
     if (visit) {
       setVisit({ ...visit, status: 'completed' });
+      
+      // Log visit completion
+      addActivity({
+        userId: MOCK_USER.uid,
+        type: 'visit',
+        title: 'Visite terminée',
+        description: `Visite terminée avec succès pour ${property?.title}`,
+        status: 'completed',
+        propertyId: property?.id,
+        propertyTitle: property?.title,
+        metadata: {
+          visitDate: visit.date.toISOString(),
+          visitTime: visit.time
+        }
+      });
+      
       setShowBookingForm(true);
       Alert.alert('Visite terminée', 'Vous pouvez maintenant procéder à la réservation.');
     }
@@ -779,6 +828,28 @@ const ReservationScreen = () => {
                   documentsSubmitted: false,
                   documentsApproved: false,
                   visitCompleted: visit?.status === 'completed'
+                });
+                
+                // Log reservation activity
+                addActivity({
+                  userId: MOCK_USER.uid,
+                  type: isForSale ? 'interest' : 'reservation',
+                  title: isForSale ? 'Intérêt manifesté' : 'Réservation créée',
+                  description: isForSale ? 
+                    `Manifestation d'intérêt pour ${property?.title} avec un budget de ${formik.values.budget}€` :
+                    `Réservation créée pour ${property?.title} - ${formik.values.numberOfOccupants} occupants`,
+                  status: 'pending',
+                  propertyId: property?.id,
+                  propertyTitle: property?.title,
+                  metadata: isForSale ? {
+                    budget: formik.values.budget,
+                    financingType: formik.values.financingType,
+                    timeframe: formik.values.timeframe
+                  } : {
+                    monthlyRent: property?.monthlyRent,
+                    numberOfOccupants: formik.values.numberOfOccupants,
+                    hasGuarantor: formik.values.hasGuarantor
+                  }
                 });
                 
                 if (isForSale) {

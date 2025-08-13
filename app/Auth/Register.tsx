@@ -13,68 +13,40 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/components/contexts/authContext/AuthContext';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-// Interface pour les données d'inscription
 interface RegisterData {
-  firstName: string;
-  lastName: string;
-  username: string;
+  fullName: string;
   email: string;
   password: string;
-  phoneNumber?: string;
-}
-
-// Interface pour la réponse de l'API
-interface ApiResponse {
-  success: boolean;
-  message: string;
-  data?: {
-    userId: string;
-    email: string;
-  };
+  confirmPassword: string;
+  phone?: string;
 }
 
 const RegisterScreen: React.FC = () => {
   const [formData, setFormData] = useState<RegisterData>({
-    firstName: '',
-    lastName: '',
-    username: '',
+    fullName: '',
     email: '',
     password: '',
-    phoneNumber: ''
+    confirmPassword: '',
+    phone: ''
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [verificationStep, setVerificationStep] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
   const router = useRouter();
+  const { register, verifyAccount, resendVerification } = useAuth();
 
   const validateForm = (): boolean => {
-    console.log('🔍 Validation du formulaire...', formData);
-    
-    if (!formData.firstName.trim()) {
-      Alert.alert('Erreur', 'Le prénom est obligatoire');
+    if (!formData.fullName.trim()) {
+      Alert.alert('Erreur', 'Le nom complet est obligatoire');
       return false;
     }
-    if (formData.firstName.trim().length < 2) {
-      Alert.alert('Erreur', 'Le prénom doit contenir au moins 2 caractères');
-      return false;
-    }
-    if (!formData.lastName.trim()) {
-      Alert.alert('Erreur', 'Le nom est obligatoire');
-      return false;
-    }
-    if (formData.lastName.trim().length < 2) {
+    if (formData.fullName.trim().length < 2) {
       Alert.alert('Erreur', 'Le nom doit contenir au moins 2 caractères');
-      return false;
-    }
-    if (!formData.username.trim()) {
-      Alert.alert('Erreur', 'Le nom d\'utilisateur est obligatoire');
-      return false;
-    }
-    if (formData.username.trim().length < 3) {
-      Alert.alert('Erreur', 'Le nom d\'utilisateur doit contenir au moins 3 caractères');
-      return false;
-    }
-    if (!/^[a-z0-9_.-]+$/i.test(formData.username.trim())) {
-      Alert.alert('Erreur', 'Le nom d\'utilisateur ne peut contenir que des lettres, chiffres, tirets et points');
       return false;
     }
     if (!formData.email.trim()) {
@@ -94,111 +66,57 @@ const RegisterScreen: React.FC = () => {
       Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 8 caractères');
       return false;
     }
+    if (formData.password !== formData.confirmPassword) {
+      Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
+      return false;
+    }
     
-    console.log('✅ Validation réussie');
     return true;
   };
 
   const handleRegister = async () => {
-    console.log('🚀 handleRegister déclenché');
-    console.log('📝 Données du formulaire:', formData);
-    
-    // Vérifier si déjà en cours de traitement
-    if (loading) {
-      console.log('⏳ Déjà en cours de traitement, abandon');
-      return;
-    }
+    if (loading || !validateForm()) return;
 
-    if (!validateForm()) {
-      console.log('❌ Validation échouée');
+    setLoading(true);
+    try {
+      const registerData = {
+        fullName: formData.fullName.trim(),
+        email: formData.email.toLowerCase().trim(),
+        password: formData.password,
+        phone: formData.phone?.trim()
+      };
+
+      await register(registerData);
+      setVerificationStep(true);
+    } catch (error) {
+      console.error('Registration error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyAccount = async () => {
+    if (!verificationCode.trim()) {
+      Alert.alert('Erreur', 'Veuillez entrer le code de vérification');
       return;
     }
 
     setLoading(true);
-    console.log('🔄 Loading activé');
-
     try {
-      const dataToSend: any = {
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        username: formData.username.toLowerCase().trim(),
-        email: formData.email.toLowerCase().trim(),
-        password: formData.password
-      };
-      
-      if (formData.phoneNumber?.trim()) {
-        dataToSend.phoneNumber = formData.phoneNumber.trim();
-      }
-
-      console.log('📤 Données à envoyer:', dataToSend);
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        console.log('⏰ Timeout de la requête');
-        controller.abort();
-      }, 15000); // 15 sec timeout
-
-      console.log('🌐 Envoi de la requête...');
-
-      const response = await fetch('http://192.168.1.66:3000/api/v1/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(dataToSend),
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      console.log('📥 Réponse reçue - Status:', response.status);
-      console.log('📥 Réponse headers:', response.headers);
-
-      let result: ApiResponse;
-      try {
-        result = await response.json();
-        console.log('📄 Contenu de la réponse:', result);
-      } catch (parseError) {
-        console.error('❌ Erreur parsing JSON:', parseError);
-        throw new Error('Réponse du serveur invalide');
-      }
-
-      if (response.ok && result.success) {
-        console.log('✅ Inscription réussie');
-        Alert.alert(
-          'Inscription réussie', 
-          result.message || 'Votre compte a été créé avec succès',
-          [
-            { 
-              text: 'OK', 
-              onPress: () => {
-                console.log('🔄 Redirection vers Login');
-                router.push('/Auth/Login');
-              }
-            }
-          ]
-        );
-      } else {
-        console.log('❌ Erreur d\'inscription:', result);
-        Alert.alert('Erreur d\'inscription', result.message || 'Une erreur est survenue');
-      }
-    } catch (error: any) {
-      console.error('💥 Erreur lors de l\'inscription:', error);
-      
-      if (error.name === 'AbortError') {
-        console.error('⏰ Request timed out');
-        Alert.alert('Erreur', 'La requête a expiré. Veuillez réessayer.');
-      } else if (error.message?.includes('Network request failed')) {
-        console.error('🌐 Erreur réseau');
-        Alert.alert('Erreur', 'Impossible de se connecter au serveur. Vérifiez votre connexion internet.');
-      } else {
-        console.error('❌ Erreur générale:', error.message);
-        Alert.alert('Erreur', error.message || 'Une erreur inattendue est survenue. Veuillez réessayer.');
-      }
+      await verifyAccount(formData.email, verificationCode);
+      router.push('/Auth/Login');
+    } catch (error) {
+      console.error('Verification error:', error);
     } finally {
-      console.log('🔄 Loading désactivé');
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    try {
+      await resendVerification(formData.email);
+    } catch (error) {
+      console.error('Resend verification error:', error);
     }
   };
 
@@ -210,11 +128,7 @@ const RegisterScreen: React.FC = () => {
     }));
   };
 
-  // Fonction de test pour vérifier le bouton
-  const testButton = () => {
-    console.log('🧪 Test du bouton - Bouton pressé !');
-    Alert.alert('Test', 'Le bouton fonctionne !');
-  };
+
 
   return (
     <KeyboardAvoidingView 
@@ -232,101 +146,141 @@ const RegisterScreen: React.FC = () => {
           <View style={styles.formContainer}>
             <Text style={styles.title}>Inscription</Text>
             
-            <TextInput
-              placeholder="Prénom"
-              value={formData.firstName}
-              onChangeText={(value) => updateFormData('firstName', value)}
-              style={styles.input}
-              autoCapitalize="words"
-              editable={!loading}
-            />
-            
-            <TextInput
-              placeholder="Nom"
-              value={formData.lastName}
-              onChangeText={(value) => updateFormData('lastName', value)}
-              style={styles.input}
-              autoCapitalize="words"
-              editable={!loading}
-            />
-            
-            <TextInput
-              placeholder="Nom d'utilisateur"
-              value={formData.username}
-              onChangeText={(value) => updateFormData('username', value)}
-              style={styles.input}
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!loading}
-            />
-            
-            <TextInput
-              placeholder="Email"
-              value={formData.email}
-              onChangeText={(value) => updateFormData('email', value)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={styles.input}
-              editable={!loading}
-            />
-            
-            <TextInput
-              placeholder="Mot de passe"
-              value={formData.password}
-              onChangeText={(value) => updateFormData('password', value)}
-              secureTextEntry
-              style={styles.input}
-              editable={!loading}
-            />
-
-            <TextInput
-              placeholder="Numéro de téléphone (optionnel)"
-              value={formData.phoneNumber}
-              onChangeText={(value) => updateFormData('phoneNumber', value)}
-              keyboardType="phone-pad"
-              style={styles.input}
-              editable={!loading}
-            />
-            
-            {/* Bouton de test - Retirez après confirmation */}
-            <TouchableOpacity 
-              onPress={testButton}
-              style={[styles.button, { backgroundColor: '#FF6B6B', marginBottom: 10 }]}
-            >
-              <Text style={styles.buttonText}>Test Bouton</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              onPress={handleRegister}
-              disabled={loading}
-              style={[styles.button, loading && styles.buttonDisabled]}
-              activeOpacity={0.7}
-            >
-              {loading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator color="white" size="small" />
-                  <Text style={[styles.buttonText, { marginLeft: 8 }]}>
-                    Inscription en cours...
-                  </Text>
+            {verificationStep ? (
+              // Verification Step
+              <>
+                <Text style={styles.verificationText}>
+                  Un code de vérification a été envoyé à {formData.email}
+                </Text>
+                
+                <TextInput
+                  placeholder="Code de vérification"
+                  value={verificationCode}
+                  onChangeText={setVerificationCode}
+                  keyboardType="numeric"
+                  style={styles.input}
+                  maxLength={6}
+                  editable={!loading}
+                />
+                
+                <TouchableOpacity 
+                  onPress={handleVerifyAccount}
+                  disabled={loading}
+                  style={[styles.button, loading && styles.buttonDisabled]}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Text style={styles.buttonText}>Vérifier le compte</Text>
+                  )}
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  onPress={handleResendVerification}
+                  style={{ marginTop: 16 }}
+                >
+                  <Text style={styles.linkText}>Renvoyer le code</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              // Registration Form
+              <>
+                <TextInput
+                  placeholder="Nom complet"
+                  value={formData.fullName}
+                  onChangeText={(value) => updateFormData('fullName', value)}
+                  style={styles.input}
+                  autoCapitalize="words"
+                  editable={!loading}
+                />
+                
+                <TextInput
+                  placeholder="Email"
+                  value={formData.email}
+                  onChangeText={(value) => updateFormData('email', value)}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={styles.input}
+                  editable={!loading}
+                />
+                
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    placeholder="Mot de passe"
+                    value={formData.password}
+                    onChangeText={(value) => updateFormData('password', value)}
+                    secureTextEntry={!showPassword}
+                    style={[styles.input, { marginBottom: 0, paddingRight: 50 }]}
+                    editable={!loading}
+                  />
+                  <TouchableOpacity 
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeIcon}
+                  >
+                    <MaterialCommunityIcons 
+                      name={showPassword ? 'eye-off' : 'eye'} 
+                      size={24} 
+                      color="#666" 
+                    />
+                  </TouchableOpacity>
                 </View>
-              ) : (
-                <Text style={styles.buttonText}>S'inscrire</Text>
-              )}
-            </TouchableOpacity>
+                
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    placeholder="Confirmer le mot de passe"
+                    value={formData.confirmPassword}
+                    onChangeText={(value) => updateFormData('confirmPassword', value)}
+                    secureTextEntry={!showConfirmPassword}
+                    style={[styles.input, { marginBottom: 0, paddingRight: 50 }]}
+                    editable={!loading}
+                  />
+                  <TouchableOpacity 
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={styles.eyeIcon}
+                  >
+                    <MaterialCommunityIcons 
+                      name={showConfirmPassword ? 'eye-off' : 'eye'} 
+                      size={24} 
+                      color="#666" 
+                    />
+                  </TouchableOpacity>
+                </View>
 
-            <TouchableOpacity 
-              onPress={() => {
-                console.log('🔄 Redirection vers Login');
-                router.push("/Auth/Login");
-              }}
-              style={{ marginTop: 16 }}
-              disabled={loading}
-            >
-              <Text style={styles.linkText}>
-                Déjà un compte ? Connectez-vous
-              </Text>
-            </TouchableOpacity>
+                <TextInput
+                  placeholder="Numéro de téléphone (optionnel)"
+                  value={formData.phone}
+                  onChangeText={(value) => updateFormData('phone', value)}
+                  keyboardType="phone-pad"
+                  style={styles.input}
+                  editable={!loading}
+                />
+                
+                <TouchableOpacity 
+                  onPress={handleRegister}
+                  disabled={loading}
+                  style={[styles.button, loading && styles.buttonDisabled]}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Text style={styles.buttonText}>S'inscrire</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+
+            {!verificationStep && (
+              <TouchableOpacity 
+                onPress={() => router.push("/Auth/Login")}
+                style={{ marginTop: 16 }}
+                disabled={loading}
+              >
+                <Text style={styles.linkText}>
+                  Déjà un compte ? Connectez-vous
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </LinearGradient>
       </ScrollView>
@@ -391,6 +345,21 @@ const styles = StyleSheet.create({
     color: '#4A90E2',
     textAlign: 'center',
     fontSize: 16,
+  },
+  passwordContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 12,
+    top: 14,
+  },
+  verificationText: {
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#666',
+    fontSize: 14,
   }
 });
 

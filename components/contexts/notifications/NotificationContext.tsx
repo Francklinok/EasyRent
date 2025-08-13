@@ -32,17 +32,7 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [notifications, setNotifications] = useState<GlobalNotification[]>([
-    {
-      id: 'demo-1',
-      type: 'visit_request',
-      title: 'Nouvelle demande de visite',
-      message: 'Jean Dupont souhaite visiter votre appartement',
-      timestamp: new Date().toISOString(),
-      isRead: false,
-      data: { clientName: 'Jean Dupont', propertyTitle: 'Appartement 3P' }
-    }
-  ]);
+  const [notifications, setNotifications] = useState<GlobalNotification[]>([]);
 
   const addNotification = useCallback((notificationData: Omit<GlobalNotification, 'id' | 'timestamp' | 'isRead'>) => {
     const newNotification: GlobalNotification = {

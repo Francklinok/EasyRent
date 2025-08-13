@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '../ui/BackButton';
 import { useBooking, BookingReservation } from '../contexts/booking/BookingContext';
 import { useNotifications } from '../contexts/notifications/NotificationContext';
+import { useActivity } from '../contexts/activity/ActivityContext';
 const { width, height } = Dimensions.get('window');
 
 // Enhanced Types
@@ -696,16 +697,16 @@ interface MenuItem {
   title: string;
   icon: string;
   color: string;
-  component: 'dashboard' | 'bookings' | 'properties' | 'wallet' | 'roles' | 'stats' | 'subscriptions' | 'transactions' | 'services' | 'available-services' | 'actions';
+  component: 'dashboard' | 'activities' | 'bookings' | 'properties' | 'wallet' | 'roles' | 'stats' | 'subscriptions' | 'transactions' | 'services' | 'available-services' | 'actions';
 }
 
 const menuItems: MenuItem[] = [
   { id: '1', title: 'Tableau de Bord', icon: 'view-dashboard', color: '#007AFF', component: 'dashboard' },
-  { id: '2', title: 'Réservations', icon: 'calendar-check', color: '#34C759', component: 'bookings' },
-  { id: '3', title: 'Mes Propriétés', icon: 'home-group', color: '#FF9500', component: 'properties' },
-  { id: '4', title: 'Portefeuille', icon: 'wallet', color: '#AF52DE', component: 'wallet' },
-  { id: '5', title: 'Statistiques', icon: 'chart-line', color: '#FF3B30', component: 'stats' },
-  { id: '6', title: 'Mes Rôles', icon: 'account-tie', color: '#5AC8FA', component: 'roles' },
+  { id: '2', title: 'Activités', icon: 'timeline', color: '#34C759', component: 'activities' },
+  { id: '3', title: 'Réservations', icon: 'calendar-check', color: '#FF9500', component: 'bookings' },
+  { id: '4', title: 'Mes Propriétés', icon: 'home-group', color: '#AF52DE', component: 'properties' },
+  { id: '5', title: 'Portefeuille', icon: 'wallet', color: '#FF3B30', component: 'wallet' },
+  { id: '6', title: 'Statistiques', icon: 'chart-line', color: '#5AC8FA', component: 'stats' },
   { id: '7', title: 'Abonnements', icon: 'crown', color: '#FFCC02', component: 'subscriptions' },
   { id: '8', title: 'Actions Rapides', icon: 'flash', color: '#FF6B35', component: 'actions' }
 ];
@@ -716,6 +717,7 @@ const EnhancedProfileComponent: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { getUserReservations, getOwnerReservations } = useBooking();
   const { notifications } = useNotifications();
+  const { getUserActivities } = useActivity();
   const [user, setUser] = useState(demoUser);
   const [activeRole, setActiveRole] = useState(user.roles[0]);
   const [showWalletModal, setShowWalletModal] = useState(false);
@@ -724,6 +726,7 @@ const EnhancedProfileComponent: React.FC = () => {
   const [selectedComponent, setSelectedComponent] = useState<string | null>('dashboard');
   const [userReservations, setUserReservations] = useState<BookingReservation[]>([]);
   const [ownerReservations, setOwnerReservations] = useState<BookingReservation[]>([]);
+  const [userActivities, setUserActivities] = useState<any[]>([]);
   
   // Load booking data
   useEffect(() => {
@@ -748,7 +751,10 @@ const EnhancedProfileComponent: React.FC = () => {
     setOwnerReservations(ownerBookings.sort((a, b) => 
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     ));
-  }, [getUserReservations, getOwnerReservations, user.id]);
+    
+    const activities = getUserActivities(user.id);
+    setUserActivities(activities);
+  }, [getUserReservations, getOwnerReservations, getUserActivities, user.id]);
   
   // Update visit status function
   const updateVisitStatus = (newStatus: string) => {
@@ -894,10 +900,10 @@ const EnhancedProfileComponent: React.FC = () => {
                 </ThemedView>
                 <ThemedView style={{ alignItems: 'center' }}>
                   <ThemedText style={{ fontSize: 20, fontWeight: '800', color: theme.success }}>
-                    {notifications.length}
+                    {userActivities.length}
                   </ThemedText>
                   <ThemedText style={{ fontSize: 10, color: theme.typography.caption }}>
-                    Notifications
+                    Activités
                   </ThemedText>
                 </ThemedView>
                 <ThemedView style={{ alignItems: 'center' }}>
@@ -910,6 +916,104 @@ const EnhancedProfileComponent: React.FC = () => {
                 </ThemedView>
               </ThemedView>
             </ThemedView>
+          </ThemedView>
+        );
+      case 'activities':
+        return (
+          <ThemedView style={{ marginHorizontal: 16, marginBottom: 20 }}>
+            <ThemedText style={{ fontSize: 18, fontWeight: '700', marginBottom: 12, color: theme.typography.body }}>
+              Historique d'Activités ({userActivities.length})
+            </ThemedText>
+            {userActivities.length === 0 ? (
+              <ThemedView style={{ backgroundColor: theme.surface, borderRadius: 16, padding: 20, alignItems: 'center' }}>
+                <MaterialCommunityIcons name="timeline-clock" size={48} color={theme.typography.caption} />
+                <ThemedText style={{ fontSize: 16, fontWeight: '600', color: theme.typography.caption, marginTop: 12 }}>
+                  Aucune activité
+                </ThemedText>
+              </ThemedView>
+            ) : (
+              userActivities.slice(0, 10).map((activity, index) => {
+                const getActivityIcon = (type: string) => {
+                  switch (type) {
+                    case 'reservation': return 'calendar-plus';
+                    case 'visit': return 'calendar-check';
+                    case 'documents': return 'file-document';
+                    case 'payment': return 'credit-card';
+                    case 'contract': return 'file-certificate';
+                    case 'approval': return 'check-circle';
+                    case 'interest': return 'heart';
+                    default: return 'information';
+                  }
+                };
+                
+                const getActivityColor = (status: string) => {
+                  switch (status) {
+                    case 'completed': return theme.success;
+                    case 'pending': return theme.warning;
+                    case 'failed': return theme.error;
+                    case 'in_progress': return theme.primary;
+                    default: return theme.typography.caption;
+                  }
+                };
+                
+                return (
+                  <ThemedView key={activity.id} style={{ 
+                    backgroundColor: theme.surface, 
+                    borderRadius: 12, 
+                    padding: 16, 
+                    marginBottom: 8,
+                    borderLeftWidth: 4,
+                    borderLeftColor: getActivityColor(activity.status)
+                  }}>
+                    <ThemedView style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                      <ThemedView style={{ 
+                        backgroundColor: getActivityColor(activity.status) + '20', 
+                        borderRadius: 8, 
+                        padding: 6, 
+                        marginRight: 12 
+                      }}>
+                        <MaterialCommunityIcons 
+                          name={getActivityIcon(activity.type) as any} 
+                          size={16} 
+                          color={getActivityColor(activity.status)} 
+                        />
+                      </ThemedView>
+                      <ThemedView style={{ flex: 1 }}>
+                        <ThemedText style={{ fontSize: 14, fontWeight: '600', color: theme.typography.body }}>
+                          {activity.title}
+                        </ThemedText>
+                        <ThemedText style={{ fontSize: 11, color: theme.typography.caption }}>
+                          {new Date(activity.timestamp).toLocaleDateString('fr-FR', {
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </ThemedText>
+                      </ThemedView>
+                      <ThemedView style={{ 
+                        backgroundColor: getActivityColor(activity.status) + '20', 
+                        paddingHorizontal: 8, 
+                        paddingVertical: 2, 
+                        borderRadius: 8 
+                      }}>
+                        <ThemedText style={{ fontSize: 9, fontWeight: '600', color: getActivityColor(activity.status) }}>
+                          {activity.status.toUpperCase()}
+                        </ThemedText>
+                      </ThemedView>
+                    </ThemedView>
+                    <ThemedText style={{ fontSize: 12, color: theme.typography.body + '80', marginLeft: 34 }}>
+                      {activity.description}
+                    </ThemedText>
+                    {activity.propertyTitle && (
+                      <ThemedText style={{ fontSize: 11, color: theme.primary, marginLeft: 34, marginTop: 4 }}>
+                        📍 {activity.propertyTitle}
+                      </ThemedText>
+                    )}
+                  </ThemedView>
+                );
+              })
+            )}
           </ThemedView>
         );
       case 'wallet':

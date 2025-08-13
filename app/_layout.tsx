@@ -8,6 +8,8 @@ import { ThemeProvider } from '@/components/contexts/theme/themeContext';
 import { NotificationProvider } from '@/components/contexts/notifications/NotificationContext';
 import { FavoritesProvider } from '@/components/contexts/favorites/FavoritesContext';
 import { BookingProvider } from '@/components/contexts/booking/BookingContext';
+import { ActivityProvider } from '@/components/contexts/activity/ActivityContext';
+import { AuthProvider } from '@/components/contexts/authContext/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -28,13 +30,13 @@ export default function RootLayout() {
       try {
         if (!fontsLoaded) return; // Attendre que les fonts soient prêtes
 
-        // Vérifier token
+        // Check authentication with AuthContext
         const token = await AsyncStorage.getItem('token');
         if (token) {
-          console.log('✅ Token trouvé → Home');
+          console.log('✅ Token found → Home');
           router.replace('/(tabs)');
         } else {
-          console.log('❌ Pas de token → Login');
+          console.log('❌ No token → Login');
           router.replace('/Auth/Login');
         }
       } catch (error) {
@@ -65,19 +67,23 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider initialTheme="system">
-      <NotificationProvider>
-        <FavoritesProvider>
-          <BookingProvider>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="Auth/Login" options={{ headerShown: false }} />
-              <Stack.Screen name="Auth/Register" options={{ headerShown: false }} />
-              <Stack.Screen name="+not-found" options={{ title: 'Page Introuvable' }} />
-            </Stack>
-            <StatusBar style="auto" />
-          </BookingProvider>
-        </FavoritesProvider>
-      </NotificationProvider>
+      <AuthProvider>
+        <NotificationProvider>
+          <FavoritesProvider>
+            <BookingProvider>
+              <ActivityProvider>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="Auth/Login" options={{ headerShown: false }} />
+                  <Stack.Screen name="Auth/Register" options={{ headerShown: false }} />
+                  <Stack.Screen name="+not-found" options={{ title: 'Page Introuvable' }} />
+                </Stack>
+                <StatusBar style="auto" />
+              </ActivityProvider>
+            </BookingProvider>
+          </FavoritesProvider>
+        </NotificationProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

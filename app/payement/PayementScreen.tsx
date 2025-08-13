@@ -10,6 +10,7 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { BackButton } from '@/components/ui/BackButton';
 import { useBooking, BookingReservation } from '@/components/contexts/booking/BookingContext';
 import { useTheme } from '@/components/contexts/theme/themehook';
+import { useActivity } from '@/components/contexts/activity/ActivityContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import { router } from 'expo-router';
@@ -20,6 +21,7 @@ export default function PaymentScreen() {
   const navigation = useNavigation();
   const { theme } = useTheme();
   const { getReservation, updateReservationStatus } = useBooking();
+  const { addActivity } = useActivity();
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' | 'crypto' | 'wallet' | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [reservation, setReservation] = useState<BookingReservation | null>(null);
@@ -54,8 +56,40 @@ export default function PaymentScreen() {
     }
     
     setPaymentLoading(true);
+    
+    // Log payment activity
+    addActivity({
+      userId: 'user123',
+      type: 'payment',
+      title: 'Paiement effectué',
+      description: `Paiement de ${calculateTotal()}€ via ${paymentMethod === 'wallet' ? 'portefeuille' : paymentMethod === 'card' ? 'carte bancaire' : 'PayPal'}`,
+      status: 'in_progress',
+      propertyId: reservation?.propertyId,
+      propertyTitle: reservation?.propertyTitle,
+      metadata: {
+        amount: calculateTotal(),
+        paymentMethod: paymentMethod
+      }
+    });
+    
     setTimeout(() => {
       updateReservationStatus(reservationId, 'payment_completed');
+      
+      // Update activity status
+      addActivity({
+        userId: 'user123',
+        type: 'payment',
+        title: 'Paiement confirmé',
+        description: `Paiement de ${calculateTotal()}€ confirmé avec succès`,
+        status: 'completed',
+        propertyId: reservation?.propertyId,
+        propertyTitle: reservation?.propertyTitle,
+        metadata: {
+          amount: calculateTotal(),
+          paymentMethod: paymentMethod
+        }
+      });
+      
       setPaymentLoading(false);
       Alert.alert(
         'Paiement réussi !',
