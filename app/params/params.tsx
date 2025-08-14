@@ -7,15 +7,17 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { SettingsItem } from '@/components/ui/SettingsItems';
 import { ThemedScrollView } from '@/components/ui/ScrolleView';
 import { useTheme } from '@/components/contexts/theme/themehook';
+import { useAuth } from '@/components/contexts/authContext/AuthContext';
 
 const ParamsScreen = () => {
   const insets = useSafeAreaInsets();
   const {theme} = useTheme()
+  const {logout} = useAuth()
 
   return (
     <ThemedView className="h-full" style={{ paddingTop: insets.top + 4 }}>
       {/* Header utilisateur */}
-      <ThemedView className="flex-row items-center p-4 px-6"
+      {/* <ThemedView className="flex-row items-center p-4 px-6"
       style = {{borderBottomWidth:1, borderColor:theme.outline}}>
         <ThemedView className="relative">
           <Image
@@ -28,7 +30,7 @@ const ParamsScreen = () => {
           <ThemedText type='normal' intensity='strong'>SilverJ</ThemedText>
           <ThemedText type='normal' intensity='light'>Propriétaire</ThemedText>
         </ThemedView>
-      </ThemedView>
+      </ThemedView> */}
 
       <ThemedScrollView className="flex-1  px-2">
         {/* PARAMÈTRES UTILISATEUR */}
@@ -73,8 +75,8 @@ const ParamsScreen = () => {
             icon="log-out"
             iconColor="white"
             onPress={() => {
-              // log out or confirm
-              router.replace('/auth/Login');
+              logout();
+              router.replace("/Auth/Login");
             }}
           />
         </ThemedView>

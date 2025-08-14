@@ -1,16 +1,22 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { userService, UserData } from '@/components/services/userService';
 
 export interface UserProfile {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  phone: string;
-  avatar: string;
-  role: 'buyer' | 'seller' | 'renter' | 'owner' | 'agent' | 'developer';
-  isPremium: boolean;
-  premiumExpiry?: string;
+  phoneNumber?: string;
+  photo?: string;
+  role: string;
+  isActive: boolean;
   createdAt: string;
+  updatedAt: string;
+  preferences?: Record<string, any>;
+  // App-specific fields
+  isPremium?: boolean;
+  premiumExpiry?: string;
 }
 
 export interface WalletData {
@@ -34,10 +40,12 @@ interface UserContextType {
   favorites: string[];
   isLoading: boolean;
   
-  // User functions
-  login: (email: string, password: string) => Promise<boolean>;
-  logout: () => Promise<void>;
+  // Backend user functions
+  fetchUserFromBackend: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  uploadProfilePicture: (imageUri: string) => Promise<void>;
+  updatePreferences: (preferences: Record<string, any>) => Promise<void>;
+  deleteAccount: () => Promise<boolean>;
   
   // Wallet functions
   addFunds: (amount: number) => Promise<boolean>;
@@ -51,6 +59,10 @@ interface UserContextType {
   // Premium functions
   upgradeToPremium: () => Promise<boolean>;
   checkPremiumStatus: () => boolean;
+  
+  // Helper functions
+  getFullName: () => string;
+  isUserActive: () => boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -97,48 +109,129 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await AsyncStorage.setItem('favorites', JSON.stringify(favoritesData));
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const fetchUserFromBackend = async (): Promise<void> => {
     try {
       setIsLoading(true);
-      const mockUser: UserProfile = {
-        id: '1',
-        name: 'John Doe',
-        email,
-        phone: '+33 6 12 34 56 78',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&q=80',
-        role: 'buyer',
-        isPremium: false,
-        createdAt: new Date().toISOString()
+      const userData = await userService.getCurrentUser();
+      
+      const userProfile: UserProfile = {
+        id: userData.id,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        email: userData.email,
+        phoneNumber: userData.phoneNumber,
+        photo: userData.photo,
+        role: userData.role,
+        isActive: userData.isActive,
+        createdAt: userData.createdAt,
+        updatedAt: userData.updatedAt,
+        preferences: userData.preferences,
+        isPremium: user?.isPremium || false,
+        premiumExpiry: user?.premiumExpiry
       };
       
-      setUser(mockUser);
-      await saveUserData(mockUser);
-      return true;
+      setUser(userProfile);
+      await saveUserData(userProfile);
     } catch (error) {
-      console.error('Login error:', error);
-      return false;
+      console.error('Error fetching user from backend:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const logout = async (): Promise<void> => {
-    try {
-      await AsyncStorage.multiRemove(['user', 'wallet', 'favorites']);
-      setUser(null);
-      setWallet({ balance: 0, currency: 'EUR', transactions: [] });
-      setFavorites([]);
-    } catch (error) {
-      console.error('Logout error:', error);
     }
   };
 
   const updateProfile = async (updates: Partial<UserProfile>): Promise<void> => {
     if (!user) return;
     
-    const updatedUser = { ...user, ...updates };
-    setUser(updatedUser);
-    await saveUserData(updatedUser);
+    try {
+      setIsLoading(true);
+      
+      const backendUpdates = {
+        firstName: updates.firstName,
+        lastName: updates.lastName,
+        phoneNumber: updates.phoneNumber,
+        preferences: updates.preferences
+      };
+      
+      const updatedUserData = await userService.updateUser(backendUpdates);
+      
+      const updatedUser: UserProfile = {
+        ...user,
+        ...updates,
+        firstName: updatedUserData.firstName,
+        lastName: updatedUserData.lastName,
+        phoneNumber: updatedUserData.phoneNumber,
+        preferences: updatedUserData.preferences,
+        updatedAt: updatedUserData.updatedAt
+      };
+      
+      setUser(updatedUser);
+      await saveUserData(updatedUser);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const uploadProfilePicture = async (imageUri: string): Promise<void> => {
+    try {
+      setIsLoading(true);
+      const result = await userService.uploadProfilePicture(imageUri);
+      
+      if (user) {
+        const updatedUser = { ...user, photo: result.photo };
+        setUser(updatedUser);
+        await saveUserData(updatedUser);
+      }
+    } catch (error) {
+      console.error('Error uploading profile picture:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updatePreferences = async (preferences: Record<string, any>): Promise<void> => {
+    try {
+      const updatedUserData = await userService.updatePreferences(preferences);
+      
+      if (user) {
+        const updatedUser = { ...user, preferences: updatedUserData.preferences };
+        setUser(updatedUser);
+        await saveUserData(updatedUser);
+      }
+    } catch (error) {
+      console.error('Error updating preferences:', error);
+      throw error;
+    }
+  };
+
+  const deleteAccount = async (): Promise<boolean> => {
+    try {
+      const result = await userService.deleteAccount();
+      
+      if (result.success) {
+        await AsyncStorage.multiRemove(['user', 'wallet', 'favorites']);
+        setUser(null);
+        setWallet({ balance: 0, currency: 'EUR', transactions: [] });
+        setFavorites([]);
+      }
+      
+      return result.success;
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      return false;
+    }
+  };
+
+  const getFullName = (): string => {
+    if (!user) return '';
+    return `${user.firstName} ${user.lastName}`.trim();
+  };
+
+  const isUserActive = (): boolean => {
+    return user?.isActive ?? false;
   };
 
   const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
@@ -294,16 +387,20 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     wallet,
     favorites,
     isLoading,
-    login,
-    logout,
+    fetchUserFromBackend,
     updateProfile,
+    uploadProfilePicture,
+    updatePreferences,
+    deleteAccount,
     addFunds,
     withdrawFunds,
     makePayment,
     toggleFavorite,
     isFavorite,
     upgradeToPremium,
-    checkPremiumStatus
+    checkPremiumStatus,
+    getFullName,
+    isUserActive
   };
 
   return (
@@ -320,3 +417,4 @@ export const useUser = (): UserContextType => {
   }
   return context;
 };
+

@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+
+import React, { , useCallback, useRef } from "react";
 import { Alert, AppState, AppStateStatus } from 'react-native';
 import { authService, User, RegisterData, TwoFactorSetup } from "@/components/services/authService";
+import { userService, UserData } from "@/components/services/userService";
 
-// Enhanced Auth State Types
 export interface AuthState {
-  user: User | null;
+  user: UserData | null;
   loading: boolean;
   initializing: boolean;
   isAuthenticated: boolean;
@@ -25,8 +26,9 @@ export interface AuthActions {
   setupTwoFactor: () => Promise<TwoFactorSetup>;
   verifyTwoFactor: (code: string) => Promise<{ success: boolean }>;
   disableTwoFactor: (password: string) => Promise<{ success: boolean }>;
-  updateProfile: (data: Partial<User>) => Promise<{ success: boolean; user: User }>;
+  updateProfile: (data: Partial<UserData>) => Promise<{ success: boolean; user: UserData }>;
   refreshProfile: () => Promise<void>;
+  fetchUserData: () => Promise<void>;
   clearError: () => void;
   checkSession: () => Promise<boolean>;
 }
@@ -43,7 +45,6 @@ type AuthContextType = AuthState & AuthActions & {
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
-// Session timeout (30 minutes)
 const SESSION_TIMEOUT = 30 * 60 * 1000;
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -61,19 +62,116 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
-  useEffect(() => {
-    initializeAuth();
-    setupAppStateListener();
-    return cleanup;
+  const clearError = useCallback(() => {
+    setError(null);
   }, []);
 
-  useEffect(() => {
-    if (state.isAuthenticated) {
-      startSessionTimer();
-    } else {
+  const handleError = useCallback((code: string, message: string, field?: string) => {
+    setError({ code, message, field });
+  }, []);
+
+  const updateActivity = useCallback(() => {
+    setState(prev => ({ ...prev, lastActivity: Date.now() }));
+  }, []);
+
+  const clearSessionTimer = useCallback(() => {
+    if (sessionTimeoutRef.current) {
+      clearTimeout(sessionTimeoutRef.current);
+      sessionTimeoutRef.current = null;
+    }
+  }, []);
+
+  const fetchUserData = useCallback(async (): Promise<void> => {
+    try {
+      const userData = await userService.getCurrentUser();
+      setState(prev => ({ ...prev, user: userData }));
+    } catch (error) {
+      console.error('Failed to fetch user data:', error);
+      throw error;
+    }
+  }, []);
+
+  const checkSession = useCallback(async (): Promise<boolean> => {
+    try {
+      if (!authService.isAuthenticated()) return false;
+      
+      await fetchUserData();
+      return true;
+    } catch (error) {
+      console.error('Session check failed:', error);
+      return false;
+    }
+  }, [fetchUserData]);
+
+  const logout = useCallback(async (): Promise<void> => {
+    try {
+      setState(prev => ({ ...prev, loading: true }));
+      
+      await authService.logout();
+      
+      setState({
+        user: null,
+        loading: false,
+        initializing: false,
+        isAuthenticated: false,
+        requiresTwoFactor: false,
+        sessionExpired: false,
+        lastActivity: Date.now()
+      });
+      
+      clearError();
+      clearSessionTimer();
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      setState({
+        user: null,
+        loading: false,
+        initializing: false,
+        isAuthenticated: false,
+        requiresTwoFactor: false,
+        sessionExpired: false,
+        lastActivity: Date.now()
+      });
+      clearError();
       clearSessionTimer();
     }
-  }, [state.isAuthenticated, state.lastActivity]);
+  }, [clearError, clearSessionTimer]);
+
+  const handleSessionExpired = useCallback(async () => {
+    setState(prev => ({ ...prev, sessionExpired: true }));
+    Alert.alert(
+      'Session Expired',
+      'Your session has expired. Please log in again.',
+      [{ text: 'OK', onPress: logout }]
+    );
+  }, [logout]);
+
+  const startSessionTimer = useCallback(() => {
+    clearSessionTimer();
+    const timeUntilExpiry = SESSION_TIMEOUT - (Date.now() - state.lastActivity);
+    
+    if (timeUntilExpiry > 0) {
+      sessionTimeoutRef.current = setTimeout(() => {
+        handleSessionExpired();
+      }, timeUntilExpiry);
+    } else {
+      handleSessionExpired();
+    }
+  }, [state.lastActivity, handleSessionExpired, clearSessionTimer]);
+
+  const setupAppStateListener = useCallback(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (appStateRef.current === 'background' && nextAppState === 'active') {
+        if (state.isAuthenticated) {
+          checkSession();
+        }
+      }
+      appStateRef.current = nextAppState;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, [state.isAuthenticated, checkSession]);
 
   const initializeAuth = useCallback(async () => {
     try {
@@ -99,79 +197,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setState(prev => ({ ...prev, initializing: false }));
     }
-  }, []);
+  }, [checkSession, handleError]);
 
-  const setupAppStateListener = useCallback(() => {
-    const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
-        if (state.isAuthenticated) {
-          checkSession();
-        }
-      }
-      appStateRef.current = nextAppState;
+  useEffect(() => {
+    initializeAuth();
+    const cleanup = setupAppStateListener();
+    return () => {
+      clearSessionTimer();
+      cleanup();
     };
-
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-    return () => subscription?.remove();
-  }, [state.isAuthenticated]);
-
-  const cleanup = useCallback(() => {
-    clearSessionTimer();
   }, []);
 
-  const startSessionTimer = useCallback(() => {
-    clearSessionTimer();
-    const timeUntilExpiry = SESSION_TIMEOUT - (Date.now() - state.lastActivity);
-    
-    if (timeUntilExpiry > 0) {
-      sessionTimeoutRef.current = setTimeout(() => {
-        handleSessionExpired();
-      }, timeUntilExpiry);
+  useEffect(() => {
+    if (state.isAuthenticated) {
+      startSessionTimer();
     } else {
-      handleSessionExpired();
+      clearSessionTimer();
     }
-  }, [state.lastActivity]);
-
-  const clearSessionTimer = useCallback(() => {
-    if (sessionTimeoutRef.current) {
-      clearTimeout(sessionTimeoutRef.current);
-      sessionTimeoutRef.current = null;
-    }
-  }, []);
-
-  const handleSessionExpired = useCallback(async () => {
-    setState(prev => ({ ...prev, sessionExpired: true }));
-    Alert.alert(
-      'Session Expired',
-      'Your session has expired. Please log in again.',
-      [{ text: 'OK', onPress: logout }]
-    );
-  }, []);
-
-  const updateActivity = useCallback(() => {
-    setState(prev => ({ ...prev, lastActivity: Date.now() }));
-  }, []);
-
-  const handleError = useCallback((code: string, message: string, field?: string) => {
-    setError({ code, message, field });
-  }, []);
-
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
-
-  const checkSession = useCallback(async (): Promise<boolean> => {
-    try {
-      if (!authService.isAuthenticated()) return false;
-      
-      const user = await authService.getProfile();
-      setState(prev => ({ ...prev, user }));
-      return true;
-    } catch (error) {
-      console.error('Session check failed:', error);
-      return false;
-    }
-  }, []);
+  }, [state.isAuthenticated, state.lastActivity, startSessionTimer, clearSessionTimer]);
 
   const login = useCallback(async (email: string, password: string) => {
     try {
@@ -191,12 +234,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setState(prev => ({
         ...prev,
-        user: response.user,
+        user: null,
         isAuthenticated: true,
         requiresTwoFactor: false,
         loading: false,
         lastActivity: Date.now()
       }));
+      
+      try {
+        await fetchUserData();
+      } catch (error) {
+        console.error('Failed to fetch user data after login:', error);
+      }
       
       updateActivity();
       return { success: true };
@@ -205,7 +254,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       handleError('LOGIN_ERROR', error.message);
       throw error;
     }
-  }, []);
+  }, [clearError, updateActivity, handleError, fetchUserData]);
 
   const register = useCallback(async (data: RegisterData) => {
     try {
@@ -229,7 +278,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       handleError('REGISTER_ERROR', error.message);
       throw error;
     }
-  }, []);
+  }, [clearError, handleError]);
 
   const verifyAccount = useCallback(async (email: string, code: string) => {
     try {
@@ -241,7 +290,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.autoLogin) {
         setState(prev => ({
           ...prev,
-          user: response.autoLogin.user,
+          user: response.autoLogin?.user??null,
           isAuthenticated: true,
           loading: false,
           lastActivity: Date.now()
@@ -259,7 +308,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       handleError('VERIFY_ERROR', error.message);
       throw error;
     }
-  }, []);
+  }, [clearError, handleError]);
 
   const resendVerification = useCallback(async (email: string) => {
     try {
@@ -275,7 +324,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       handleError('RESEND_ERROR', error.message);
       throw error;
     }
-  }, []);
+  }, [clearError, handleError]);
 
   const forgotPassword = useCallback(async (email: string) => {
     try {
@@ -294,7 +343,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       handleError('FORGOT_PASSWORD_ERROR', error.message);
       throw error;
     }
-  }, []);
+  }, [clearError, handleError]);
 
   const resetPassword = useCallback(async (token: string, newPassword: string) => {
     try {
@@ -310,7 +359,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       handleError('RESET_PASSWORD_ERROR', error.message);
       throw error;
     }
-  }, []);
+  }, [clearError, handleError]);
 
   const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
     try {
@@ -327,7 +376,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       handleError('CHANGE_PASSWORD_ERROR', error.message);
       throw error;
     }
-  }, []);
+  }, [clearError, handleError, updateActivity]);
 
   const setupTwoFactor = useCallback(async (): Promise<TwoFactorSetup> => {
     try {
@@ -339,7 +388,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       handleError('2FA_SETUP_ERROR', error.message);
       throw error;
     }
-  }, []);
+  }, [clearError, handleError, updateActivity]);
 
   const verifyTwoFactor = useCallback(async (code: string) => {
     try {
@@ -350,12 +399,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setState(prev => ({
         ...prev,
-        user: response.user,
+        user: null,
         isAuthenticated: true,
         requiresTwoFactor: false,
         loading: false,
         lastActivity: Date.now()
       }));
+      
+      try {
+        await fetchUserData();
+      } catch (error) {
+        console.error('Failed to fetch user data after 2FA:', error);
+      }
       
       updateActivity();
       return { success: true };
@@ -364,7 +419,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       handleError('2FA_VERIFY_ERROR', error.message);
       throw error;
     }
-  }, []);
+  }, [clearError, handleError, updateActivity, fetchUserData]);
 
   const disableTwoFactor = useCallback(async (password: string) => {
     try {
@@ -386,14 +441,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       handleError('2FA_DISABLE_ERROR', error.message);
       throw error;
     }
-  }, [state.user]);
+  }, [state.user, clearError, handleError, updateActivity]);
 
-  const updateProfile = useCallback(async (data: Partial<User>) => {
+  const updateProfile = useCallback(async (data: Partial<UserData>) => {
     try {
       setState(prev => ({ ...prev, loading: true }));
       clearError();
       
-      const updatedUser = await authService.updateProfile(data);
+      const updatedUser = await userService.updateUser(data);
       
       setState(prev => ({
         ...prev,
@@ -408,62 +463,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       handleError('UPDATE_PROFILE_ERROR', error.message);
       throw error;
     }
-  }, []);
+  }, [clearError, handleError, updateActivity]);
 
   const refreshProfile = useCallback(async (): Promise<void> => {
     try {
       if (!state.isAuthenticated) return;
       
-      const updatedUser = await authService.getProfile();
-      setState(prev => ({ ...prev, user: updatedUser }));
+      await fetchUserData();
       updateActivity();
     } catch (error: any) {
       console.error('Failed to refresh profile:', error);
       handleError('REFRESH_PROFILE_ERROR', 'Failed to refresh profile');
     }
-  }, [state.isAuthenticated]);
-
-  const logout = useCallback(async (): Promise<void> => {
-    try {
-      setState(prev => ({ ...prev, loading: true }));
-      
-      await authService.logout();
-      
-      setState({
-        user: null,
-        loading: false,
-        initializing: false,
-        isAuthenticated: false,
-        requiresTwoFactor: false,
-        sessionExpired: false,
-        lastActivity: Date.now()
-      });
-      
-      clearError();
-      clearSessionTimer();
-    } catch (error: any) {
-      console.error('Logout error:', error);
-      // Force logout even if API call fails
-      setState({
-        user: null,
-        loading: false,
-        initializing: false,
-        isAuthenticated: false,
-        requiresTwoFactor: false,
-        sessionExpired: false,
-        lastActivity: Date.now()
-      });
-      clearError();
-      clearSessionTimer();
-    }
-  }, []);
+  }, [state.isAuthenticated, fetchUserData, handleError, updateActivity]);
 
   const contextValue: AuthContextType = {
-    // State
     ...state,
     error,
-    
-    // Actions
     login,
     register,
     logout,
@@ -478,13 +494,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateProfile,
     refreshProfile,
     clearError,
-    checkSession
+    checkSession,
+    fetchUserData
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>
+    <UserContext.Provider value={contextValue}>
       {children}
-    </AuthContext.Provider>
+    </UserContext.Provider>
   );
 };
 
@@ -498,8 +515,7 @@ export const useAuth = (): AuthContextType => {
   return context;
 };
 
-// Additional hooks for specific use cases
-export const useAuthUser = (): User | null => {
+export const useAuthUser = (): UserData | null => {
   const { user } = useAuth();
   return user;
 };

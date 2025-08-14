@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-const API_BASE_URL = __DEV__ ? 'http://localhost:3000/api/auth' : 'https://api.yourapp.com/auth';
+const API_BASE_URL = __DEV__ ? 'http://192.168.1.67:3000/api/v1/auth' : 'https://api.yourapp.com/auth';
 
 // Enhanced Type Definitions
 export interface User {

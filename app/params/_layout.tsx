@@ -5,7 +5,7 @@ export default function ParamsLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: true,
+        headerShown: false,
         headerTintColor: "#fff", // couleur des icônes/texte
       }}
     >
