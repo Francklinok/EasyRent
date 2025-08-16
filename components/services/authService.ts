@@ -1,9 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-const API_BASE_URL = __DEV__ ? 'http://192.168.1.67:3000/api/v1/auth' : 'https://api.yourapp.com/auth';
+const API_BASE_URL = 'http://192.168.1.75:3000/api/v1/auth';
 
-// Enhanced Type Definitions
 export interface User {
   id: string;
   email: string;
@@ -31,11 +30,12 @@ export interface LoginResponse {
 }
 
 export interface RegisterData {
+  username: string;
   email: string;
   password: string;
-  fullName: string;
-  phone?: string;
-  acceptTerms?: boolean;
+  firstName: string;
+  lastName: string;
+  phoneNumber?: string;
 }
 
 export interface ApiError {
@@ -50,14 +50,13 @@ export interface TwoFactorSetup {
   backupCodes: string[];
 }
 
-// Enhanced Auth Service with Enterprise Features
 class AuthService {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
   private sessionId: string | null = null;
   private refreshPromise: Promise<boolean> | null = null;
   private readonly maxRetries = 3;
-  private readonly timeout = 10000;
+  private readonly timeout = 30000;
 
   async initialize(): Promise<void> {
     try {
@@ -86,6 +85,9 @@ class AuthService {
     
     try {
       const url = `${API_BASE_URL}${endpoint}`;
+      console.log('Making request to:', url);
+      console.log('Request body:', options.body);
+      
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'X-Platform': Platform.OS,
@@ -108,8 +110,8 @@ class AuthService {
       });
 
       clearTimeout(timeoutId);
+      console.log('Response status:', response.status);
 
-      // Handle token refresh
       if (response.status === 401 && this.requiresAuth(endpoint)) {
         const refreshed = await this.handleTokenRefresh();
         if (refreshed && retryCount < this.maxRetries) {
@@ -123,18 +125,21 @@ class AuthService {
           code: 'NETWORK_ERROR',
           message: `HTTP ${response.status}: ${response.statusText}`
         }));
+        console.error('API Error:', error);
         throw new Error(error.message || 'Request failed');
       }
 
       return response.json();
     } catch (error: any) {
       clearTimeout(timeoutId);
+      console.error('Request failed:', error.message, 'URL:', `${API_BASE_URL}${endpoint}`);
       
       if (error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
       
       if (retryCount < this.maxRetries && this.isRetryableError(error)) {
+        console.log(`Retrying request (${retryCount + 1}/${this.maxRetries})...`);
         await this.delay(Math.pow(2, retryCount) * 1000);
         return this.makeRequest(endpoint, options, retryCount + 1);
       }
@@ -193,7 +198,7 @@ class AuthService {
     return data;
   }
 
-  async register(userData: RegisterData): Promise<{ verificationRequired: boolean }> {
+  async register(userData: RegisterData): Promise<{ userId?: string; verificationTokenGenerated?: boolean; emailSent?: boolean }> {
     return this.makeRequest('/register', {
       method: 'POST',
       body: JSON.stringify({
@@ -207,8 +212,8 @@ class AuthService {
     });
   }
 
-  async verifyAccount(email: string, code: string): Promise<{ autoLogin?: LoginResponse }> {
-    const result = await this.makeRequest('/verify-account', {
+  async verifyAccount(email: string, code: string): Promise<{ success?: boolean; message?: string; autoLogin?: LoginResponse }> {
+    const result = await this.makeRequest('/verify-email?token=${token}', {
       method: 'POST',
       body: JSON.stringify({ 
         email: email.toLowerCase().trim(), 

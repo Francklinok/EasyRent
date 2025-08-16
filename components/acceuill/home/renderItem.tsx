@@ -365,11 +365,9 @@ const ActionButtons = React.memo(({
             />
             <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'transparent' }}>
               <MaterialCommunityIcons name="rocket-launch" size={14} color={theme.surface} />
-              <ThemedText
+              <ThemedText intensity="strong"
                 style={{
                   color: theme.surface,
-                  fontWeight: '800',
-                  fontSize: 10,
                   letterSpacing: 0.3
                 }}
               >
@@ -666,139 +664,154 @@ const RenderItem: React.FC<Props> = ({
             theme={theme}
           />
 
-          {/* Compact Content Section */}
+          {/* Compact Beautiful Content */}
           <ThemedView style={{ padding: 10, gap: 6 }}>
-            {/* Compact Header: Type, Location & Rating in one row */}
-
+            {/* Single Row: Title, Location & Rating */}
             <MotiView
               from={{ opacity: 0, translateY: 10 }}
               animate={{ opacity: 1, translateY: 0 }}
-              transition={{ delay: 500, type: 'spring' }}
+              transition={{ delay: 400, type: 'spring' }}
+              // style={{ flexDirection: 'row',alignItems: 'center',gap: 10}}
             >
-              <ThemedView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <ThemedView style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                  <ThemedView style={{
-                    backgroundColor: theme.primary + '15',
-                    paddingHorizontal: 5,
-                    paddingVertical: 1,
-                    borderRadius: 6,
-                    marginRight: 4
-                  }}>
-                    <ThemedText style={{
-                      fontSize: 8,
-                      fontWeight: '800',
-                      color: theme.primary,
-                      textTransform: 'uppercase',
-                      letterSpacing: 0.3
-                    }}>
-                      {item.type}
-                    </ThemedText>
-                  </ThemedView>
-                  <MaterialIcons name="location-on" size={12} color={theme.error} />
+              <ThemedView className="flex-row justify-between px-3">
+                {/* Title */}
+                
+                {/* Location */}
+                <ThemedView style={{ flexDirection: 'row', alignItems: 'center', marginRight: 6 }}>
+                  <MaterialIcons name="location-on" size={10} color={theme.error} />
                   <ThemedText style={{
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: '500',
                     color: theme.typography.body,
-                    marginLeft: 1,
-                    flex: 1
+                    marginLeft: 2,
+
+                    // flex: 1
                   }} numberOfLines={1}>
                     {item.location}
                   </ThemedText>
                 </ThemedView>
+                {/* Type Badge Row */}
+              <ThemedView style={{ marginTop: 4 }}>
+                <ThemedView style={{
+                  backgroundColor: theme.primary + '15',
+                  paddingHorizontal: 10,
+                  paddingVertical: 1,
+                  borderRadius: 8,
+                }}>
+                  <ThemedText style={{
+                    fontSize: 8,
+                    fontWeight: '700',
+                    color: theme.primary,
+                    textTransform: 'uppercase'
+                  }}>
+                    {item.type}
+                  </ThemedText>
+                </ThemedView>
+              </ThemedView>
 
+               <ThemedText style={{
+                  fontSize: 13,
+                  fontWeight: '700',
+                  color: theme.typography.heading,
+                  // flex: 2,
+                  marginRight: 6
+                }} numberOfLines={1}>
+                  {item.title || 'Luxury Property'}
+                </ThemedText>
+
+                {/* Star Rating */}
                 <ThemedView style={{
                   flexDirection: 'row',
                   alignItems: 'center',
                   backgroundColor: theme.star + '15',
                   paddingHorizontal: 6,
                   paddingVertical: 2,
-                  borderRadius: 8,
-                  gap: 2
+                  borderRadius: 10,
+                  flex: 0
                 }}>
-                  <FontAwesome5 name="star" size={10} color={theme.star} />
+                  <FontAwesome5 name="star" size={9} color={theme.star} />
                   <ThemedText style={{
                     fontSize: 10,
                     fontWeight: '700',
-                    color: theme.star
+                    color: theme.star,
+                    marginLeft: 2
                   }}>
                     {item.stars}
                   </ThemedText>
                 </ThemedView>
               </ThemedView>
+              
+              
             </MotiView>
             
-            {/* Compact Property Stats */}
+            {/* Combined Review & Stats Section */}
             <MotiView
               from={{ opacity: 0, translateY: 10 }}
               animate={{ opacity: 1, translateY: 0 }}
-              transition={{ delay: 600, type: 'spring' }}
+              transition={{ delay: 500, type: 'spring' }}
             >
               <ThemedView style={{
-                flexDirection: 'row',
-                justifyContent: 'space-around',
-                backgroundColor: theme.surfaceVariant + '20',
+                backgroundColor: theme.surface + '40',
                 borderRadius: 8,
-                paddingVertical: 6,
-                paddingHorizontal: 8
+                padding: 8,
+                borderLeftWidth: 2,
+                borderLeftColor: theme.primary
               }}>
-                <ThemedView style={{ alignItems: 'center', gap: 1 }}>
-                  <MaterialCommunityIcons name="bed" size={12} color={theme.primary} />
-                  <ThemedText style={{ fontSize: 9, fontWeight: '700', color: theme.typography.body }}>
-                    {item.generalInfo?.bedrooms || 'N/A'}
-                  </ThemedText>
-                </ThemedView>
-                <ThemedView style={{ alignItems: 'center', gap: 1 }}>
-                  <MaterialCommunityIcons name="shower" size={12} color={theme.primary} />
-                  <ThemedText style={{ fontSize: 9, fontWeight: '700', color: theme.typography.body }}>
-                    {item.generalInfo?.bathrooms || 'N/A'}
-                  </ThemedText>
-                </ThemedView>
-                <ThemedView style={{ alignItems: 'center', gap: 1 }}>
-                  <MaterialCommunityIcons name="ruler-square" size={12} color={theme.primary} />
-                  <ThemedText style={{ fontSize: 9, fontWeight: '700', color: theme.typography.body }}>
-                    {item.generalInfo?.surface}m²
-                  </ThemedText>
-                </ThemedView>
-                <ThemedView style={{ alignItems: 'center', gap: 1 }}>
-                  <MaterialCommunityIcons name="home-group" size={12} color={theme.primary} />
-                  <ThemedText style={{ fontSize: 9, fontWeight: '700', color: theme.typography.body }}>
-                    {item.generalInfo?.rooms}P
-                  </ThemedText>
-                </ThemedView>
-              </ThemedView>
-            </MotiView>
-
-            {/* Compact Review Section */}
-            {truncatedReview && (
-              <MotiView
-                from={{ opacity: 0, translateY: 10 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ delay: 700, type: 'spring' }}
-              >
-                <ThemedView style={{
-                  backgroundColor: theme.surface + '40',
-                  borderRadius: 6,
-                  padding: 6,
-                  borderLeftWidth: 2,
-                  borderLeftColor: theme.primary + '60'
-                }}>
+                   {truncatedReview && (
                   <ThemedText style={{
                     fontSize: 10,
                     lineHeight: 14,
-                    color: theme.typography.body + '90',
+                    color: theme.typography.body,
                     fontStyle: 'italic'
                   }} numberOfLines={2}>
                     {truncatedReview}
                   </ThemedText>
+                )}
+                {/* Property Stats Row */}
+                <ThemedView style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  marginBottom: truncatedReview ? 6 : 0
+                }}>
+                  <ThemedView style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <MaterialCommunityIcons name="bed" size={12} color={theme.primary} />
+                    <ThemedText style={{ fontSize: 9, fontWeight: '700', color: theme.typography.body, marginLeft: 2 }}>
+                      {item.generalInfo?.bedrooms || 'N/A'}
+                    </ThemedText>
+                  </ThemedView>
+                  
+                  <ThemedView style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <MaterialCommunityIcons name="shower" size={12} color={theme.secondary || theme.primary} />
+                    <ThemedText style={{ fontSize: 9, fontWeight: '700', color: theme.typography.body, marginLeft: 2 }}>
+                      {item.generalInfo?.bathrooms || 'N/A'}
+                    </ThemedText>
+                  </ThemedView>
+                  
+                  <ThemedView style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <MaterialCommunityIcons name="ruler-square" size={12} color={theme.success} />
+                    <ThemedText style={{ fontSize: 9, fontWeight: '700', color: theme.typography.body, marginLeft: 2 }}>
+                      {item.generalInfo?.surface}m²
+                    </ThemedText>
+                  </ThemedView>
+                  
+                  <ThemedView style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <MaterialCommunityIcons name="home-group" size={12} color={theme.warning || theme.primary} />
+                    <ThemedText style={{ fontSize: 9, fontWeight: '700', color: theme.typography.body, marginLeft: 2 }}>
+                      {item.generalInfo?.rooms}P
+                    </ThemedText>
+                  </ThemedView>
                 </ThemedView>
-              </MotiView>
-            )}
+
+                {/* Review Text */}
+             
+              </ThemedView>
+            </MotiView>
 
             {/* Compact Action Buttons */}
             <MotiView
               from={{ opacity: 0, translateY: 10 }}
               animate={{ opacity: 1, translateY: 0 }}
-              transition={{ delay: 800, type: 'spring' }}
+              transition={{ delay: 600, type: 'spring' }}
             >
               <ActionButtons
                 onPress={handlePress}
