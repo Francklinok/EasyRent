@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { userService, UserData } from '@/components/services/userService';
+import { userService, UserData, UpdateUserData, ActivityLog } from '@/components/services/userService';
 
 export interface UserProfile {
   id: string;
@@ -14,7 +14,6 @@ export interface UserProfile {
   createdAt: string;
   updatedAt: string;
   preferences?: Record<string, any>;
-  // App-specific fields
   isPremium?: boolean;
   premiumExpiry?: string;
 }
@@ -38,14 +37,24 @@ interface UserContextType {
   user: UserProfile | null;
   wallet: WalletData;
   favorites: string[];
+  activityLogs: ActivityLog[];
   isLoading: boolean;
+  isInitialized: boolean; // Nouveau: pour savoir si l'initialisation est terminée
   
   // Backend user functions
   fetchUserFromBackend: () => Promise<void>;
-  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  updateProfile: (updates: UpdateUserData) => Promise<void>;
   uploadProfilePicture: (imageUri: string) => Promise<void>;
   updatePreferences: (preferences: Record<string, any>) => Promise<void>;
   deleteAccount: () => Promise<boolean>;
+  fetchActivityLogs: () => Promise<void>;
+  
+  // Admin functions
+  fetchAllUsers: (page?: number, limit?: number) => Promise<{users: UserData[], total: number}>;
+  searchUsers: (searchData: any) => Promise<{users: UserData[], total: number}>;
+  activateUser: (userId: string) => Promise<void>;
+  deactivateUser: (userId: string) => Promise<void>;
+  deleteUser: (userId: string) => Promise<boolean>;
   
   // Wallet functions
   addFunds: (amount: number) => Promise<boolean>;
@@ -63,6 +72,7 @@ interface UserContextType {
   // Helper functions
   getFullName: () => string;
   isUserActive: () => boolean;
+  isAdmin: () => boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -75,13 +85,37 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     transactions: []
   });
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    loadUserData();
+    initializeUserData();
   }, []);
 
-  const loadUserData = async () => {
+  const initializeUserData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // 1. Charger les données locales d'abord
+      await loadLocalUserData();
+      
+      // 2. Vérifier s'il y a un token
+      const token = await AsyncStorage.getItem('accessToken');
+      
+      if (token) {
+        // 3. Si token existe, récupérer les données du backend
+        await fetchUserFromBackend();
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'initialisation:', error);
+    } finally {
+      setIsLoading(false);
+      setIsInitialized(true);
+    }
+  };
+
+  const loadLocalUserData = async () => {
     try {
       const userData = await AsyncStorage.getItem('user');
       const walletData = await AsyncStorage.getItem('wallet');
@@ -91,9 +125,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (walletData) setWallet(JSON.parse(walletData));
       if (favoritesData) setFavorites(JSON.parse(favoritesData));
     } catch (error) {
-      console.error('Error loading user data:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Erreur lors du chargement des données locales:', error);
     }
   };
 
@@ -111,7 +143,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const fetchUserFromBackend = async (): Promise<void> => {
     try {
-      setIsLoading(true);
       const userData = await userService.getCurrentUser();
       
       const userProfile: UserProfile = {
@@ -133,30 +164,22 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(userProfile);
       await saveUserData(userProfile);
     } catch (error) {
-      console.error('Error fetching user from backend:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Erreur lors de la récupération depuis le backend:', error);
+      // Ne pas throw l'erreur pour éviter de casser l'app
+      // L'utilisateur utilisera les données locales s'il y en a
     }
   };
 
-  const updateProfile = async (updates: Partial<UserProfile>): Promise<void> => {
+  const updateProfile = async (updates: UpdateUserData): Promise<void> => {
     if (!user) return;
     
     try {
       setIsLoading(true);
       
-      const backendUpdates = {
-        firstName: updates.firstName,
-        lastName: updates.lastName,
-        phoneNumber: updates.phoneNumber,
-        preferences: updates.preferences
-      };
-      
-      const updatedUserData = await userService.updateUser(backendUpdates);
+      const updatedUserData = await userService.updateCurrentUser(updates);
       
       const updatedUser: UserProfile = {
         ...user,
-        ...updates,
         firstName: updatedUserData.firstName,
         lastName: updatedUserData.lastName,
         phoneNumber: updatedUserData.phoneNumber,
@@ -209,13 +232,14 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const deleteAccount = async (): Promise<boolean> => {
     try {
-      const result = await userService.deleteAccount();
+      const result = await userService.deleteCurrentUser();
       
       if (result.success) {
-        await AsyncStorage.multiRemove(['user', 'wallet', 'favorites']);
+        await AsyncStorage.multiRemove(['user', 'wallet', 'favorites', 'accessToken']);
         setUser(null);
         setWallet({ balance: 0, currency: 'EUR', transactions: [] });
         setFavorites([]);
+        setActivityLogs([]);
       }
       
       return result.success;
@@ -225,6 +249,63 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const fetchActivityLogs = async (): Promise<void> => {
+    try {
+      const logs = await userService.getCurrentUserActivityLogs();
+      setActivityLogs(logs);
+    } catch (error) {
+      console.error('Error fetching activity logs:', error);
+    }
+  };
+
+  // Admin functions
+  const fetchAllUsers = async (page: number = 1, limit: number = 10) => {
+    try {
+      return await userService.getUsers(page, limit);
+    } catch (error) {
+      console.error('Error fetching all users:', error);
+      throw error;
+    }
+  };
+
+  const searchUsers = async (searchData: any) => {
+    try {
+      return await userService.searchUsers(searchData);
+    } catch (error) {
+      console.error('Error searching users:', error);
+      throw error;
+    }
+  };
+
+  const activateUser = async (userId: string): Promise<void> => {
+    try {
+      await userService.activateUser(userId);
+    } catch (error) {
+      console.error('Error activating user:', error);
+      throw error;
+    }
+  };
+
+  const deactivateUser = async (userId: string): Promise<void> => {
+    try {
+      await userService.deactivateUser(userId);
+    } catch (error) {
+      console.error('Error deactivating user:', error);
+      throw error;
+    }
+  };
+
+  const deleteUser = async (userId: string): Promise<boolean> => {
+    try {
+      const result = await userService.deleteUser(userId);
+      return result.success;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      return false;
+    }
+  };
+
+  // Helper functions
   const getFullName = (): string => {
     if (!user) return '';
     return `${user.firstName} ${user.lastName}`.trim();
@@ -234,6 +315,11 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return user?.isActive ?? false;
   };
 
+  const isAdmin = (): boolean => {
+    return user?.role === 'admin' || user?.role === 'super_admin';
+  };
+
+  // Wallet functions (gardées telles quelles)
   const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
     const newTransaction: Transaction = {
       ...transaction,
@@ -328,6 +414,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Favorites functions
   const toggleFavorite = async (itemId: string): Promise<void> => {
     try {
       const updatedFavorites = favorites.includes(itemId)
@@ -345,6 +432,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return favorites.includes(itemId);
   };
 
+  // Premium functions
   const upgradeToPremium = async (): Promise<boolean> => {
     try {
       if (!user) return false;
@@ -386,12 +474,20 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     user,
     wallet,
     favorites,
+    activityLogs,
     isLoading,
+    isInitialized,
     fetchUserFromBackend,
     updateProfile,
     uploadProfilePicture,
     updatePreferences,
     deleteAccount,
+    fetchActivityLogs,
+    fetchAllUsers,
+    searchUsers,
+    activateUser,
+    deactivateUser,
+    deleteUser,
     addFunds,
     withdrawFunds,
     makePayment,
@@ -400,7 +496,8 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     upgradeToPremium,
     checkPremiumStatus,
     getFullName,
-    isUserActive
+    isUserActive,
+    isAdmin
   };
 
   return (
@@ -417,4 +514,3 @@ export const useUser = (): UserContextType => {
   }
   return context;
 };
-

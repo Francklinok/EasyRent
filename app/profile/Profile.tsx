@@ -6,17 +6,19 @@ import { ThemedText } from '@/components/ui/ThemedText'
 import { BackButton } from '@/components/ui/BackButton'
 import { useTheme } from '@/components/contexts/theme/themehook'
 import EnhancedProfileComponent from '@/components/profile/EnhancedProfileComponent'
+import { useUser } from '@/components/contexts/user/UserContext'
+
 
 const Profile = () => {
   const { theme } = useTheme()
   const [editing, setEditing] = useState(null)
   const [editValue, setEditValue] = useState('')
-  const [user, setUser] = useState({
-    name: 'John Doe',
-    email: 'john@example.com',
-    phone: '+1 234 567 8900',
-    profilePhoto: null
-  })
+// const [user, setUser] = useState({
+//     name: 'John Doe',
+//     email: 'john@example.com',
+//     phone: '+1 234 567 8900',
+//     profilePhoto: null
+//   })  
   const [stats] = useState({
     totalBookings: 24,
     favoriteProperties: 12,
@@ -28,12 +30,13 @@ const Profile = () => {
     setEditValue(value)
   }
   
-  const saveEdit = () => {
-    if (editing && editValue.trim()) {
-      setUser(prev => ({ ...prev, [editing]: editValue }))
-      setEditing(null)
-    }
-  }
+  // const saveEdit = () => {
+  //   if (editing && editValue.trim()) {
+  //     setUser(prev => ({ ...prev, [editing]: editValue }))
+  //     setEditing(null)
+  //   }
+  // }
+  const {user} = useUser()
   
   const cancelEdit = () => {
     setEditing(null)
@@ -44,7 +47,7 @@ const Profile = () => {
     <ThemedView className="items-center py-6 mb-6">
       <View className="relative mb-4">
         <Image
-          source={{ uri: user?.profilePhoto || 'https://via.placeholder.com/120' }}
+          source={{ uri: user?.photo || 'https://via.placeholder.com/120' }}
           className="w-24 h-24 rounded-full"
         />
         <TouchableOpacity 
@@ -56,7 +59,7 @@ const Profile = () => {
       </View>
       
       <ThemedText type="title" className="mb-1">
-        {user?.name || 'User Name'}
+        {user?.firstName || 'User Name'}
       </ThemedText>
       
       <ThemedText className="text-center mb-4 opacity-70">

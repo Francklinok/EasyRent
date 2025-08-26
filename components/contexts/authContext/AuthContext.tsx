@@ -13,7 +13,7 @@ export interface AuthState {
 }
 
 export interface AuthActions {
-  login: (email: string, password: string) => Promise<{ success: boolean; requiresTwoFactor?: boolean }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; requireTwoFactor?: boolean }>;
   register: (data: RegisterData) => Promise<{ success: boolean; verificationRequired: boolean }>;
   logout: () => Promise<void>;
   verifyAccount: (email: string, code: string) => Promise<{ success: boolean; autoLogin?: boolean }>;
@@ -210,21 +210,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearError();
       
       const response = await authService.login(email, password);
+      console.log("user response  for the  first  attempt  for  login is  ",  response)
       
-      if (response.requiresTwoFactor) {
+      if (response.requireTwoFactor) {
         setState(prev => ({ 
           ...prev, 
-          requiresTwoFactor: true,
+          requireTwoFactor: true,
           loading: false 
         }));
-        return { success: true, requiresTwoFactor: true };
+        return { success: true, requireTwoFactor: true };
       }
       
       setState(prev => ({
         ...prev,
-        user: response.user,
+        user: response.data.user,
         isAuthenticated: true,
-        requiresTwoFactor: false,
+        requireTwoFactor: false,
         loading: false,
         lastActivity: Date.now()
       }));
@@ -243,7 +244,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setState(prev => ({ ...prev, loading: true }));
       clearError();
       
-      const response = await authService.register(data);
+      const response:any = await authService.register(data);
       
       setState(prev => ({ ...prev, loading: false }));
       
@@ -272,7 +273,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.autoLogin) {
         setState(prev => ({
           ...prev,
-          user: response.autoLogin?.user??null,
+          user: response.autoLogin?.data.user??null,
           isAuthenticated: true,
           loading: false,
           lastActivity: Date.now()
@@ -295,7 +296,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resendVerification = useCallback(async (email: string) => {
     try {
       clearError();
-      const response = await authService.resendVerification(email);
+      const response:any = await authService.resendVerification(email);
       
       if (response.sent) {
         Alert.alert('Verification Sent', 'A new verification code has been sent to your email.');
@@ -311,7 +312,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const forgotPassword = useCallback(async (email: string) => {
     try {
       clearError();
-      const response = await authService.forgotPassword(email);
+      const response:any = await authService.forgotPassword(email);
       
       if (response.resetTokenSent) {
         Alert.alert(
@@ -330,7 +331,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resetPassword = useCallback(async (token: string, newPassword: string) => {
     try {
       clearError();
-      const response = await authService.resetPassword(token, newPassword);
+      const response:any = await authService.resetPassword(token, newPassword);
       
       if (response.success) {
         Alert.alert('Password Reset', 'Your password has been successfully changed.');
@@ -346,7 +347,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
     try {
       clearError();
-      const response = await authService.changePassword(currentPassword, newPassword);
+      const response:any= await authService.changePassword(currentPassword, newPassword);
       
       if (response.success) {
         Alert.alert('Password Changed', 'Your password has been updated successfully.');
@@ -381,7 +382,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setState(prev => ({
         ...prev,
-        user: response.user,
+        user: response.data.user,
         isAuthenticated: true,
         requiresTwoFactor: false,
         loading: false,
@@ -400,7 +401,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const disableTwoFactor = useCallback(async (password: string) => {
     try {
       clearError();
-      const response = await authService.disableTwoFactor(password);
+      const response:any = await authService.disableTwoFactor(password);
       
       if (response.success && state.user) {
         setState(prev => ({

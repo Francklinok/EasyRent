@@ -13,6 +13,9 @@ import { AuthProvider } from '@/components/contexts/authContext/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import Profile from './profile/Profile';
+import { UserProvider } from '@/components/contexts/user/UserContext';
+
 
 SplashScreen.preventAutoHideAsync();
 
@@ -68,6 +71,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider initialTheme="system">
       <AuthProvider>
+        <UserProvider>
         <NotificationProvider>
           <FavoritesProvider>
             <BookingProvider>
@@ -83,6 +87,7 @@ export default function RootLayout() {
             </BookingProvider>
           </FavoritesProvider>
         </NotificationProvider>
+        </UserProvider>
       </AuthProvider>
     </ThemeProvider>
   );

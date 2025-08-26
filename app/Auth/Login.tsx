@@ -54,42 +54,53 @@ const LoginScreen = () => {
   }, []);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
-      return;
-    }
+  if (!email || !password) {
+    Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+    return;
+  }
 
-    setLoading(true);
-    try {
-      const result = await login(email, password);
-      if (result.success && !result.requiresTwoFactor) {
+  setLoading(true);
+  try {
+    const result = await login(email, password);
+    console.log('Login result:', result);
+
+    if (result.success) {
+      if (result.requireTwoFactor) {
+        // 2FA activé, on attend le code
+        Alert.alert('Vérification', 'Veuillez entrer votre code 2FA');
+      } else {
+        // Login complet
         router.replace('/Auth/AuthHome');
       }
-    } catch (error) {
-      console.error('Login error:', error);
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error: any) {
+    console.error('Login error:', error);
+    Alert.alert('Erreur', error.message || 'Connexion échouée');
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const handleTwoFactorVerify = async () => {
-    if (!twoFactorCode) {
-      Alert.alert('Erreur', 'Veuillez entrer le code 2FA');
-      return;
-    }
+const handleTwoFactorVerify = async () => {
+  if (!twoFactorCode) {
+    Alert.alert('Erreur', 'Veuillez entrer le code 2FA');
+    return;
+  }
 
-    setLoading(true);
-    try {
-      const result = await verifyTwoFactor(twoFactorCode);
-      if (result.success) {
-        router.replace('/Auth/AuthHome');
-      }
-    } catch (error) {
-      console.error('2FA verification error:', error);
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  try {
+    const result = await verifyTwoFactor(twoFactorCode);
+    if (result.success) {
+      router.replace('/Auth/AuthHome');
     }
-  };
+  } catch (error: any) {
+    console.error('2FA verification error:', error);
+    Alert.alert('Erreur', error.message || 'Vérification échouée');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleForgotPassword = () => {
     router.push('/Auth/ForgotPassword');

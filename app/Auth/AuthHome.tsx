@@ -12,13 +12,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { useAuth } from '@/components/contexts/authContext/AuthContext';
+import { useAuthUser } from '@/components/contexts/authContext/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
 const AuthHome = () => {
   const router = useRouter();
-  const { user } = useAuth();
+  const  user  = useAuthUser();
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(100)).current;
@@ -70,7 +70,7 @@ const AuthHome = () => {
     if (user?.firstName) {
       return user.firstName;
     }
-    return 'Utilisateur';
+    return 'user';
   };
 
   return (

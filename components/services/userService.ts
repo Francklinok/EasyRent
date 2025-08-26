@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = __DEV__ ? 'http://localhost:3000/api' : 'https://api.yourapp.com';
+const API_BASE_URL = 'http://192.168.1.70:3000/api';
 
 export interface UserData {
   id: string;
@@ -20,8 +20,24 @@ export interface UpdateUserData {
   firstName?: string;
   lastName?: string;
   phoneNumber?: string;
-  photo?: string;
   preferences?: Record<string, any>;
+  isPremium?:boolean;
+  premiumExpiry?:Date
+}
+
+export interface SearchUsersData {
+  query?: string;
+  role?: string;
+  isActive?: boolean;
+  page?: number;
+  limit?: number;
+}
+
+export interface ActivityLog {
+  id: string;
+  action: string;
+  timestamp: string;
+  details?: Record<string, any>;
 }
 
 class UserService {
@@ -54,17 +70,60 @@ class UserService {
     return response.json();
   }
 
+  // Récupérer l'utilisateur connecté
   async getCurrentUser(): Promise<UserData> {
     return this.makeRequest<UserData>('/users/me');
   }
 
-  async updateUser(data: UpdateUserData): Promise<UserData> {
+  // Liste des utilisateurs (pour admin)
+  async getUsers(page: number = 1, limit: number = 10): Promise<{users: UserData[], total: number}> {
+    return this.makeRequest<{users: UserData[], total: number}>(`/users?page=${page}&limit=${limit}`);
+  }
+
+  // Détails d'un utilisateur par ID
+  async getUserById(userId: string): Promise<UserData> {
+    return this.makeRequest<UserData>(`/users/${userId}`);
+  }
+
+  // Recherche avancée d'utilisateurs
+  async searchUsers(searchData: SearchUsersData): Promise<{users: UserData[], total: number}> {
+    return this.makeRequest<{users: UserData[], total: number}>('/users/search', {
+      method: 'POST',
+      body: JSON.stringify(searchData),
+    });
+  }
+
+  // Mise à jour de l'utilisateur connecté
+  async updateCurrentUser(data: UpdateUserData): Promise<UserData> {
     return this.makeRequest<UserData>('/users/me', {
-      method: 'PATCH',
+      method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
+  // Mise à jour d'un utilisateur par ID (pour admin)
+  async updateUser(userId: string, data: UpdateUserData): Promise<UserData> {
+    return this.makeRequest<UserData>(`/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Activer un utilisateur
+  async activateUser(userId: string): Promise<UserData> {
+    return this.makeRequest<UserData>(`/users/${userId}/activate`, {
+      method: 'PUT',
+    });
+  }
+
+  // Désactiver un utilisateur
+  async deactivateUser(userId: string): Promise<UserData> {
+    return this.makeRequest<UserData>(`/users/${userId}/deactivate`, {
+      method: 'PUT',
+    });
+  }
+
+  // Upload de photo de profil
   async uploadProfilePicture(imageUri: string): Promise<{ photo: string }> {
     const token = await this.getAuthToken();
     
@@ -94,17 +153,37 @@ class UserService {
     return response.json();
   }
 
-  async deleteAccount(): Promise<{ success: boolean }> {
+  // Supprimer l'utilisateur connecté
+  async deleteCurrentUser(): Promise<{ success: boolean }> {
     return this.makeRequest('/users/me', {
       method: 'DELETE',
     });
   }
 
+  // Supprimer un utilisateur par ID (pour admin)
+  async deleteUser(userId: string): Promise<{ success: boolean }> {
+    return this.makeRequest(`/users/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Mettre à jour les préférences
   async updatePreferences(preferences: Record<string, any>): Promise<UserData> {
     return this.makeRequest<UserData>('/users/me/preferences', {
-      method: 'PATCH',
+      method: 'PUT',
       body: JSON.stringify({ preferences }),
     });
+  }
+
+  // Récupérer les logs d'activité d'un utilisateur
+  async getUserActivityLogs(userId: string): Promise<ActivityLog[]> {
+    return this.makeRequest<ActivityLog[]>(`/users/${userId}/activity-logs`);
+  }
+
+  // Récupérer ses propres logs d'activité
+  async getCurrentUserActivityLogs(): Promise<ActivityLog[]> {
+    const currentUser = await this.getCurrentUser();
+    return this.getUserActivityLogs(currentUser.id);
   }
 }
 

@@ -1,12 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 
-const API_BASE_URL = 'http://192.168.1.75:3000/api/v1/auth';
+
+const API_BASE_URL = 'http://192.168.1.70:3000/api/v1/auth';
 
 export interface User {
   id: string;
   email: string;
   fullName: string;
+  firstName: string;     // ajoute ceci
+  lastName: string; 
   phone?: string;
   avatar?: string;
   role: 'user' | 'admin' | 'agent';
@@ -22,11 +26,23 @@ export interface AuthTokens {
   expiresIn: number;
 }
 
+// export interface LoginResponse {
+//   user: User;
+//   tokens: AuthTokens;
+//   requireTwoFactor?: boolean;
+//   accessToken: string;
+//   sessionId:string
+// }
 export interface LoginResponse {
-  user: User;
-  tokens: AuthTokens;
-  requiresTwoFactor?: boolean;
-  sessionId: string;
+  data: {
+    accessToken: string;
+    refreshToken: string;
+    sessionId: string;
+    user: User;
+  };
+  message: string;
+  requireTwoFactor: boolean;
+  success: boolean;
 }
 
 export interface RegisterData {
@@ -62,13 +78,17 @@ class AuthService {
     try {
       const [token, refresh, session] = await Promise.all([
         AsyncStorage.getItem('accessToken'),
-        AsyncStorage.getItem('refreshToken'),
+        SecureStore.getItemAsync('refreshToken'),
         AsyncStorage.getItem('sessionId')
       ]);
       
       this.accessToken = token;
-      this.refreshToken = refresh;
+      // this.refreshToken = refresh;
       this.sessionId = session;
+      if (refresh && !token) {
+        // Si accessToken absent mais refreshToken présent → auto-refresh
+        await this.refreshTokens();
+      }
     } catch (error) {
       console.error('Auth initialization failed:', error);
       await this.clearSession();
@@ -188,9 +208,10 @@ class AuthService {
       }),
     });
     
-    if (data.requiresTwoFactor) {
-      this.sessionId = data.sessionId;
-      await AsyncStorage.setItem('sessionId', data.sessionId);
+    console.log("data  is  ", data)
+    if (data.requireTwoFactor) {
+      this.accessToken = data.data.accessToken;
+      await AsyncStorage.setItem('sessionId', data.data.accessToken);
       return data;
     }
 
@@ -217,7 +238,7 @@ class AuthService {
       method: 'POST',
       body: JSON.stringify({ 
         email: email.toLowerCase().trim(), 
-        verificationCode: code 
+        code: code 
       }),
     });
 
@@ -356,20 +377,25 @@ class AuthService {
     }
   }
 
-  private async storeSession(loginResponse: LoginResponse): Promise<void> {
-    const { tokens, user, sessionId } = loginResponse;
-    
-    this.accessToken = tokens.accessToken;
-    this.refreshToken = tokens.refreshToken;
-    this.sessionId = sessionId;
+ private async storeSession(loginResponse: LoginResponse): Promise<void> {
+  const { accessToken, refreshToken, sessionId, user } = loginResponse.data;
 
-    await Promise.all([
-      AsyncStorage.setItem('accessToken', tokens.accessToken),
-      AsyncStorage.setItem('refreshToken', tokens.refreshToken),
-      AsyncStorage.setItem('sessionId', sessionId),
-      AsyncStorage.setItem('user', JSON.stringify(user))
-    ]);
-  }
+  this.accessToken = accessToken;
+  this.refreshToken = refreshToken;
+  this.sessionId = sessionId;
+
+  console.log("accessToken", this.accessToken);
+  console.log("refreshToken", this.refreshToken);
+  console.log("sessionId", this.sessionId);
+
+  await Promise.all([
+    AsyncStorage.setItem('accessToken', accessToken),
+    AsyncStorage.setItem('refreshToken', refreshToken),
+    AsyncStorage.setItem('sessionId', sessionId),
+    AsyncStorage.setItem('user', JSON.stringify(user))
+  ]);
+}
+
 
   private async clearSession(): Promise<void> {
     this.accessToken = null;
