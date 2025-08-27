@@ -16,6 +16,8 @@ export interface UserProfile {
   preferences?: Record<string, any>;
   isPremium?: boolean;
   premiumExpiry?: string;
+  isEmailVerified?:boolean,
+  lastLogin?:Date
 }
 
 export interface WalletData {

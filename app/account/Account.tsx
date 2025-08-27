@@ -11,25 +11,14 @@ import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { BackButton } from '@/components/ui/BackButton';
 import { useTheme } from '@/components/contexts/theme/themehook';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+
+
 const AccountPanel = ({ onClose }) => {
   const { theme } = useTheme();
-  
-  // Safe context usage with fallbacks
-  const [user, setUser] = useState({
-    name: 'John Doe',
-    email: 'john@example.com',
-    phone: '+1 234 567 8900',
-    profilePhoto: null
-  });
-  
-  const updateUser = async (updates) => {
-    setUser(prev => ({ ...prev, ...updates }));
-  };
-  
-  const logout = async () => {
-    console.log('Logout functionality');
-  };
-  
+  const  insets = useSafeAreaInsets()
+
   const [activeSection, setActiveSection] = useState('main');
   const [editing, setEditing] = useState(null);
   const [editValue, setEditValue] = useState('');
@@ -74,40 +63,40 @@ const AccountPanel = ({ onClose }) => {
     }).start();
   }, []);
 
-  const handleEdit = (field, value) => {
-    setEditing(field);
-    setEditValue(value);
-  };
+  // const handleEdit = (field, value) => {
+  //   setEditing(field);
+  //   setEditValue(value);
+  // };
   
-  const saveEdit = async () => {
-    if (editing && editValue.trim()) {
-      try {
-        await updateUser({ [editing]: editValue });
-        setEditing(null);
-        Alert.alert('Success', 'Profile updated successfully');
-      } catch (error) {
-        Alert.alert('Error', 'Failed to update profile');
-      }
-    }
-  };
+  // const saveEdit = async () => {
+  //   if (editing && editValue.trim()) {
+  //     try {
+  //       await updateUser({ [editing]: editValue });
+  //       setEditing(null);
+  //       Alert.alert('Success', 'Profile updated successfully');
+  //     } catch (error) {
+  //       Alert.alert('Error', 'Failed to update profile');
+  //     }
+  //   };
+  // }
   
-  const cancelEdit = () => {
-    setEditing(null);
-    setEditValue('');
-  };
+  // const cancelEdit = () => {
+  //   setEditing(null);
+  //   setEditValue('');
+  // };
 
-  const handleLogout = () => {
-    setShowLogoutModal(true);
-  };
+  // const handleLogout = () => {
+  //   setShowLogoutModal(true);
+  // };
 
-  const confirmLogout = async () => {
-    try {
-      await logout();
-      setShowLogoutModal(false);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to logout');
-    }
-  };
+  // const confirmLogout = async () => {
+  //   try {
+  //     await logout();
+  //     setShowLogoutModal(false);
+  //   } catch (error) {
+  //     Alert.alert('Error', 'Failed to logout');
+  //   }
+  // };
 
   const handleDeleteAccount = () => {
     setShowDeleteModal(true);
@@ -133,24 +122,20 @@ const AccountPanel = ({ onClose }) => {
     setPrivacy(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-
-
-
-
   const SettingItem = ({ title, subtitle, value, onToggle, icon, showSwitch = true }) => (
     <ThemedView variant="surfaceVariant" className="p-4 mb-2 rounded-xl">
-      <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center flex-1">
-          <View className="mr-3">
+      <ThemedView className="flex-row items-center justify-between">
+        <ThemedView className="flex-row items-center flex-1">
+          <ThemedView className="mr-3">
             {icon}
-          </View>
-          <View className="flex-1">
+          </ThemedView>
+          <ThemedView className="flex-1">
             <ThemedText className="font-medium">{title}</ThemedText>
             {subtitle && (
               <ThemedText className="text-xs mt-1 opacity-60">{subtitle}</ThemedText>
             )}
-          </View>
-        </View>
+          </ThemedView>
+        </ThemedView>
         {showSwitch && (
           <Switch
             value={value}
@@ -159,7 +144,7 @@ const AccountPanel = ({ onClose }) => {
             thumbColor={value ? theme.surface : theme.background}
           />
         )}
-      </View>
+      </ThemedView>
     </ThemedView>
   );
 
@@ -169,11 +154,11 @@ const AccountPanel = ({ onClose }) => {
       className={`p-4 mb-2 rounded-xl ${danger ? 'bg-red-50 dark:bg-red-900/20' : ''}`}
     >
       <ThemedView variant={danger ? "surface" : "surfaceVariant"} className="flex-row items-center justify-between">
-        <View className="flex-row items-center flex-1">
-          <View className="mr-3">
+        <ThemedView className="flex-row items-center flex-1">
+          <ThemedView className="mr-3">
             {icon}
-          </View>
-          <View className="flex-1">
+          </ThemedView>
+          <ThemedView className="flex-1">
             <ThemedText className={`font-medium ${danger ? 'text-red-600 dark:text-red-400' : ''}`}>
               {title}
             </ThemedText>
@@ -182,53 +167,19 @@ const AccountPanel = ({ onClose }) => {
                 {subtitle}
               </ThemedText>
             )}
-          </View>
-        </View>
+          </ThemedView>
+        </ThemedView>
         <ChevronRight size={20} color={danger ? '#ef4444' : theme.primary} />
       </ThemedView>
     </TouchableOpacity>
   );
 
-  const renderNavigationTabs = () => (
-    <ThemedView className="border-t border-gray-200 dark:border-gray-700">
-      <View className="flex-row">
-        {[
-          { id: 'notifications', label: 'Notifications', icon: <Bell size={18} /> },
-          { id: 'privacy', label: 'Privacy', icon: <Eye size={18} /> },
-          { id: 'security', label: 'Security', icon: <Shield size={18} /> },
-          { id: 'help', label: 'Help', icon: <HelpCircle size={18} /> }
-        ].map((tab) => (
-          <TouchableOpacity
-            key={tab.id}
-            onPress={() => setActiveSection(tab.id)}
-            className={`flex-1 px-2 py-3 items-center ${
-              activeSection === tab.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-            }`}
-          >
-            <View className={`mb-1 ${
-              activeSection === tab.id ? 'text-blue-600' : 'text-gray-600'
-            }`}>
-              {React.cloneElement(tab.icon, { 
-                color: activeSection === tab.id ? theme.primary : theme.text + '80'
-              })}
-            </View>
-            <ThemedText className={`text-xs ${
-              activeSection === tab.id ? 'text-blue-600 font-medium' : 'opacity-60'
-            }`}>
-              {tab.label}
-            </ThemedText>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </ThemedView>
-  );
-
   const MainMenu = () => (
-    <View>
-      <View className="flex-row items-center mb-6">
+    <ThemedView>
+      <ThemedView className="flex-row items-center mb-6">
         <BackButton />
         <ThemedText type="title" className="ml-4">Account Settings</ThemedText>
-      </View>
+      </ThemedView>
 
       <ThemedText className="mb-6 opacity-70">
         Manage your account preferences and settings
@@ -261,7 +212,7 @@ const AccountPanel = ({ onClose }) => {
         onPress={() => setActiveSection('help')}
         icon={<HelpCircle size={20} color={theme.primary} />}
       />
-    </View>
+    </ThemedView>
   );
 
   const renderContent = () => {
@@ -272,13 +223,13 @@ const AccountPanel = ({ onClose }) => {
 
       case 'notifications':
         return (
-          <View>
-            <View className="flex-row items-center mb-6">
+          <ThemedView>
+            <ThemedView className="flex-row items-center mb-6">
               <TouchableOpacity onPress={() => setActiveSection('main')} className="p-2 -ml-2">
                 <ChevronRight size={24} color={theme.primary} style={{ transform: [{ rotate: '180deg' }] }} />
               </TouchableOpacity>
               <ThemedText type="title" className="ml-2">Notifications</ThemedText>
-            </View>
+            </ThemedView>
             
             <ThemedText className="mb-6 opacity-70">
               Manage your notification preferences
@@ -327,18 +278,18 @@ const AccountPanel = ({ onClose }) => {
               onToggle={() => toggleNotification('vibrationEnabled')}
               icon={<Settings size={20} color={theme.primary} />}
             />
-          </View>
+          </ThemedView>
         );
 
       case 'privacy':
         return (
-          <View>
-            <View className="flex-row items-center mb-6">
+          <ThemedView>
+            <ThemedView className="flex-row items-center mb-6">
               <TouchableOpacity onPress={() => setActiveSection('main')} className="p-2 -ml-2">
                 <ChevronRight size={24} color={theme.primary} style={{ transform: [{ rotate: '180deg' }] }} />
               </TouchableOpacity>
               <ThemedText type="title" className="ml-2">Privacy</ThemedText>
-            </View>
+            </ThemedView>
             
             <ThemedText className="mb-6 opacity-70">
               Control who can see your information
@@ -375,18 +326,18 @@ const AccountPanel = ({ onClose }) => {
               onToggle={() => togglePrivacy('dataCollection')}
               icon={<Database size={20} color={theme.primary} />}
             />
-          </View>
+          </ThemedView>
         );
 
       case 'security':
         return (
-          <View>
-            <View className="flex-row items-center mb-6">
+          <ThemedView>
+            <ThemedView className="flex-row items-center mb-6">
               <TouchableOpacity onPress={() => setActiveSection('main')} className="p-2 -ml-2">
                 <ChevronRight size={24} color={theme.primary} style={{ transform: [{ rotate: '180deg' }] }} />
               </TouchableOpacity>
               <ThemedText type="title" className="ml-2">Security</ThemedText>
-            </View>
+            </ThemedView>
             
             <ThemedText className="mb-6 opacity-70">
               Protect your account with security measures
@@ -415,13 +366,13 @@ const AccountPanel = ({ onClose }) => {
 
             <ThemedText type="subtitle" className="mb-4 mt-6 text-red-600">Danger Zone</ThemedText>
             
-            <ActionButton
+            {/* <ActionButton
               title="Logout from All Devices"
               subtitle="End all active sessions"
               onPress={handleLogout}
               icon={<LogOut size={20} color="#ef4444" />}
               danger
-            />
+            /> */}
             
             <ActionButton
               title="Delete Account"
@@ -430,18 +381,18 @@ const AccountPanel = ({ onClose }) => {
               icon={<Trash2 size={20} color="#ef4444" />}
               danger
             />
-          </View>
+          </ThemedView>
         );
 
       case 'help':
         return (
-          <View>
-            <View className="flex-row items-center mb-6">
+          <ThemedView>
+            <ThemedView className="flex-row items-center mb-6">
               <TouchableOpacity onPress={() => setActiveSection('main')} className="p-2 -ml-2">
                 <ChevronRight size={24} color={theme.primary} style={{ transform: [{ rotate: '180deg' }] }} />
               </TouchableOpacity>
               <ThemedText type="title" className="ml-2">Help & Support</ThemedText>
-            </View>
+            </ThemedView>
             
             <ActionButton
               title="FAQ"
@@ -484,7 +435,7 @@ const AccountPanel = ({ onClose }) => {
                 Last updated: July 15, 2025
               </ThemedText>
             </ThemedView>
-          </View>
+          </ThemedView>
         );
 
       default:
@@ -493,51 +444,15 @@ const AccountPanel = ({ onClose }) => {
   };
 
   return (
-    <SafeAreaView className="flex-1">
+    <SafeAreaView className="flex-1" style = {{paddingTop: insets.top}}>
       <ThemedView className="flex-1">
         <ScrollView 
           showsVerticalScrollIndicator={false}
           className="flex-1 px-4 pt-4"
         >
           {renderContent()}
-          <View className="h-20" />
+          <ThemedView className="h-20" />
         </ScrollView>
-
-
-
-        {/* Logout Confirmation Modal */}
-        <Modal
-          visible={showLogoutModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowLogoutModal(false)}
-        >
-          <View className="flex-1 bg-black/50 justify-center items-center px-6">
-            <ThemedView className="bg-white dark:bg-gray-800 p-6 rounded-2xl w-full max-w-sm">
-              <ThemedText type="subtitle" className="mb-4 text-center">
-                Logout Confirmation
-              </ThemedText>
-              <ThemedText className="text-center mb-6 opacity-70">
-                Are you sure you want to logout from all devices?
-              </ThemedText>
-              <View className="flex-row space-x-3">
-                <TouchableOpacity
-                  onPress={() => setShowLogoutModal(false)}
-                  className="flex-1 p-3 rounded-xl bg-gray-200 dark:bg-gray-700"
-                >
-                  <ThemedText className="text-center font-medium">Cancel</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={confirmLogout}
-                  className="flex-1 p-3 rounded-xl bg-red-500"
-                >
-                  <Text className="text-center font-medium text-white">Logout</Text>
-                </TouchableOpacity>
-              </View>
-            </ThemedView>
-          </View>
-        </Modal>
-
         {/* Delete Account Confirmation Modal */}
         <Modal
           visible={showDeleteModal}
@@ -545,7 +460,7 @@ const AccountPanel = ({ onClose }) => {
           animationType="fade"
           onRequestClose={() => setShowDeleteModal(false)}
         >
-          <View className="flex-1 bg-black/50 justify-center items-center px-6">
+          <ThemedView className="flex-1 bg-black/50 justify-center items-center px-6">
             <ThemedView className="bg-white dark:bg-gray-800 p-6 rounded-2xl w-full max-w-sm">
               <ThemedText type="subtitle" className="mb-4 text-center text-red-600">
                 Delete Account
@@ -553,7 +468,7 @@ const AccountPanel = ({ onClose }) => {
               <ThemedText className="text-center mb-6 opacity-70">
                 This action cannot be undone. All your data will be permanently deleted.
               </ThemedText>
-              <View className="flex-row space-x-3">
+              <ThemedView className="flex-row space-x-3">
                 <TouchableOpacity
                   onPress={() => setShowDeleteModal(false)}
                   className="flex-1 p-3 rounded-xl bg-gray-200 dark:bg-gray-700"
@@ -566,9 +481,9 @@ const AccountPanel = ({ onClose }) => {
                 >
                   <Text className="text-center font-medium text-white">Delete</Text>
                 </TouchableOpacity>
-              </View>
+              </ThemedView>
             </ThemedView>
-          </View>
+          </ThemedView>
         </Modal>
       </ThemedView>
     </SafeAreaView>
