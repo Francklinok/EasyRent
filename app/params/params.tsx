@@ -16,22 +16,6 @@ const ParamsScreen = () => {
 
   return (
     <ThemedView className="h-full" style={{ paddingTop: insets.top + 4 }}>
-      {/* Header utilisateur */}
-      {/* <ThemedView className="flex-row items-center p-4 px-6"
-      style = {{borderBottomWidth:1, borderColor:theme.outline}}>
-        <ThemedView className="relative">
-          <Image
-            source={{ uri: 'https://i.pravatar.cc/150' }}
-            className="w-14 h-14 rounded-full mr-3"
-          />
-          <ThemedView style = {{backgroundColor:theme.success}} className="absolute right-3 bottom-0 w-3 h-3 rounded-full" />
-        </ThemedView>
-        <ThemedView className="flex-1">
-          <ThemedText type='normal' intensity='strong'>SilverJ</ThemedText>
-          <ThemedText type='normal' intensity='light'>Propriétaire</ThemedText>
-        </ThemedView>
-      </ThemedView> */}
-
       <ThemedScrollView className="flex-1  px-2">
         {/* PARAMÈTRES UTILISATEUR */}
         <ThemedView className="px-4 pt-4 pb-2">

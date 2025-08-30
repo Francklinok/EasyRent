@@ -12,12 +12,15 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { BackButton } from '@/components/ui/BackButton';
 import { useTheme } from '@/components/contexts/theme/themehook';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { useAuth } from '@/components/contexts/authContext/AuthContext';
+import { useUser } from '@/components/contexts/user/UserContext';
 
 
 const AccountPanel = ({ onClose }) => {
   const { theme } = useTheme();
   const  insets = useSafeAreaInsets()
+  const  {logout,  setupTwoFactor,disableTwoFactor} = useAuth()
+  const {deleteAccount} = useUser();
 
   const [activeSection, setActiveSection] = useState('main');
   const [editing, setEditing] = useState(null);
@@ -102,34 +105,88 @@ const AccountPanel = ({ onClose }) => {
     setShowDeleteModal(true);
   };
 
-  const confirmDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'This action cannot be undone. All your data will be permanently deleted.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => console.log('Account deleted') }
-      ]
-    );
-    setShowDeleteModal(false);
-  };
+ const confirmDeleteAccount = () => {
+  Alert.alert(
+    'Delete Account',
+    'This action cannot be undone. All your data will be permanently deleted.',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { 
+        text: 'Delete', 
+        style: 'destructive', 
+        onPress: async () => { // 👈 rendre async ici
+          try {
+            const success = await deleteAccount();
+            if (success) {
+              console.log('Account deleted');
+            } else {
+              console.log('Account has not been deleted');
+            }
+          } catch (error) {
+            console.error('Error deleting account:', error);
+          }
+        } 
+      }
+    ]
+  );
+  setShowDeleteModal(false);
+};
+
 
   const toggleNotification = (key) => {
     setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
   };
+
   
   const togglePrivacy = (key) => {
     setPrivacy(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const  handleTwoFactorConfiguration = () =>{
+   Alert.alert(
+    "Two Factor  Authentification",  "Do you  want to   activate  two  factor  authentificate?",
+    [
+      {
+        text:"Disable",
+        // style:"Cancel",
+        onPress:async () =>{
+          try{
+            const result = await disableTwoFactor(''),
+            if(result.success){
+              Alert.alert(("two   factor  authentification disable"))
+            }
+          }catch (error) {
+            console.error("Error disabling two-factor:", error);
+            Alert.alert("Error", "An error occurred while disabling.");
+          }
+        }
+      },
+      {
+        text:"Enable",
+        onPress: async () =>{
+          try{
+            const result = await setupTwoFactor()
+            if(result  && result.qrCode){
+              Alert.alert(( "two factor  authentification enable"))
+            }
+          }catch (error) {
+            console.error("Error enabling two-factor:", error);
+            Alert.alert("Error", "An error occurred while enabling.");
+          }
+        }
+      }
+    ]
+   )
+  }
+
   const SettingItem = ({ title, subtitle, value, onToggle, icon, showSwitch = true }) => (
     <ThemedView variant="surfaceVariant" className="p-4 mb-2 rounded-xl">
-      <ThemedView className="flex-row items-center justify-between">
-        <ThemedView className="flex-row items-center flex-1">
-          <ThemedView className="mr-3">
+      <ThemedView  variant="surfaceVariant" className="flex-row items-center justify-between">
+        <ThemedView  variant="surfaceVariant" className="flex-row items-center flex-1">
+          <ThemedView variant="surfaceVariant" className="pr-4">
             {icon}
           </ThemedView>
-          <ThemedView className="flex-1">
+          <ThemedView  variant="surfaceVariant" className="flex-1">
             <ThemedText className="font-medium">{title}</ThemedText>
             {subtitle && (
               <ThemedText className="text-xs mt-1 opacity-60">{subtitle}</ThemedText>
@@ -140,7 +197,7 @@ const AccountPanel = ({ onClose }) => {
           <Switch
             value={value}
             onValueChange={onToggle}
-            trackColor={{ false: theme.accent, true: theme.primary }}
+            trackColor={{ false: theme.outline, true: theme.primary }}
             thumbColor={value ? theme.surface : theme.background}
           />
         )}
@@ -151,37 +208,37 @@ const AccountPanel = ({ onClose }) => {
   const ActionButton = ({ title, subtitle, onPress, icon, danger = false }) => (
     <TouchableOpacity 
       onPress={onPress}
-      className={`p-4 mb-2 rounded-xl ${danger ? 'bg-red-50 dark:bg-red-900/20' : ''}`}
+      className={`p-4 mb-2 rounded-xl `}
     >
-      <ThemedView variant={danger ? "surface" : "surfaceVariant"} className="flex-row items-center justify-between">
+      <ThemedView className="flex-row items-center justify-between">
         <ThemedView className="flex-row items-center flex-1">
-          <ThemedView className="mr-3">
+          <ThemedView className="mr-4">
             {icon}
           </ThemedView>
           <ThemedView className="flex-1">
-            <ThemedText className={`font-medium ${danger ? 'text-red-600 dark:text-red-400' : ''}`}>
+            <ThemedText type = "body">
               {title}
             </ThemedText>
             {subtitle && (
-              <ThemedText className={`text-xs mt-1 ${danger ? 'text-red-500 dark:text-red-300' : 'opacity-60'}`}>
+              <ThemedText className='mt-1'>
                 {subtitle}
               </ThemedText>
             )}
           </ThemedView>
         </ThemedView>
-        <ChevronRight size={20} color={danger ? '#ef4444' : theme.primary} />
+        <ChevronRight size={20} color={theme.primary} />
       </ThemedView>
     </TouchableOpacity>
   );
 
   const MainMenu = () => (
-    <ThemedView>
+    <ThemedView className = "px-2 pt-6">
       <ThemedView className="flex-row items-center mb-6">
         <BackButton />
-        <ThemedText type="title" className="ml-4">Account Settings</ThemedText>
+        <ThemedText type="subtitle" className="ml-4">Account Settings</ThemedText>
       </ThemedView>
 
-      <ThemedText className="mb-6 opacity-70">
+      <ThemedText className="mb-4 opacity-70">
         Manage your account preferences and settings
       </ThemedText>
 
@@ -189,7 +246,7 @@ const AccountPanel = ({ onClose }) => {
         title="Notifications"
         subtitle="Manage your notification preferences"
         onPress={() => setActiveSection('notifications')}
-        icon={<Bell size={20} color={theme.primary} />}
+        icon={<Bell size={20} color={theme.star} />}
       />
       
       <ActionButton
@@ -203,14 +260,14 @@ const AccountPanel = ({ onClose }) => {
         title="Security"
         subtitle="Protect your account with security measures"
         onPress={() => setActiveSection('security')}
-        icon={<Shield size={20} color={theme.primary} />}
+        icon={<Shield size={20} color={theme.error} />}
       />
       
       <ActionButton
         title="Help & Support"
         subtitle="Get help and contact our support team"
         onPress={() => setActiveSection('help')}
-        icon={<HelpCircle size={20} color={theme.primary} />}
+        icon={<HelpCircle size={20} color={theme.success} />}
       />
     </ThemedView>
   );
@@ -223,19 +280,19 @@ const AccountPanel = ({ onClose }) => {
 
       case 'notifications':
         return (
-          <ThemedView>
-            <ThemedView className="flex-row items-center mb-6">
+          <ThemedView className='px-2'>
+            <ThemedView className="flex-row items-center mb-4">
               <TouchableOpacity onPress={() => setActiveSection('main')} className="p-2 -ml-2">
-                <ChevronRight size={24} color={theme.primary} style={{ transform: [{ rotate: '180deg' }] }} />
+                <BackButton />
               </TouchableOpacity>
-              <ThemedText type="title" className="ml-2">Notifications</ThemedText>
+              <ThemedText type="subtitle" className="ml-2">Notifications</ThemedText>
             </ThemedView>
             
-            <ThemedText className="mb-6 opacity-70">
+            <ThemedText className="mb-3 opacity-70">
               Manage your notification preferences
             </ThemedText>
             
-            <ThemedText type="subtitle" className="mb-4">General Notifications</ThemedText>
+            <ThemedText type="body" className="mb-4">General Notifications</ThemedText>
             
             <SettingItem
               title="Push Notifications"
@@ -261,7 +318,7 @@ const AccountPanel = ({ onClose }) => {
               icon={<Phone size={20} color={theme.primary} />}
             />
 
-            <ThemedText type="subtitle" className="mb-4 mt-6">Sound & Vibration</ThemedText>
+            <ThemedText type="body" className="mb-3 mt-2">Sound & Vibration</ThemedText>
             
             <SettingItem
               title="Sound"
@@ -353,7 +410,7 @@ const AccountPanel = ({ onClose }) => {
             <ActionButton
               title="Two-Factor Authentication"
               subtitle="Add an extra layer of security"
-              onPress={() => console.log('2FA')}
+              onPress={() => handleTwoFactorConfiguration()}
               icon={<Shield size={20} color={theme.primary} />}
             />
             
@@ -365,14 +422,6 @@ const AccountPanel = ({ onClose }) => {
             />
 
             <ThemedText type="subtitle" className="mb-4 mt-6 text-red-600">Danger Zone</ThemedText>
-            
-            {/* <ActionButton
-              title="Logout from All Devices"
-              subtitle="End all active sessions"
-              onPress={handleLogout}
-              icon={<LogOut size={20} color="#ef4444" />}
-              danger
-            /> */}
             
             <ActionButton
               title="Delete Account"
@@ -453,13 +502,13 @@ const AccountPanel = ({ onClose }) => {
           {renderContent()}
           <ThemedView className="h-20" />
         </ScrollView>
+
         {/* Delete Account Confirmation Modal */}
         <Modal
           visible={showDeleteModal}
           transparent
           animationType="fade"
-          onRequestClose={() => setShowDeleteModal(false)}
-        >
+          onRequestClose={() => setShowDeleteModal(false)}>
           <ThemedView className="flex-1 bg-black/50 justify-center items-center px-6">
             <ThemedView className="bg-white dark:bg-gray-800 p-6 rounded-2xl w-full max-w-sm">
               <ThemedText type="subtitle" className="mb-4 text-center text-red-600">
@@ -471,14 +520,12 @@ const AccountPanel = ({ onClose }) => {
               <ThemedView className="flex-row space-x-3">
                 <TouchableOpacity
                   onPress={() => setShowDeleteModal(false)}
-                  className="flex-1 p-3 rounded-xl bg-gray-200 dark:bg-gray-700"
-                >
+                  className="flex-1 p-3 rounded-xl bg-gray-200 dark:bg-gray-700">
                   <ThemedText className="text-center font-medium">Cancel</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={confirmDeleteAccount}
-                  className="flex-1 p-3 rounded-xl bg-red-500"
-                >
+                  className="flex-1 p-3 rounded-xl bg-red-500">
                   <Text className="text-center font-medium text-white">Delete</Text>
                 </TouchableOpacity>
               </ThemedView>
