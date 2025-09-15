@@ -133,12 +133,12 @@ const AccountPanel = ({ onClose }) => {
 };
 
 
-  const toggleNotification = (key) => {
+  const toggleNotification = (key:any) => {
     setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   
-  const togglePrivacy = (key) => {
+  const togglePrivacy = (key:any) => {
     setPrivacy(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
@@ -151,7 +151,7 @@ const AccountPanel = ({ onClose }) => {
         // style:"Cancel",
         onPress:async () =>{
           try{
-            const result = await disableTwoFactor(''),
+            const result = await disableTwoFactor('')
             if(result.success){
               Alert.alert(("two   factor  authentification disable"))
             }
@@ -232,7 +232,7 @@ const AccountPanel = ({ onClose }) => {
   );
 
   const MainMenu = () => (
-    <ThemedView className = "px-2 pt-6">
+    <ThemedView className = "px-2 pt-4">
       <ThemedView className="flex-row items-center mb-6">
         <BackButton />
         <ThemedText type="subtitle" className="ml-4">Account Settings</ThemedText>
@@ -283,8 +283,9 @@ const AccountPanel = ({ onClose }) => {
           <ThemedView className='px-2'>
             <ThemedView className="flex-row items-center mb-4">
               <TouchableOpacity onPress={() => setActiveSection('main')} className="p-2 -ml-2">
-                <BackButton />
-              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setActiveSection('main')} className="p-2 -ml-2">
+                <ChevronRight size={24} color={theme.primary} style={{ transform: [{ rotate: '180deg' }] }} />
+              </TouchableOpacity>              </TouchableOpacity>
               <ThemedText type="subtitle" className="ml-2">Notifications</ThemedText>
             </ThemedView>
             
@@ -340,15 +341,15 @@ const AccountPanel = ({ onClose }) => {
 
       case 'privacy':
         return (
-          <ThemedView>
-            <ThemedView className="flex-row items-center mb-6">
+          <ThemedView className='px-2'>
+            <ThemedView className="flex-row items-center mb-4">
               <TouchableOpacity onPress={() => setActiveSection('main')} className="p-2 -ml-2">
                 <ChevronRight size={24} color={theme.primary} style={{ transform: [{ rotate: '180deg' }] }} />
               </TouchableOpacity>
-              <ThemedText type="title" className="ml-2">Privacy</ThemedText>
+              <ThemedText type="subtitle" className="ml-2">Privacy</ThemedText>
             </ThemedView>
             
-            <ThemedText className="mb-6 opacity-70">
+            <ThemedText className="mb-3 opacity-70">
               Control who can see your information
             </ThemedText>
             
@@ -388,15 +389,15 @@ const AccountPanel = ({ onClose }) => {
 
       case 'security':
         return (
-          <ThemedView>
-            <ThemedView className="flex-row items-center mb-6">
+          <ThemedView className='px-2'>
+            <ThemedView className="flex-row items-center mb-1">
               <TouchableOpacity onPress={() => setActiveSection('main')} className="p-2 -ml-2">
                 <ChevronRight size={24} color={theme.primary} style={{ transform: [{ rotate: '180deg' }] }} />
               </TouchableOpacity>
-              <ThemedText type="title" className="ml-2">Security</ThemedText>
+              <ThemedText type="subtitle" className="ml-2">Security</ThemedText>
             </ThemedView>
             
-            <ThemedText className="mb-6 opacity-70">
+            <ThemedText className="mb-3 opacity-70">
               Protect your account with security measures
             </ThemedText>
             
@@ -435,12 +436,12 @@ const AccountPanel = ({ onClose }) => {
 
       case 'help':
         return (
-          <ThemedView>
-            <ThemedView className="flex-row items-center mb-6">
+          <ThemedView className='px-2'>
+            <ThemedView className="flex-row items-center mb-4">
               <TouchableOpacity onPress={() => setActiveSection('main')} className="p-2 -ml-2">
                 <ChevronRight size={24} color={theme.primary} style={{ transform: [{ rotate: '180deg' }] }} />
               </TouchableOpacity>
-              <ThemedText type="title" className="ml-2">Help & Support</ThemedText>
+              <ThemedText type="subtitle" className="ml-2">Help & Support</ThemedText>
             </ThemedView>
             
             <ActionButton
@@ -493,8 +494,8 @@ const AccountPanel = ({ onClose }) => {
   };
 
   return (
-    <SafeAreaView className="flex-1" style = {{paddingTop: insets.top}}>
-      <ThemedView className="flex-1">
+    <ThemedView style = {{paddingTop: insets.top + 4}}>
+      <ThemedView className = "h-full">
         <ScrollView 
           showsVerticalScrollIndicator={false}
           className="flex-1 px-4 pt-4"
@@ -533,7 +534,7 @@ const AccountPanel = ({ onClose }) => {
           </ThemedView>
         </Modal>
       </ThemedView>
-    </SafeAreaView>
+    </ThemedView>
   );
 };
 

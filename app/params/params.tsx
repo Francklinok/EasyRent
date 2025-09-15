@@ -8,11 +8,36 @@ import { SettingsItem } from '@/components/ui/SettingsItems';
 import { ThemedScrollView } from '@/components/ui/ScrolleView';
 import { useTheme } from '@/components/contexts/theme/themehook';
 import { useAuth } from '@/components/contexts/authContext/AuthContext';
+import { Alert } from 'react-native';
+
 
 const ParamsScreen = () => {
   const insets = useSafeAreaInsets();
   const {theme} = useTheme()
   const {logout} = useAuth()
+
+  const  handleLogout = () =>{
+   Alert.alert(
+      "logout","you want to logout",
+      [
+       { text:"Cancel", style:"cancel"} ,
+       {
+        text:"Logout",
+         style:"destructive",
+         
+            onPress: async() =>{
+               try{
+                await logout()
+                if(true){
+                  router.replace("/Auth/Login");
+              }}catch(error:any){
+              console.error('Error logout:', error);
+          }
+          
+       }
+           ]
+    )
+  }
 
   return (
     <ThemedView className="h-full" style={{ paddingTop: insets.top + 4 }}>
@@ -58,10 +83,7 @@ const ParamsScreen = () => {
             label="Se déconnecter"
             icon="log-out"
             iconColor="white"
-            onPress={() => {
-              logout();
-              router.replace("/Auth/Login");
-            }}
+            onPress={handleLogout}
           />
         </ThemedView>
       </ThemedScrollView>
