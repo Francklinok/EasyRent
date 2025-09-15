@@ -18,6 +18,10 @@ babel.config.js
 *.p12
 *.key
 *.mobileprovision
+#
+android/google-services.json
+**/google-services.json
+
 
 # Metro
 .metro-health-check*
