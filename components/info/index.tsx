@@ -1,4 +1,4 @@
-import { View, Text, FlatList, Image, Dimensions, TouchableOpacity, Modal, Animated, Easing, StatusBar, Platform } from "react-native";
+import { View, Text, FlatList, Image, Dimensions, TouchableOpacity, Modal, StatusBar, Platform } from "react-native";
 import { useState, useRef } from "react";
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -12,6 +12,8 @@ import { ThemedView } from "../ui/ThemedView";
 import { ThemedText } from "../ui/ThemedText";
 import { useTheme } from "../contexts/theme/themehook";
 import { eachDayOfInterval, format } from "date-fns"; // npm install date-fns
+import { getBookingService } from "@/services/api/bookingService";
+import { ro } from "date-fns/locale";
 
 const { width, height } = Dimensions.get("window");
 
@@ -22,6 +24,11 @@ const screenHeight = height + statusBarHeight;
 interface ItemDataProps {
   itemData?: any;
 }
+
+type BookingScreenRoute = 
+  | "VisitScreen"
+  | "ReservationScreen"
+  | "PaymentScreen";
 
 // Génération des dates marquées en vert
 const getMarkedDates = (start: string, end: string) => {
@@ -45,15 +52,14 @@ const getMarkedDates = (start: string, end: string) => {
   return marked;
 };
 
-const ItemData = ({ itemData }: ItemDataProps) => {
+const ItemData = async ({ itemData }: ItemDataProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [slideAnim] = useState(new Animated.Value(screenHeight));
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [scaleAnim] = useState(new Animated.Value(0.95));
   const { theme } = useTheme();
+  const  bookingService = getBookingService()
+  const  existentservice = await bookingService.getPropertyActivityService(itemData.id)
 
   // Données par défaut
   const item = itemData;
@@ -71,53 +77,10 @@ const ItemData = ({ itemData }: ItemDataProps) => {
 
   const openCalendarModal = () => {
     setModalVisible(true);
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-        easing: Easing.bezier(0.25, 0.8, 0.25, 1),
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
 
   const closeCalendarModal = () => {
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: screenHeight,
-        duration: 350,
-        useNativeDriver: true,
-        easing: Easing.bezier(0.25, 0.8, 0.25, 1),
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setModalVisible(false);
-    });
-  };
-
-  // Animation pour le bouton de réservation
-  const animateReservationButton = () => {
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 0.9,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    setModalVisible(false);
   };
 
   // Générer les dates disponibles (en vert)
@@ -138,11 +101,77 @@ const ItemData = ({ itemData }: ItemDataProps) => {
     }
   }
 
+const link = (rel:BookingScreenRoute) => {
+  router.push({
+    pathname: `/booking/${rel}`,
+    params: { property: JSON.stringify(item) }
+  });
+};
+const handleNavigate = () => {
+  // Aucune activité → première visite
+  if (!existentservice || existentservice.length === 0) {
+    link("VisitScreen");
+    return;
+  }
+
+  const lastActivity = existentservice[existentservice.length - 1];
+  if (!lastActivity) {
+    link("VisitScreen");
+    return;
+  }
+
+  const { reservationStatus, visiteStatus } = lastActivity;
+
+  // 🔴 PRIORITÉ 1 : réservation EXISTE → jamais revenir à la visite
+  if (reservationStatus) {
+    if (reservationStatus === "ACCEPTED") {
+      link("PaymentScreen");
+      return;
+    }
+
+    if (
+      reservationStatus === "PENDING" ||
+      reservationStatus === "DRAFT" ||
+      reservationStatus === "REFUSED"
+    ) {
+      link("ReservationScreen");
+      return;
+    }
+  }
+
+  // 🟠 PRIORITÉ 2 : visite existe mais pas de réservation
+  if (visiteStatus) {
+    if (visiteStatus === "ACCEPTED") {
+      link("ReservationScreen");
+      return;
+    }
+
+    if (visiteStatus === "PENDING" || visiteStatus === "DRAFT") {
+      link("VisitScreen");
+      return;
+    }
+  }
+
+  // 🟢 Cas par défaut
+  link("VisitScreen");
+};
+
+const getColor = () => {
+  const availability = item.availability;
+  if (availability === "AVAILABLE") return theme.success;
+  if (["RENTED", "SOLD", "DELETED"].includes(availability)) return theme.warning;
+  if (["PENDING", "RESERVED"].includes(availability)) return theme.info;
+
+  return theme.background; 
+};
+
+
+
   return (
     <>
-      <ThemedView className="flex flex-col space-y-6 pb-16">
+      <ThemedView className="flex flex-col space-y-5 pb-16">
         {/* Carrousel d'images avec overlay gradient */}
-        <ThemedView className="relative overflow-hidden rounded-3xl mx-4 shadow-lg">
+        <ThemedView className="relative overflow-hidden rounded-3xl mx-1 shadow-lg">
           <FlatList
             ref={flatListRef}
             horizontal
@@ -152,7 +181,7 @@ const ItemData = ({ itemData }: ItemDataProps) => {
               <View className="relative">
                 <Image
                   source={imageItem}
-                  style={{ width: width - 32, height: 300 }}
+                  style={{ width: width - 8, height: 300 }}
                   className="rounded-3xl"
                   resizeMode="cover"
                 />
@@ -176,142 +205,142 @@ const ItemData = ({ itemData }: ItemDataProps) => {
           />
 
           {/* Bouton Réserver avec effet glassmorphism */}
-          <Animated.View 
-            style={{ 
-              position: 'absolute', 
-              top: 20, 
-              left: 20, 
-              transform: [{ scale: scaleAnim }] ,
+          <View
+            style={{
+              position: 'absolute',
+              top: 20,
+              left: 20,
             }}
           >
             <TouchableOpacity
-              disabled={item.availibility !== "available"}
-              onPress={() => {
-                animateReservationButton();
-                if (item.availibility === "available") {
-                  router.navigate({ pathname: "/booking/bookingscreen" });
-                }
-              }}
+              disabled={item.availibility === "SOLD" || item.availibility === "RENTED" || item.availibility === "DELETED"}
+              onPress={handleNavigate}
               className="overflow-hidden rounded-full"
               style= {{backgroundColor:theme.success}}
             >
-              <BlurView intensity={10} tint="light" style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor:item.availibility === "available" ?theme.success: theme.error}}>
-                <ThemedView style= {{backgroundColor:item.availibility === "available" ?theme.success: theme.error}} className="flex-row items-center space-x-2">
-                  <MaterialIcons 
-                    name={item.availibility === "available" ? "event-available" : "event-busy"} 
-                    size={18} 
-                    color={theme.surface} 
+              <BlurView intensity={10} tint="light" style={{ 
+                paddingHorizontal: 20, 
+                paddingVertical: 12, 
+                backgroundColor: getColor()
+              }}>
+                <ThemedView style={{
+                  backgroundColor:getColor()
+                }} className="flex-row items-center space-x-2">
+                  <MaterialIcons
+                    name={(item.availibility === "SOLD" || item.availibility === "RENTED" || item.availibility === "DELETED") ? "event-busy" : "event-available"}
+                    size={18}
+                    color={theme.surface}
                   />
-                  <ThemedText 
+                  <ThemedText
                     className="font-semibold text-sm"
-                    style={{ color:theme.surface }}
+                    style={{ color: theme.surface }}
                   >
-                    {item.availibility === "available" ? "Disponible" : "Indisponible"}
+                    {item.availibility.lowercase()}
                   </ThemedText>
                 </ThemedView>
               </BlurView>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
 
           {/* Indicateurs de pagination améliorés */}
           <ThemedView className="absolute bottom-8 w-full flex-row justify-center space-x-2">
             {imageList.map((_, index) => (
-              <Animated.View
+              <View
                 key={index}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  currentIndex === index ? "w-8 bg-white" : "w-2 bg-white/50"
-                }`}
                 style={{
+                  height: 8,
+                  width: currentIndex === index ? 32 : 8,
+                  borderRadius: 4,
+                  backgroundColor: currentIndex === index ? 'white' : 'rgba(255, 255, 255, 0.5)',
                   shadowColor: '#000',
-                  // shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.25,
                   shadowRadius: 4,
-                  elevation: 5,}}
+                  elevation: 5,
+                }}
               />
             ))}
           </ThemedView>
         </ThemedView>
 
-        {/* Prix et localisation avec design cards */}
-        <ThemedView className="flex-row px-4 gap-4 space-x-3 py-2 ">
-          <ThemedView variant="surfaceVariant" className="flex-1 flex-row items-center p-2 rounded-2xl shadow-sm">
-            <MaterialIcons name="location-on" size={20} color={theme.primary} />
-            <ThemedView  variant="surfaceVariant" className="ml-3 flex-1">
-              <ThemedText type="caption" className="opacity-70">Location</ThemedText>
-              <ThemedText intensity="strong" type="body" className="mt-1">
+        {/* Prix et localisation compacts */}
+        <ThemedView className="flex-row px-4 gap-3 mt-2">
+          <ThemedView variant="surfaceVariant" className="flex-1 flex-row items-center p-3 rounded-xl">
+            <MaterialIcons name="location-on" size={18} color={theme.primary} />
+            <ThemedView variant="surfaceVariant" className="ml-2 flex-1">
+              <ThemedText type="caption" style={{ fontSize: 10, opacity: 0.7 }}>Location</ThemedText>
+              <ThemedText intensity="strong" style={{ fontSize: 13 }} numberOfLines={1}>
                 {item.location || "Localisation"}
               </ThemedText>
             </ThemedView>
           </ThemedView>
           
-          <ThemedView variant="surfaceVariant" className="flex-1 flex-row items-center p-2 rounded-2xl shadow-sm">
-            <MaterialIcons name="attach-money" size={20} color={theme.success} />
-            <View className="ml-3 flex-1">
-              <ThemedText type="caption" className="opacity-70">Prix</ThemedText>
-              <ThemedText intensity="strong" type="body" variant="primary" className="mt-1">
+          <ThemedView variant="surfaceVariant" className="flex-1 flex-row items-center p-3 rounded-xl">
+            <MaterialIcons name="attach-money" size={18} color={theme.success} />
+            <View className="ml-2 flex-1">
+              <ThemedText type="caption" style={{ fontSize: 10, opacity: 0.7 }}>Prix</ThemedText>
+              <ThemedText intensity="strong" variant="primary" style={{ fontSize: 13 }} numberOfLines={1}>
                 {item.price || "Prix non spécifié"}
               </ThemedText>
             </View>
           </ThemedView>
         </ThemedView>
 
-        {/* Description avec animation */}
-        <ThemedView className="px-4 space-y-3 pt-2">
-          <ThemedView className="flex-row  gap-2 items-center space-x-2 pb-2">
-            <MaterialIcons name="description" size={20} color={theme.primary} />
-            <ThemedText type = "body" className = "p-2">Description</ThemedText>
+        {/* Description compacte */}
+        <ThemedView className="px-4 mt-1">
+          <ThemedView className="flex-row items-center gap-2 mb-2">
+            <MaterialIcons name="description" size={18} color={theme.primary} />
+            <ThemedText style={{ fontSize: 14, fontWeight: '600' }}>Description</ThemedText>
           </ThemedView>
           
-          <ThemedView variant="surfaceVariant" className="p-4 rounded-2xl">
-            <ThemedText className="leading-6">
+          <ThemedView variant="surfaceVariant" className="p-3 rounded-xl">
+            <ThemedText type = "normal" style={{ lineHeight: 18 }}>
               {isExpanded ? descriptionComplete : descriptionCourte}
             </ThemedText>
-            <TouchableOpacity 
-              onPress={() => setIsExpanded(!isExpanded)}
-              className="mt-3"
-            >
-              <ThemedText variant="primary" className="font-medium">
-                {isExpanded ? "Voir moins" : "Voir plus"}
-              </ThemedText>
-            </TouchableOpacity>
+            {descriptionComplete.length > 100 && (
+              <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} className="mt-2">
+                <ThemedText variant="primary" style={{ fontSize: 12, fontWeight: '600' }}>
+                  {isExpanded ? "Voir moins" : "Voir plus"}
+                </ThemedText>
+              </TouchableOpacity>
+            )}
           </ThemedView>
         </ThemedView>
 
-        {/* Infos générales avec icônes colorées */}
-        <ThemedView className="px-4 space-y-4 pt-2">
-          <ThemedView className="flex-row items-center gap-2 space-x-2 pb-2">
-            <MaterialIcons name="info" size={20} color={theme.primary} />
-            <ThemedText type = "body" className = "p-2">Informations générales</ThemedText>
+        {/* Infos générales compactes */}
+        <ThemedView className="px-4 mt-1">
+          <ThemedView className="flex-row items-center gap-2 mb-2">
+            <MaterialIcons name="info" size={18} color={theme.primary} />
+            <ThemedText style={{ fontSize: 14, fontWeight: '600' }}>Informations</ThemedText>
           </ThemedView>
           
-          <ThemedView  className="p-4 rounded-2xl">
-            <ThemedView className="flex-row justify-between">
-              <ThemedView className="items-center space-y-2 flex-1">
-                <ThemedView className="w-12 h-12 rounded-full items-center justify-center" style={{ backgroundColor: theme.primary + '20' }}>
-                  <Ionicons name="bed-outline" size={24} color={theme.primary} />
+          <ThemedView variant="surfaceVariant" className="p-3 rounded-xl">
+            <ThemedView className="flex-row justify-around">
+              <ThemedView className="items-center flex-1">
+                <ThemedView className="w-10 h-10 rounded-full items-center justify-center mb-1" style={{ backgroundColor: theme.primary + '15' }}>
+                  <Ionicons name="bed-outline" size={20} color={theme.primary} />
                 </ThemedView>
-                <ThemedText type="caption" className="text-center opacity-70">Chambres</ThemedText>
-                <ThemedText intensity="strong" className="text-center">
+                <ThemedText type="caption" style={{ fontSize: 10, opacity: 0.7 }}>Chambres</ThemedText>
+                <ThemedText intensity="strong" style={{ fontSize: 14 }}>
                   {item.generalInfo.bedrooms || 1}
                 </ThemedText>
               </ThemedView>
               
-              <ThemedView className="items-center space-y-2 flex-1">
-                <ThemedView className="w-12 h-12 rounded-full items-center justify-center" style={{ backgroundColor: theme.success + '20' }}>
-                  <MaterialCommunityIcons name="shower" size={24} color={theme.surface} />
+              <ThemedView className="items-center flex-1">
+                <ThemedView className="w-10 h-10 rounded-full items-center justify-center mb-1" style={{ backgroundColor: theme.info + '15' }}>
+                  <MaterialCommunityIcons name="shower" size={20} color={theme.info} />
                 </ThemedView>
-                <ThemedText type="caption" className="text-center opacity-70">Douches</ThemedText>
-                <ThemedText intensity="strong" className="text-center">
+                <ThemedText type="caption" style={{ fontSize: 10, opacity: 0.7 }}>Douches</ThemedText>
+                <ThemedText intensity="strong" style={{ fontSize: 14 }}>
                   {item.generalInfo.bathrooms || 1}
                 </ThemedText>
               </ThemedView>
               
-              <ThemedView className="items-center space-y-2 flex-1">
-                <View className="w-12 h-12 rounded-full items-center justify-center" style={{ backgroundColor: theme.warning + '20' }}>
-                  <FontAwesome6 name="restroom" size={20} color={theme.warning} />
+              <ThemedView className="items-center flex-1">
+                <View className="w-10 h-10 rounded-full items-center justify-center mb-1" style={{ backgroundColor: theme.warning + '15' }}>
+                  <FontAwesome6 name="restroom" size={18} color={theme.warning} />
                 </View>
-                <ThemedText type="caption" className="text-center opacity-70">WC</ThemedText>
-                <ThemedText intensity="strong" className="text-center">
+                <ThemedText type="caption" style={{ fontSize: 10, opacity: 0.7 }}>WC</ThemedText>
+                <ThemedText intensity="strong" style={{ fontSize: 14 }}>
                   {item.generalInfo.restrooms || 1}
                 </ThemedText>
               </ThemedView>
@@ -319,26 +348,26 @@ const ItemData = ({ itemData }: ItemDataProps) => {
           </ThemedView>
         </ThemedView>
 
-        {/* Bouton calendrier avec gradient et animation */}
-        <ThemedView className="px-4 space-y-3 pt-2">
-          <ThemedView className="flex-row items-center  gap-2 space-x-2 pb-2">
-            <MaterialIcons name="event" size={20} color={theme.primary} />
-            <ThemedText type = "body" className = "p-2" >Disponibilité</ThemedText>
+        {/* Bouton calendrier compact */}
+        <ThemedView className="px-4 mt-1">
+          <ThemedView className="flex-row items-center gap-2 mb-2">
+            <MaterialIcons name="event" size={18} color={theme.primary} />
+            <ThemedText style={{ fontSize: 14, fontWeight: '600' }}>Disponibilité</ThemedText>
           </ThemedView>
           
           <TouchableOpacity
             onPress={openCalendarModal}
-            className="overflow-hidden rounded-2xl shadow-lg p-2"
+            className="overflow-hidden rounded-xl"
             activeOpacity={0.8}
-            style = {{backgroundColor:theme.success}}
+            style={{ backgroundColor: theme.success }}
           >
-            <ThemedView >
-              <ThemedView style = {{backgroundColor:theme.success}} className="flex-row items-center justify-center space-x-3 gap-4">
-                <MaterialIcons name="calendar-today" size={24} color={theme.surface} />
-                <ThemedText style = {{color:theme.surface}}>
+            <ThemedView style={{ backgroundColor: theme.success, paddingVertical: 12, paddingHorizontal: 16 }}>
+              <ThemedView style={{ backgroundColor: theme.success }} className="flex-row items-center justify-center gap-3">
+                <MaterialIcons name="calendar-today" size={20} color={theme.surface} />
+                <ThemedText style={{ color: theme.surface, fontSize: 14, fontWeight: '600' }}>
                   Voir le calendrier
                 </ThemedText>
-                <MaterialIcons name="arrow-forward" size={20} color={theme.surface} />
+                <MaterialIcons name="arrow-forward" size={18} color={theme.surface} />
               </ThemedView>
             </ThemedView>
           </TouchableOpacity>
@@ -353,12 +382,11 @@ const ItemData = ({ itemData }: ItemDataProps) => {
         onRequestClose={closeCalendarModal}
         statusBarTranslucent={true}
       >
-        {/* Overlay Background avec animation */}
-        <Animated.View
+        {/* Overlay Background */}
+        <View
           style={{
             flex: 1,
             backgroundColor: 'rgba(0, 0, 0, 0.6)',
-            opacity: fadeAnim,
           }}
         >
           {/* Zone cliquable pour fermer */}
@@ -367,16 +395,15 @@ const ItemData = ({ itemData }: ItemDataProps) => {
             activeOpacity={1}
             onPress={closeCalendarModal}
           />
-          
+
           {/* Bottom Sheet Container */}
-          <Animated.View
+          <View
             style={{
               position: 'absolute',
               bottom: 0,
               left: 0,
               right: 0,
               height: screenHeight * 0.75,
-              transform: [{ translateY: slideAnim }],
             }}
           >
             {/* Contenu du Modal avec gradient subtil */}
@@ -507,8 +534,8 @@ const ItemData = ({ itemData }: ItemDataProps) => {
                 </ThemedView>
               </ThemedView>
             </ThemedView>
-          </Animated.View>
-        </Animated.View>
+          </View>
+        </View>
       </Modal>
     </>
   );
