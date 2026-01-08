@@ -1,19 +1,17 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Animated } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useRouter } from 'expo-router';
 import { ThemedView } from '../ui/ThemedView';
 import { ThemedText } from '../ui/ThemedText';
 import { useTheme } from '../contexts/theme/themehook';
+import { getServiceMarketplaceService } from '@/services/api/serviceMarketplaceService';
 
 type ServicesProps = {
   itemData?: {
-    services?: {
-      key: string;
-      title: string;
-      description: string;
-      icon: string;
-      available?: boolean;
-    }[];
+    services?: Array<{
+      serviceId: string;
+    }>;
   };
 };
 
@@ -50,17 +48,8 @@ const ServiceCard = ({ service, index }: { service: any; index: number }) => {
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={0.9}
-        // className=" rounded-2xl"
-        // style={{
-        //   shadowColor: theme.shadow,
-        //   shadowOffset: { width: 0, height: 4 },
-        //   shadowOpacity: 0.1,
-        //   shadowRadius: 12,
-        //   elevation: 0,
-        // }}
       >
-        <ThemedView variant = "surfaceVariant" className="p-3 flex-row gap-4 items-center rounded-1xl">
-          {/* Icon avec gradient background */}
+        <ThemedView variant = "surfaceVariant" className="p-3 flex-row gap-4 items-center rounded-2xl">
           <ThemedView  
             className="rounded-2xl mr-2"
             style={{
@@ -79,7 +68,7 @@ const ServiceCard = ({ service, index }: { service: any; index: number }) => {
             />
           </ThemedView>
 
-          {/* Content */}
+          {/* Service content */}
           <ThemedView variant = "surfaceVariant" className="flex-1">
             <ThemedText type = "body" className = "pb-2">
               {service.title}
@@ -89,8 +78,8 @@ const ServiceCard = ({ service, index }: { service: any; index: number }) => {
             </ThemedText>
           </ThemedView>
 
-          {/* Arrow indicator */}
-          <ThemedView 
+          {/* Arrow indicator (commented out) */}
+          {/* <ThemedView 
             className="rounded-full p-2 ml-3"
           >
             <MaterialCommunityIcons
@@ -98,25 +87,28 @@ const ServiceCard = ({ service, index }: { service: any; index: number }) => {
               size={20}
               color={theme.onSurface}
             />
-          </ThemedView>
+          </ThemedView> */}
         </ThemedView>
 
-        {/* Subtle bottom accent */}
-        <ThemedView 
+        {/* Subtle bottom accent (commented out) */}
+        {/* <ThemedView 
           className="h-1 rounded-b-2xl"
           style={{
             backgroundColor: '#4A90E2',
             opacity: 0.1,
           }}
-        />
+        /> */}
       </TouchableOpacity>
     </Animated.View>
   );
 };
 
-const EmptyState = () => (
+const EmptyState = () => {
+  const router = useRouter();
+
+  return (
   <ThemedView className="flex-1 justify-center items-center px-6 py-20 ">
-    {/* Icon avec animation */}
+    {/* Icon with animation */}
     <ThemedView 
       className="rounded-full p-8 mb-6"
       style={{
@@ -133,7 +125,7 @@ const EmptyState = () => (
       />
     </ThemedView>
 
-    {/* Title */}
+    {/* Empty state title */}
     <ThemedText 
       className="text-2xl font-bold text-center mb-3"
       style={{ color: '#1A202C' }}
@@ -141,7 +133,7 @@ const EmptyState = () => (
       Aucun service disponible
     </ThemedText>
 
-    {/* Description */}
+    {/* Empty state description */}
     <ThemedText 
       className="text-center text-base leading-6 mb-8 max-w-sm"
       style={{ color: '#718096' }}
@@ -157,9 +149,10 @@ const EmptyState = () => (
       {" "}une fois votre location confirmée
     </ThemedText>
 
-    {/* CTA Button */}
+    {/* Call to action button */}
     <TouchableOpacity
       className="rounded-xl px-8 py-4"
+      onPress={() => router.push('/services')}
       style={{
         backgroundColor: '#4A90E2',
         shadowColor: '#4A90E2',
@@ -169,58 +162,135 @@ const EmptyState = () => (
         elevation: 6,
       }}
     >
-      <ThemedText 
+      <ThemedText
       >
         Découvrir les services
       </ThemedText>
     </TouchableOpacity>
   </ThemedView>
-);
+  );
+};
 
 const Services = ({ itemData }: ServicesProps) => {
-  // On filtre les services disponibles (available === true)
-  const availableServices = itemData?.services?.filter(service => service.available) || [];
+  const [services, setServices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { theme } = useTheme();
 
-  if (availableServices.length === 0) {
+  useEffect(() => {
+    const loadServices = async () => {
+      console.log('🔍 [Services] itemData received:', itemData);
+      console.log('🔍 [Services] itemData.services:', itemData?.services);
+
+      if (!itemData?.services || itemData.services.length === 0) {
+        console.log('⚠️ [Services] No services to display');
+        setServices([]);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        console.log('📥 [Services] Loading', itemData.services.length, 'services');
+        const serviceMarketplace = getServiceMarketplaceService();
+        console.log('🔧 [Services] Marketplace service instance obtained', serviceMarketplace);
+
+        // Load details for each service
+        const servicePromises = itemData.services.map(async (serviceRef) => {
+          try {
+            const service = await serviceMarketplace.getService(serviceRef.serviceId);
+            return service;
+          } catch (error) {
+            console.error(`Error loading service ${serviceRef.serviceId}:`, error);
+            return null;
+          }
+        });
+
+        const loadedServices = await Promise.all(servicePromises);
+        // Filter out null services (those that failed to load)
+        const validServices = loadedServices.filter(s => s !== null);
+        console.log('✅ [Services] Services loaded successfully:', validServices.length);
+        setServices(validServices);
+      } catch (error) {
+        console.error('Error loading services:', error);
+        setServices([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadServices();
+  }, [itemData?.services]);
+
+  if (loading) {
+    return (
+      <ThemedView className="flex-1 justify-center items-center py-20">
+        <ActivityIndicator size="large" color={theme.primary} />
+        <ThemedText className="mt-4">Chargement des services...</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (services.length === 0) {
     return <EmptyState />;
   }
 
+  // Convert marketplace services to ServiceCard format
+  const formattedServices = services.map(service => ({
+    key: service.id,
+    title: service.title,
+    description: service.description || 'Service disponible',
+    icon: getCategoryIcon(service.category),
+    available: service.status === 'approved' && service.isActive
+  }));
+
   return (
     <ThemedView className="flex-1">
-      <ThemedView 
-        className="px-6 pt-6 pb-4 "
-        style={{
-          borderBottomLeftRadius: 24,
-          borderBottomRightRadius: 24,
-        }}
+      <ThemedView
+        className="px-6 pt-2 pb-0 "
       >
-        <ThemedText type = "subtitle"
-          className=" mb-2  text-center"
+        <ThemedText type = "subtitle" intensity='strong'
+          className=" mb-2  text-"
         >
           Services disponibles
         </ThemedText>
-        <ThemedText className = "text-center"
+        <ThemedText
         >
-          {availableServices.length} service{availableServices.length > 1 ? 's' : ''} à votre disposition
+          {formattedServices.length} service{formattedServices.length > 1 ? 's' : ''} à votre disposition
         </ThemedText>
       </ThemedView>
 
-      {/* Services List */}
-      <ScrollView 
+      <ScrollView
         className="flex-1 px-6 pt-6"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 24 }}
       >
-        {availableServices.map((service, index) => (
-          <ServiceCard 
-            key={service.key} 
-            service={service} 
-            index={index} 
+        {formattedServices.map((service, index) => (
+          <ServiceCard
+            key={service.key}
+            service={service}
+            index={index}
           />
         ))}
       </ScrollView>
     </ThemedView>
   );
+};
+
+// Helper function to get icon based on category
+const getCategoryIcon = (category: string): string => {
+  const iconMap: Record<string, string> = {
+    'cleaning': 'broom',
+    'maintenance': 'tools',
+    'security': 'shield-check',
+    'moving': 'truck-delivery',
+    'gardening': 'flower',
+    'plumbing': 'pipe-wrench',
+    'electricity': 'lightning-bolt',
+    'painting': 'format-paint',
+    'renovation': 'home-edit',
+    'other': 'wrench'
+  };
+
+  return iconMap[category] || 'wrench';
 };
 
 export default Services;
