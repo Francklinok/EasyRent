@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { TouchableOpacity, Alert, Switch, ActivityIndicator, Image } from 'react-native';
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -14,6 +13,7 @@ import { useTheme } from '@/hooks/themehook';
 import { useAuth } from '@/components/contexts/authContext/AuthContext';
 import { useProfile, useTrustScore } from '@/hooks/useProfile';
 import { useLanguage } from '@/components/contexts/language';
+import { StatusBar } from 'react-native';
 
 interface AppSettings {
   notifications: {
@@ -57,12 +57,11 @@ const SettingsScreen = () => {
   } = useTrustScore(user?.id || '');
 
   const renderHeader = () => (
-    <LinearGradient
-      colors={[theme.secondary, theme.primary || theme.primary + '80']}
+    <ThemedView
       style={{
         paddingHorizontal: 20,
-        paddingTop: insets.top + 10,
-        paddingBottom: 20,
+        paddingTop: insets.top,
+        paddingBottom: 10,
       }}
     >
       <ThemedView style={{
@@ -70,10 +69,10 @@ const SettingsScreen = () => {
         justifyContent: 'space-between',
         alignItems: 'center',
         backgroundColor: 'transparent',
-        marginBottom: 10
+        marginBottom: 1
       }}>
         <ThemedText type="subtitle" intensity="strong" style={{
-          color: 'white'
+          color: theme.text
         }}>
           {t('settingsScreen.title')}
         </ThemedText>
@@ -82,21 +81,20 @@ const SettingsScreen = () => {
           <TouchableOpacity
             onPress={() => router.push('/help')}
             style={{
-              backgroundColor: 'rgba(255,255,255,0.2)',
+              backgroundColor: theme.surface,
               borderRadius: 20,
               padding: 8
             }}
           >
-            <MaterialCommunityIcons name="help-circle" size={20} color="white" />
+            <MaterialCommunityIcons name="help-circle" size={20} color={theme.text }/>
           </TouchableOpacity>
         </ThemedView>
       </ThemedView>
 
       {/* User Card */}
       <ThemedView style={{
-        backgroundColor: 'rgba(255,255,255,0.15)',
         borderRadius: 16,
-        marginBottom: 8
+        marginBottom: 2
       }}>
         <ThemedView style={{
           flexDirection: 'row',
@@ -113,7 +111,7 @@ const SettingsScreen = () => {
                 borderRadius: 30,
                 marginRight: 15,
                 borderWidth: 3,
-                borderColor: 'rgba(255,255,255,0.4)'
+                borderColor:theme.outline
               }}
             />
           ) : (
@@ -126,13 +124,13 @@ const SettingsScreen = () => {
               justifyContent: 'center',
               marginRight: 15
             }}>
-              <MaterialCommunityIcons name="account" size={30} color="white" />
+              <MaterialCommunityIcons name="account" size={30} color={theme.text} />
             </ThemedView>
           )}
 
           <ThemedView style={{ flex: 1, backgroundColor: 'transparent' }}>
             <ThemedView style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent', gap: 8 }}>
-              <ThemedText type="subtitle" intensity="strong" style={{ color: 'white' }}>
+              <ThemedText type="subtitle" intensity="strong" style={{ color: theme.text }}>
                 {profile?.firstName || user?.firstName || t('settingsScreen.defaultUser')} {profile?.lastName || user?.lastName || ''}
               </ThemedText>
               {(user as any)?.isPremium && (
@@ -142,11 +140,11 @@ const SettingsScreen = () => {
                   paddingHorizontal: 8,
                   paddingVertical: 2
                 }}>
-                  <MaterialCommunityIcons name="crown" size={14} color="#333" />
+                  <MaterialCommunityIcons name="crown" size={14} color={theme.text} />
                 </ThemedView>
               )}
             </ThemedView>
-            <ThemedText style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14, marginTop: 2 }}>
+            <ThemedText intensity ='light' style={{ color: theme.text, fontSize: 14, marginTop: 2 }}>
               {profile?.email || user?.email || 'email@example.com'}
             </ThemedText>
 
@@ -160,7 +158,7 @@ const SettingsScreen = () => {
                 gap: 6
               }}>
                 <MaterialCommunityIcons name="shield-check" size={14} color="#4CAF50" />
-                <ThemedText style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12 }}>
+                <ThemedText style={{ color:theme.text,}}>
                   {t('settingsScreen.trustScore', { score: trustScore, level: trustLevel })}
                 </ThemedText>
               </ThemedView>
@@ -170,7 +168,7 @@ const SettingsScreen = () => {
           <TouchableOpacity
             onPress={() => router.push('/profile/Profile')}
             style={{
-              backgroundColor: 'rgba(255,255,255,0.25)',
+              backgroundColor: theme.surface,
               borderRadius: 12,
               padding: 10
             }}
@@ -179,7 +177,7 @@ const SettingsScreen = () => {
           </TouchableOpacity>
         </ThemedView>
       </ThemedView>
-    </LinearGradient>
+    </ThemedView>
   );
 
   const [settings, setSettings] = useState<AppSettings>({
@@ -259,23 +257,6 @@ const SettingsScreen = () => {
       }
     }));
   };
-
-  // const clearCache = () => {
-  //   Alert.alert(
-  //     t('settingsScreen.clearCache'),
-  //     t('settingsScreen.clearCacheConfirm'),
-  //     [
-  //       { text: t('common.cancel'), style: 'cancel' },
-  //       {
-  //         text: t('settingsScreen.clearCacheAction'),
-  //         onPress: () => {
-  //           setAppStats(prev => ({ ...prev, cacheSize: '0 MB' }));
-  //           Alert.alert(t('common.success'), t('settingsScreen.clearCacheSuccess'));
-  //         }
-  //       }
-  //     ]
-  //   );
-  // };
 
   const exportData = async () => {
     if (!user?.id) {
@@ -446,11 +427,7 @@ const SettingsScreen = () => {
   const renderSettingsSection = (title: string, children: React.ReactNode) => (
     <ThemedView style={{ marginBottom: 24 }}>
       <ThemedView style={{ paddingHorizontal: 20, paddingVertical: 8, marginBottom: 8 }}>
-        <ThemedText type="normal" intensity="strong" style={{
-          color: theme.typography.caption,
-          letterSpacing: 0.8,
-          textTransform: 'uppercase'
-        }}>
+        <ThemedText type="normaltitle" intensity="strong" style={{ fontWeight: '700'}}>
           {title}
         </ThemedText>
       </ThemedView>
@@ -493,10 +470,9 @@ const SettingsScreen = () => {
       </ThemedView>
 
       <ThemedView style={{ flex: 1, backgroundColor: 'transparent' }}>
-        <ThemedText style={{
-          fontSize: 16,
+        <ThemedText type = "normal" style={{
           fontWeight: '600',
-          color: theme.typography.body,
+          color: theme.text,
           marginBottom: description ? 2 : 0
         }}>
           {label}
@@ -522,6 +498,9 @@ const SettingsScreen = () => {
   return (
     <ThemedView style={{ flex: 1 }}>
       {renderHeader()}
+        <StatusBar 
+              barStyle={theme.dark ? 'light-content' : 'dark-content'} 
+            />
       <ThemedScrollView style={{ flex: 1 }}>
         {/* User Settings */}
         {renderSettingsSection(t('settingsScreen.userSettings'), (
@@ -543,6 +522,7 @@ const SettingsScreen = () => {
               onPress={() => router.push('/security')}
             />
             <SettingsItem
+            
               showArrow="on"
               label={t('settingsScreen.privacy')}
               description={t('settingsScreen.privacyDesc')}
