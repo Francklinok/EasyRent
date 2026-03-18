@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,411 +10,455 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
-  Animated,
-  Dimensions,
-  StatusBar
+  SafeAreaView,
+  StatusBar,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { authService } from '@/components/services/authService';
-import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
+import { authService } from '@/services/restApiService/authService';
+import { Ionicons, AntDesign, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import * as Facebook from 'expo-auth-session/providers/facebook';
+import * as AuthSession from 'expo-auth-session';
+import { useThemeColors } from '@/hooks/themehook';
 
-const { width, height } = Dimensions.get('window');
+
+WebBrowser.maybeCompleteAuthSession();
+
+// ── OAuth config ──────────────────────────────────────────────────────────────
+const GOOGLE_CLIENT_ID_ANDROID = 'YOUR_GOOGLE_ANDROID_CLIENT_ID';
+const GOOGLE_CLIENT_ID_IOS     = 'YOUR_GOOGLE_IOS_CLIENT_ID';
+const GOOGLE_CLIENT_ID_WEB     = 'YOUR_GOOGLE_WEB_CLIENT_ID';
+const FACEBOOK_APP_ID          = 'YOUR_FACEBOOK_APP_ID';
 
 interface RegisterData {
-  fullName: string;
-  email: string;
-  password: string;
+  firstName:       string;
+  lastName:        string;
+  email:           string;
+  phoneNumber:     string;
+  password:        string;
   confirmPassword: string;
-  phoneNumber?: string;
 }
 
 const RegisterScreen: React.FC = () => {
+  const colors = useThemeColors();
+
   const [formData, setFormData] = useState<RegisterData>({
-    fullName: '',
-    email: '',
-    password: '',
+    firstName:       '',
+    lastName:        '',
+    email:           '',
+    phoneNumber:     '',
+    password:        '',
     confirmPassword: '',
-    phoneNumber: ''
   });
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [rememberMe, setRememberMe]       = useState(false);
+  const [showPassword, setShowPassword]   = useState(false);
+  const [loading, setLoading]             = useState(false);
+  const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | 'facebook' | null>(null);
 
   const router = useRouter();
-  
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const update = (field: keyof RegisterData, value: string) =>
+    setFormData(prev => ({ ...prev, [field]: value }));
 
-  useEffect(() => {
-    StatusBar.setBarStyle('light-content');
-    
-    Animated.parallel([
-      Animated.timing(fadeAnim, { 
-        toValue: 1, 
-        duration: 800, 
-        useNativeDriver: true 
-      }),
-      Animated.timing(slideAnim, { 
-        toValue: 0, 
-        duration: 600, 
-        useNativeDriver: true 
-      })
-    ]).start();
+  // ── Google OAuth ────────────────────────────────────────────────────────────
+  const [, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
+    androidClientId: GOOGLE_CLIENT_ID_ANDROID,
+    iosClientId:     GOOGLE_CLIENT_ID_IOS,
+    webClientId:     GOOGLE_CLIENT_ID_WEB,
+  });
 
-    return () => StatusBar.setBarStyle('default');
-  }, []);
+  React.useEffect(() => {
+    if (googleResponse?.type === 'success') {
+      handleSocialToken('google', googleResponse.authentication?.accessToken);
+    }
+  }, [googleResponse]);
 
-  const validateForm = (): boolean => {
-    const { fullName, email, password, confirmPassword } = formData;
-    
-    if (!fullName.trim()) {
-      Alert.alert('Erreur', 'Le nom complet est obligatoire');
-      return false;
+  // ── Facebook OAuth ──────────────────────────────────────────────────────────
+  const [, fbResponse, promptFacebookAsync] = Facebook.useAuthRequest({
+    clientId: FACEBOOK_APP_ID,
+  });
+
+  React.useEffect(() => {
+    if (fbResponse?.type === 'success') {
+      handleSocialToken('facebook', fbResponse.authentication?.accessToken);
     }
-    if (!email.trim()) {
-      Alert.alert('Erreur', 'L\'email est obligatoire');
-      return false;
+  }, [fbResponse]);
+
+  // ── Apple OAuth ─────────────────────────────────────────────────────────────
+  const [, appleResponse, promptAppleAsync] = AuthSession.useAuthRequest(
+    {
+      clientId:     'YOUR_APPLE_SERVICE_ID',
+      scopes:       ['name', 'email'],
+      redirectUri:  AuthSession.makeRedirectUri({ scheme: 'myapp' }),
+      responseType: AuthSession.ResponseType.Code,
+      extraParams:  { response_mode: 'form_post' },
+    },
+    { authorizationEndpoint: 'https://appleid.apple.com/auth/authorize' }
+  );
+
+  React.useEffect(() => {
+    if (appleResponse?.type === 'success') {
+      handleSocialToken('apple', appleResponse.params.code);
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      Alert.alert('Erreur', 'Email invalide');
-      return false;
-    }
-    if (!password || password.length < 8) {
-      Alert.alert('Erreur', 'Mot de passe minimum 8 caractères');
-      return false;
-    }
+  }, [appleResponse]);
+
+  const handleSocialToken = (provider: string, token?: string) => {
+    setSocialLoading(null);
+    if (!token) { Alert.alert('Erreur', `Connexion ${provider} annulée`); return; }
+    // TODO: POST /api/v1/auth/social { provider, token }
+    Alert.alert(`${provider} connecté`, 'Intégrez votre endpoint backend pour finaliser.');
+  };
+
+  const handleGoogleSignup   = async () => { setSocialLoading('google');   await promptGoogleAsync();   setSocialLoading(null); };
+  const handleAppleSignup    = async () => { setSocialLoading('apple');    await promptAppleAsync();    setSocialLoading(null); };
+  const handleFacebookSignup = async () => { setSocialLoading('facebook'); await promptFacebookAsync(); setSocialLoading(null); };
+
+  // ── Validation ──────────────────────────────────────────────────────────────
+  const validate = (): boolean => {
+    const { firstName, lastName, email, password, confirmPassword } = formData;
+    if (!firstName.trim()) { Alert.alert('Erreur', 'Le prénom est obligatoire'); return false; }
+    if (!lastName.trim())  { Alert.alert('Erreur', 'Le nom est obligatoire'); return false; }
+    if (!email.trim())     { Alert.alert('Erreur', "L'email est obligatoire"); return false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { Alert.alert('Erreur', 'Email invalide'); return false; }
+    if (!password || password.length < 8) { Alert.alert('Erreur', 'Mot de passe minimum 8 caractères'); return false; }
     if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(password)) {
-      Alert.alert('Erreur', 'Le mot de passe doit contenir au moins une minuscule, une majuscule, un chiffre et un caractère spécial (@$!%*?&)');
+      Alert.alert('Erreur', 'Le mot de passe doit contenir minuscule, majuscule, chiffre et caractère spécial');
       return false;
     }
-    if (password !== confirmPassword) {
-      Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
-      return false;
-    }
+    if (password !== confirmPassword) { Alert.alert('Erreur', 'Les mots de passe ne correspondent pas'); return false; }
     return true;
   };
 
+  // ── Register ────────────────────────────────────────────────────────────────
   const handleRegister = async () => {
-    if (loading || !validateForm()) return;
-
+    if (loading || !validate()) return;
     setLoading(true);
     try {
-      const [firstName, ...lastNameParts] = formData.fullName.trim().split(' ');
-      const lastName = lastNameParts.join(' ') || firstName;
-      const username = firstName.toLowerCase() + Math.floor(Math.random() * 1000);
+      const firstName = formData.firstName.trim();
+      const lastName  = formData.lastName.trim();
+      const username  = firstName.toLowerCase() + Math.floor(Math.random() * 1000);
 
-      const registerData = {
+      await authService.register({
         username,
-        email: formData.email.toLowerCase().trim(),
+        email:    formData.email.toLowerCase().trim(),
         password: formData.password,
         firstName,
         lastName,
-        ...(formData.phoneNumber ? { phoneNumber: formData.phoneNumber } : {})
-      };
-
-      const result = await authService.register(registerData);
-      console.log('Registration result:', result);
-      
-      // Navigate directly to verification page on successful registration
-      router.push({
-        pathname: '/Auth/VerifyEmail',
-        params: { email: registerData.email }
+        ...(formData.phoneNumber ? { phoneNumber: formData.phoneNumber } : {}),
       });
+
+      router.push({ pathname: '/Auth/VerifyEmail', params: { email: formData.email.toLowerCase().trim() } });
     } catch (error: any) {
-      console.error('Registration error:', error);
-      Alert.alert('Erreur', error.message || 'Échec de l\'inscription');
+      Alert.alert('Erreur', error.message || "Échec de l'inscription");
     } finally {
       setLoading(false);
     }
   };
 
-  const updateFormData = (field: keyof RegisterData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  // Couleurs dérivées du thème
+  const BG         =  colors.primary + "15";         
+  const BTN        = colors.primary + "80";     
+  const TEXT       = colors.text;
+  const GRAY       = colors.input.placeholder;
+  const INPUT_BG   = colors.input.background;
+  const BORDER     = colors.input.border;
+  const LINK_COLOR = colors.primary;
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
-      <ScrollView 
-        contentContainerStyle={{ flexGrow: 1 }} 
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <LinearGradient 
-          colors={['#667eea', '#764ba2']} 
-          style={styles.gradient}
+    <SafeAreaView style={[styles.safe, { backgroundColor: BG, paddingBottom : 10 }]}>
+      <StatusBar barStyle="dark-content" backgroundColor={BG} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Animated.View style={[styles.formContainer, {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }]}>
-            <BlurView intensity={20} style={styles.blurContainer}>
-              {/* Header */}
-              <View style={styles.headerContainer}>
-                <View style={styles.iconContainer}>
-                  <Ionicons name="person-add" size={28} color="#f5576c" />
-                </View>
-                <Text style={styles.title}>Inscription</Text>
-                <Text style={styles.subtitle}>Créez votre compte</Text>
-              </View>
+          {/* Title */}
+          <Text style={[styles.title, { color: TEXT }]}>Sign up</Text>
+          <Text style={[styles.subtitle, { color: GRAY }]}>Hey, Enter your details to sign up{'\n'}your account</Text>
 
-              {/* Form */}
-              <View style={styles.formContent}>
-                <View style={styles.inputContainer}>
-                  <Ionicons name="person" size={18} color="#f5576c" style={styles.inputIcon} />
-                  <TextInput
-                    placeholder="Nom complet"
-                    value={formData.fullName}
-                    onChangeText={v => updateFormData('fullName', v)}
-                    style={styles.input}
-                    autoCapitalize="words"
-                    editable={!loading}
-                    placeholderTextColor="#999"
-                  />
-                </View>
+          {/* First name + Last name */}
+          <View style={styles.nameRow}>
+            <View style={[styles.inputWrap, styles.nameField, { backgroundColor: INPUT_BG, borderColor: BORDER }]}>
+              <Ionicons name="person-outline" size={18} color={GRAY} style={styles.icon} />
+              <TextInput
+                style={[styles.inputField, { color: TEXT }]}
+                placeholder="Prénom"
+                placeholderTextColor={GRAY}
+                value={formData.firstName}
+                onChangeText={v => update('firstName', v)}
+                autoCapitalize="words"
+                editable={!loading}
+              />
+            </View>
+            <View style={[styles.inputWrap, styles.nameField, { backgroundColor: INPUT_BG, borderColor: BORDER }]}>
+              <TextInput
+                style={[styles.inputField, { color: TEXT }]}
+                placeholder="Nom"
+                placeholderTextColor={GRAY}
+                value={formData.lastName}
+                onChangeText={v => update('lastName', v)}
+                autoCapitalize="words"
+                editable={!loading}
+              />
+            </View>
+          </View>
 
-                <View style={styles.inputContainer}>
-                  <Ionicons name="mail" size={18} color="#f5576c" style={styles.inputIcon} />
-                  <TextInput
-                    placeholder="Email"
-                    value={formData.email}
-                    onChangeText={v => updateFormData('email', v)}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    style={styles.input}
-                    editable={!loading}
-                    placeholderTextColor="#999"
-                  />
-                </View>
+          {/* Email */}
+          <View style={[styles.inputWrap, { backgroundColor: INPUT_BG, borderColor: BORDER }]}>
+            <TextInput
+              style={[styles.inputField, { color: TEXT }]}
+              placeholder="demo@gmail.com"
+              placeholderTextColor={GRAY}
+              value={formData.email}
+              onChangeText={v => update('email', v)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              editable={!loading}
+            />
+          </View>
 
-                <View style={styles.inputContainer}>
-                  <Ionicons name="lock-closed" size={18} color="#f5576c" style={styles.inputIcon} />
-                  <TextInput
-                    placeholder="Mot de passe"
-                    value={formData.password}
-                    onChangeText={v => updateFormData('password', v)}
-                    secureTextEntry={!showPassword}
-                    style={styles.input}
-                    editable={!loading}
-                    placeholderTextColor="#999"
-                  />
-                  <TouchableOpacity 
-                    onPress={() => setShowPassword(!showPassword)} 
-                    style={styles.eyeIcon}
-                  >
-                    <Ionicons 
-                      name={showPassword ? 'eye-off' : 'eye'} 
-                      size={18} 
-                      color="#f5576c" 
-                    />
-                  </TouchableOpacity>
-                </View>
+          {/* Phone */}
+          <View style={[styles.inputWrap, { backgroundColor: INPUT_BG, borderColor: BORDER }]}>
+            <Ionicons name="call-outline" size={18} color={GRAY} style={styles.icon} />
+            <TextInput
+              style={[styles.inputField, { color: TEXT }]}
+              placeholder="Phone Number"
+              placeholderTextColor={GRAY}
+              value={formData.phoneNumber}
+              onChangeText={v => update('phoneNumber', v)}
+              keyboardType="phone-pad"
+              editable={!loading}
+            />
+          </View>
 
-                <View style={styles.inputContainer}>
-                  <Ionicons name="lock-closed" size={18} color="#f5576c" style={styles.inputIcon} />
-                  <TextInput
-                    placeholder="Confirmer mot de passe"
-                    value={formData.confirmPassword}
-                    onChangeText={v => updateFormData('confirmPassword', v)}
-                    secureTextEntry={!showConfirmPassword}
-                    style={styles.input}
-                    editable={!loading}
-                    placeholderTextColor="#999"
-                  />
-                  <TouchableOpacity 
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)} 
-                    style={styles.eyeIcon}
-                  >
-                    <Ionicons 
-                      name={showConfirmPassword ? 'eye-off' : 'eye'} 
-                      size={18} 
-                      color="#f5576c" 
-                    />
-                  </TouchableOpacity>
-                </View>
+          {/* Password */}
+          <View style={[styles.inputWrap, { backgroundColor: INPUT_BG, borderColor: BORDER }]}>
+            <Ionicons name="key-outline" size={18} color={GRAY} style={styles.icon} />
+            <TextInput
+              style={[styles.inputField, { color: TEXT }]}
+              placeholder="Password"
+              placeholderTextColor={GRAY}
+              value={formData.password}
+              onChangeText={v => update('password', v)}
+              secureTextEntry={!showPassword}
+              editable={!loading}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(v => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={GRAY} />
+            </TouchableOpacity>
+          </View>
 
-                <View style={styles.inputContainer}>
-                  <Ionicons name="call" size={18} color="#f5576c" style={styles.inputIcon} />
-                  <TextInput
-                    placeholder="Téléphone (optionnel)"
-                    value={formData.phoneNumber}
-                    onChangeText={v => updateFormData('phoneNumber', v)}
-                    keyboardType="phone-pad"
-                    style={styles.input}
-                    editable={!loading}
-                    placeholderTextColor="#999"
-                  />
-                </View>
+          {/* Confirm password */}
+          <View style={[styles.inputWrap, { backgroundColor: INPUT_BG, borderColor: BORDER }]}>
+            <Ionicons name="key-outline" size={18} color={GRAY} style={styles.icon} />
+            <TextInput
+              style={[styles.inputField, { color: TEXT }]}
+              placeholder="Confirm Password"
+              placeholderTextColor={GRAY}
+              value={formData.confirmPassword}
+              onChangeText={v => update('confirmPassword', v)}
+              secureTextEntry
+              editable={!loading}
+            />
+          </View>
 
-                <TouchableOpacity 
-                  onPress={handleRegister}
-                  disabled={loading}
-                  style={[styles.button, loading && styles.buttonDisabled]}
-                >
-                  <LinearGradient 
-                    colors={['#f5576c', '#f093fb']} 
-                    style={styles.buttonGradient}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color="white" size="small" />
-                    ) : (
-                      <>
-                        <Text style={styles.buttonText}>S'inscrire</Text>
-                        <Ionicons name="arrow-forward" size={18} color="white" style={styles.buttonIcon} />
-                      </>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
+          {/* Remember me */}
+          <TouchableOpacity style={styles.checkboxRow} onPress={() => setRememberMe(v => !v)}>
+            <View style={[styles.checkbox, { borderColor: GRAY }, rememberMe && { backgroundColor: BTN, borderColor: BTN }]}>
+              {rememberMe && <Ionicons name="checkmark" size={12} color="#fff" />}
+            </View>
+            <Text style={[styles.rememberText, { color: TEXT }]}>Remember me</Text>
+          </TouchableOpacity>
 
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>ou</Text>
-                <View style={styles.dividerLine} />
-              </View>
+          {/* Create account button */}
+          <TouchableOpacity
+            style={[styles.createBtn, { backgroundColor: BTN, shadowColor: BTN }, loading && { opacity: 0.7 }]}
+            onPress={handleRegister}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            {loading
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={styles.createBtnText}>Create An Account</Text>}
+          </TouchableOpacity>
 
-              <TouchableOpacity 
-                onPress={() => router.push("/Auth/Login")} 
-                style={styles.loginButton} 
-                disabled={loading}
-              >
-                <Text style={styles.loginText}>Déjà un compte ? </Text>
-                <Text style={styles.loginLink}>Se connecter</Text>
-              </TouchableOpacity>
-            </BlurView>
-          </Animated.View>
-        </LinearGradient>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {/* Divider */}
+          <View style={styles.dividerRow}>
+            <View style={[styles.dividerLine, { backgroundColor: BORDER }]} />
+            <Text style={[styles.dividerText, { color: GRAY }]}>Or continue with</Text>
+            <View style={[styles.dividerLine, { backgroundColor: BORDER }]} />
+          </View>
+
+          {/* Social icons */}
+          <View style={styles.socialRow}>
+            <TouchableOpacity style={[styles.socialCircle, { backgroundColor: INPUT_BG, borderColor: BORDER }]} onPress={handleGoogleSignup} disabled={!!socialLoading} activeOpacity={0.8}>
+              {socialLoading === 'google'
+                ? <ActivityIndicator size="small" color={GRAY} />
+                : <AntDesign name="google" size={22} color="#EA4335" />}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.socialCircle, { backgroundColor: INPUT_BG, borderColor: BORDER }]} onPress={handleAppleSignup} disabled={!!socialLoading} activeOpacity={0.8}>
+              {socialLoading === 'apple'
+                ? <ActivityIndicator size="small" color={GRAY} />
+                : <MaterialCommunityIcons name="apple" size={24} color={TEXT} />}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.socialCircle, { backgroundColor: INPUT_BG, borderColor: BORDER }]} onPress={handleFacebookSignup} disabled={!!socialLoading} activeOpacity={0.8}>
+              {socialLoading === 'facebook'
+                ? <ActivityIndicator size="small" color={GRAY} />
+                : <FontAwesome name="facebook" size={22} color="#1877F2" />}
+            </TouchableOpacity>
+          </View>
+
+          {/* Login link */}
+          <View style={styles.loginRow}>
+            <Text style={[styles.loginText, { color: GRAY }]}>Already Have an account? </Text>
+            <TouchableOpacity onPress={() => router.push('/Auth/Login')}>
+              <Text style={[styles.loginLink, { color: LINK_COLOR }]}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1 
+  safe: {
+    flex: 1,
   },
-  gradient: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    padding: 20
+  scroll: {
+    paddingHorizontal: 28,
+    paddingTop: 42,
+    paddingBottom: 60,
   },
-  formContainer: { 
-    width: '100%', 
-    maxWidth: 350 
+
+  // ── Typography ──────────────────────────────────────────────────────────────
+  title: {
+    fontSize: 30,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 10,
   },
-  blurContainer: { 
-    borderRadius: 20, 
-    padding: 25, 
-    backgroundColor: 'rgba(255,255,255,0.1)', 
-    borderWidth: 1, 
-    borderColor: 'rgba(255,255,255,0.2)'
+  subtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 22,
   },
-  headerContainer: { 
-    alignItems: 'center', 
-    marginBottom: 25 
+
+  // ── Name row ────────────────────────────────────────────────────────────────
+  nameRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 0,
   },
-  iconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
+  nameField: {
+    flex: 1,
+    marginBottom: 10,
+  },
+
+  // ── Inputs ──────────────────────────────────────────────────────────────────
+  inputWrap: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 54,
+    marginBottom: 10,
+    borderWidth: 1,
   },
-  title: { 
-    fontSize: 24, 
-    fontWeight: 'bold', 
-    color: 'white', 
-    marginBottom: 5
+  icon: {
+    marginRight: 8,
   },
-  subtitle: { 
-    fontSize: 14, 
-    color: 'rgba(255,255,255,0.8)', 
-    textAlign: 'center'
+  inputField: {
+    flex: 1,
+    fontSize: 15,
   },
-  formContent: { 
-    gap: 15 
+
+  // ── Remember me ─────────────────────────────────────────────────────────────
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
   },
-  inputContainer: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: 'rgba(255,255,255,0.9)', 
-    borderRadius: 12, 
-    paddingHorizontal: 15, 
-    height: 50
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  inputIcon: {
-    marginRight: 10
+  rememberText: {
+    fontSize: 13,
   },
-  input: { 
-    flex: 1, 
-    fontSize: 16, 
-    color: '#333'
+
+  // ── Create button ────────────────────────────────────────────────────────────
+  createBtn: {
+    borderRadius: 30,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    
   },
-  eyeIcon: { 
-    padding: 5
+  createBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
-  button: { 
-    borderRadius: 12, 
-    overflow: 'hidden', 
-    marginTop: 10
+
+  // ── Divider ──────────────────────────────────────────────────────────────────
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  buttonDisabled: { 
-    opacity: 0.7 
+  dividerLine: {
+    flex: 1,
+    height: 1,
   },
-  buttonGradient: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    paddingVertical: 15, 
-    paddingHorizontal: 20 
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 13,
   },
-  buttonText: { 
-    color: 'white', 
-    fontSize: 16, 
-    fontWeight: 'bold' 
+
+  // ── Social ───────────────────────────────────────────────────────────────────
+  socialRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 20,
+    marginBottom: 14,
   },
-  buttonIcon: { 
-    marginLeft: 8 
+  socialCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  divider: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginVertical: 20 
+
+  // ── Login link ───────────────────────────────────────────────────────────────
+  loginRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
-  dividerLine: { 
-    flex: 1, 
-    height: 1, 
-    backgroundColor: 'rgba(255,255,255,0.3)' 
+  loginText: {
+    fontSize: 14,
   },
-  dividerText: { 
-    color: 'rgba(255,255,255,0.7)', 
-    marginHorizontal: 15, 
-    fontSize: 12
-  },
-  loginButton: { 
-    flexDirection: 'row', 
-    justifyContent: 'center', 
-    alignItems: 'center'
-  },
-  loginText: { 
-    color: 'rgba(255,255,255,0.8)', 
-    fontSize: 14 
-  },
-  loginLink: { 
-    color: 'white', 
-    fontSize: 14, 
-    fontWeight: 'bold'
+  loginLink: {
+    fontSize: 14,
+    fontWeight: '800',
   },
 });
 

@@ -1,9 +1,9 @@
 import React from 'react';
-import { TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
+import { TouchableOpacity, StyleSheet, ViewStyle, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { ThemedText } from './ThemedText';
-import { useTheme, useThemeTransition } from '../contexts/theme/themehook';
+import { useTheme } from '../../hooks/themehook';
 
 type ElevationLevel = 'small' | 'medium' | 'large';
 type IntensityLevel = 'light' | 'normal' | 'strong';
@@ -12,7 +12,7 @@ type Variant = 'primary' | 'secondary' | 'accent' | 'default' | 'surface' | 'sur
 type SettingsItemProps = {
   label: string;
   icon: string;
-  onPress: () => void;
+  onPress?: () => void;
   iconColor?: string;
   elevated?: boolean | ElevationLevel;
   bordered?: boolean;
@@ -22,6 +22,8 @@ type SettingsItemProps = {
   showArrow?: 'on' | 'off';
   type?: 'heading' | 'body' | 'caption' | 'title' | 'subtitle' | 'link' | 'normal' | 'default';
   size?: number;
+  description?: string;
+  rightElement?: React.ReactNode;
 };
 
 export const SettingsItem: React.FC<SettingsItemProps> = ({
@@ -37,9 +39,10 @@ export const SettingsItem: React.FC<SettingsItemProps> = ({
   variant = 'default',
   type = 'default',
   size,
+  description,
+  rightElement,
 }) => {
   const { theme } = useTheme();
-  const { isAnimatingTheme, getTransitionStyle } = useThemeTransition();
 
   const getBackgroundColor = () => {
     if (customBackgroundColor) return customBackgroundColor;
@@ -86,20 +89,31 @@ export const SettingsItem: React.FC<SettingsItemProps> = ({
         styles.container,
         {
           backgroundColor: getBackgroundColor(),
+
         },
         getElevationStyle(),
         getBorderStyle(),
-        isAnimatingTheme && getTransitionStyle(),
       ]}
     >
       <Ionicons name={icon as any} size={22} color={iconColor || theme.text} />
-      <ThemedText
-        type={type}
-        size={size}
-        style={styles.label}
-      >
-        {label}
-      </ThemedText>
+      <View style={styles.textContainer}>
+        <ThemedText
+          type={type}
+          size={size}
+          style={styles.label}
+        >
+          {label}
+        </ThemedText>
+        {/* {description && (
+          <ThemedText
+            type="caption"
+            style={styles.description}
+          >
+            {description}
+          </ThemedText>
+        )} */}
+      </View>
+      {rightElement}
       {showArrow === 'on' && (
         <AntDesign name="right" size={18} color={theme.outline} />
       )}
@@ -111,13 +125,21 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 14,
     gap: 14,
-    borderRadius: 10,
-    marginBottom: 6,
+    borderRadius: 0,
+  },
+  textContainer: {
+    flex: 1,
+    flexDirection: 'column',
   },
   label: {
-    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  description: {
+    fontSize: 12,
+    opacity: 0.0,
   },
 });

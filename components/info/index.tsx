@@ -1,19 +1,36 @@
 import { FlatList, Image, Dimensions, TouchableOpacity, ScrollView, StatusBar, Platform, StyleSheet } from "react-native";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { router } from 'expo-router';
-import { useTheme } from "../contexts/theme/themehook";
-import { getBookingService } from "@/services/api/bookingService";
+import { useTheme } from "../../hooks/themehook";
+import { usePremiumFeatures } from "@/hooks/usePremiumFeatures";
+import { useLanguage } from "@/components/contexts/language";
+import { premiumService } from "@/services/api/premiumService";
+import { useOwnerPrivacy, filterOwnerByPrivacy } from "@/hooks/useOwnerPrivacy";
 import { eachDayOfInterval, format } from "date-fns";
 import { ThemedView } from "../ui/ThemedView";
 import {ThemedText} from "../ui/ThemedText";
 // Import components
 import Criteria from "./criteriaFile";
 import Services from "./servicesFiles";
+import { getDetailFacilities, getPropertyDisplayConfig, FacilityItem, filterEquipmentsByType, filterAtoutsByType, isLandProperty } from "@/components/utils/propertyDisplayConfig";
+// Import advanced booking flow config
+import {
+  PropertyType,
+  ActionType,
+  normalizePropertyType,
+  normalizeActionType,
+  getBookingFlowMessage,
+  canSkipVisit,
+  isInstantBookingAllowed,
+  getPropertyConfig
+} from "@/constants/propertyTypeConfigs";
+import { usePropertyActivity } from "@/hooks/usePropertyActivity";
+import { useAuthUser } from "@/components/contexts/authContext/AuthContext";
 
 const { width, height } = Dimensions.get("window");
 
@@ -32,6 +49,8 @@ LocaleConfig.defaultLocale = 'fr';
 
 interface ItemDataProps {
   itemData?: any;
+  onClick?:() => void;
+
 }
 
 type BookingScreenRoute =
@@ -40,7 +59,88 @@ type BookingScreenRoute =
   | "/booking/HotelBookingScreen"
   | "/payment/PaymentScreen";
 
-const HOTEL_TYPES = ['Hôtel', 'Hotel', 'Auberge', 'Motel', 'Resort', 'Chambre d\'hôte', 'Guesthouse'];
+type AllBookingRoutes = BookingScreenRoute | "/bookingReview/bookingReview" | "/wallet/Wallet";
+
+// Hotel types are now imported from propertyTypeConfigs
+
+// Composant pour afficher l'accès aux services (eau, électricité, route) pour les terrains
+const AccessChipDisplay = ({ icon, label, available }: { icon: React.ReactNode; label: string; available?: boolean }) => (
+  <ThemedView
+    variant={available ? "surfaceVariant" : "surface"}
+    style={[
+      styles.accessChip,
+      !available && styles.accessChipUnavailable
+    ]}
+  >
+    {icon}
+    <ThemedText
+      type="caption"
+      intensity={available ? "strong" : "light"}
+      style={!available ? styles.accessTextUnavailable : undefined}
+    >
+      {label}
+    </ThemedText>
+    {available !== undefined && (
+      <Ionicons
+        name={available ? "checkmark-circle" : "close-circle"}
+        size={14}
+        color={available ? "#10B981" : "#9CA3AF"}
+      />
+    )}
+  </ThemedView>
+);
+
+// Composant pour afficher les facilités dynamiquement selon le type de propriété
+const DynamicFacilities = ({ item }: { item: any }) => {
+  const facilities = getDetailFacilities(item.type, item.generalInfo);
+
+  const renderIcon = (facility: FacilityItem) => {
+    const iconColor = "#6B7280";
+    if (facility.lib === 'Ionicons') {
+      return <Ionicons name={facility.icon as any} size={20} color={iconColor} />;
+    }
+    if (facility.lib === 'FontAwesome5') {
+      return <FontAwesome5 name={facility.icon as any} size={20} color={iconColor} />;
+    }
+    return <MaterialCommunityIcons name={facility.icon as any} size={20} color={iconColor} />;
+  };
+
+  const formatValue = (facility: FacilityItem) => {
+    const value = facility.getValue(item.generalInfo);
+    if (typeof value === 'boolean') {
+      return facility.label;
+    }
+    if (facility.key === 'surface') {
+      return `${value || item.details?.surface || '0'} m²`;
+    }
+    return `${value} ${facility.label}`;
+  };
+
+  // Si aucune facilité configurée, afficher un message ou la surface par défaut
+  if (facilities.length === 0) {
+    const surface = item.generalInfo?.surface || item.details?.surface;
+    if (surface) {
+      return (
+        <ThemedView variant="surfaceVariant" style={styles.facilityItem}>
+          <MaterialCommunityIcons name="ruler-square" size={20} color="#6B7280" />
+          <ThemedText type="caption" style={styles.facilityText}>{surface} m²</ThemedText>
+        </ThemedView>
+      );
+    }
+    return null;
+  }
+
+  return (
+    <>
+      {facilities.map((facility) => (
+        <ThemedView key={facility.key} variant="surfaceVariant" style={styles.facilityItem}>
+          {renderIcon(facility)}
+          <ThemedText type="caption" style={styles.facilityText}>{formatValue(facility)}</ThemedText>
+        </ThemedView>
+      ))}
+    </>
+  );
+};
 
 const getMarkedDates = (start: string, end: string) => {
   if (!start || !end) return {};
@@ -70,46 +170,102 @@ const getMarkedDates = (start: string, end: string) => {
   }
 };
 
-const ItemData = ({ itemData }: ItemDataProps) => {
+const ItemData = ({ itemData, onClick }: ItemDataProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef(null);
   const [activeTab, setActiveTab] = useState<'Description' | 'Criteria' | 'Services'>('Description');
-  const [existentservice, setExistentservice] = useState<any[]>([]);
-  const [loadingService, setLoadingService] = useState(true);
   const [imageErrors, setImageErrors] = useState<{ [key: number]: boolean }>({});
+  const [selectedUnitIndex, setSelectedUnitIndex] = useState<number | null>(null);
+  const [selectedHotelRoom, setSelectedHotelRoom] = useState<{ roomTypeId: string; roomId: string; roomName: string; pricePerNight: number; roomTypeName: string } | null>(null);
   const { theme } = useTheme();
+  const { isPremium, hasPriorityContact, hasOwnerInfo, isClientRole, hasVerifiedOwnerBadge, isOwnerRole } = usePremiumFeatures();
+  const { t } = useLanguage();
+  const user = useAuthUser();
 
+  // Compute property type + action type early (needed by the activity hook below)
+  const propertyType: PropertyType = useMemo(
+    () => normalizePropertyType(itemData?.type || itemData?.propertyType || 'apartment'),
+    [itemData?.type, itemData?.propertyType]
+  );
+  const actionType: ActionType = useMemo(
+    () => normalizeActionType(itemData?.actionType || itemData?.listType || 'rent'),
+    [itemData?.actionType, itemData?.listType]
+  );
+
+  // Central hook: fetches this user's activity for the property and derives navigation
+  const {
+    isLoading: activityLoading,
+    navigation: bookingNavigation,
+    refresh: refreshActivity,
+  } = usePropertyActivity({
+    propertyId: itemData?.id,
+    userId: user?.id,
+    propertyType,
+    actionType,
+  });
+
+  // Get owner privacy settings to determine what info to show
+  const ownerPrivacy = useOwnerPrivacy({
+    ownerId: itemData?.owner?.id || itemData?.ownerId,
+    enabled: !!itemData
+  });
+
+  // Filter owner data based on privacy settings
+  const filteredOwner = useMemo(() => {
+    if (!itemData?.owner) return null;
+    return filterOwnerByPrivacy(itemData.owner, ownerPrivacy);
+  }, [itemData?.owner, ownerPrivacy]);
+
+  // Track property view (silent)
   useEffect(() => {
-    const loadPropertyActivityService = async () => {
-      if (!itemData?.id) {
-        setLoadingService(false);
-        return;
-      }
-
-      try {
-        const bookingService = getBookingService();
-        const result = await bookingService.getPropertyActivityService(itemData.id);
-        setExistentservice(result || []);
-      } catch (error) {
-        console.error('Error loading activity service:', error);
-        setExistentservice([]);
-      } finally {
-        setLoadingService(false);
-      }
-    };
-
-    loadPropertyActivityService();
+    if (itemData?.id) {
+      premiumService.trackView(itemData.id, 'direct').catch(() => {});
+    }
   }, [itemData?.id]);
 
   const item = itemData;
 
   if (!item) {
     return (
-      <ThemedView style={styles.emptyContainer}>
-        <ThemedText type="body" style={styles.emptyText}>Aucune donnée disponible</ThemedText>
+      <ThemedView variant="surface" style={styles.emptyContainer}>
+        <ThemedText type="body">Aucune donnée disponible</ThemedText>
       </ThemedView>
     );
   }
+
+  // --- Rental strategy & unit management ---
+  const rentalStrategy: string = item.rentalStrategy || 'global';
+  const isHotelProperty = (item.type || '').toLowerCase() === 'hotel' || (item.type || '').toLowerCase() === 'hôtel';
+  const hasPropertyRooms = item.propertyRooms && Array.isArray(item.propertyRooms) && item.propertyRooms.length > 0;
+  const hasUnits = !isHotelProperty && hasPropertyRooms;
+  const isPerUnit = rentalStrategy === 'per_unit';
+  const isBothMode = rentalStrategy === 'both';
+  const isPerUnitOrBoth = isPerUnit || isBothMode;
+  const actionTypeRaw = item.actionType || item.listType || 'rent';
+  const isSale = actionTypeRaw === 'sell' || actionTypeRaw === 'sale';
+  // Show room section for any property with rooms (all modes)
+  const showRoomSection = hasUnits;
+  // Rooms are clickable only for per_unit and both rental modes (not global, not sell)
+  const roomsAreClickable = isPerUnitOrBoth && !isSale;
+
+  // Get the selected unit data
+  const selectedUnit = useMemo(() => {
+    if (selectedUnitIndex === null || !item.propertyRooms) return null;
+    return item.propertyRooms[selectedUnitIndex] || null;
+  }, [selectedUnitIndex, item.propertyRooms]);
+
+  // Build unit images when a unit is selected
+  const selectedUnitImages = useMemo(() => {
+    if (!selectedUnit) return [];
+    const imgs: Array<{ uri: string }> = [];
+    if (selectedUnit.images && selectedUnit.images.length > 0) {
+      for (const img of selectedUnit.images) {
+        const uri = img.variants?.medium || img.variants?.large || img.originalUrl;
+        if (uri) imgs.push({ uri });
+      }
+    }
+    return imgs;
+  }, [selectedUnit]);
 
   const handleScroll = (event: any) => {
     const index = Math.round(event.nativeEvent.contentOffset.x / width);
@@ -120,79 +276,135 @@ const ItemData = ({ itemData }: ItemDataProps) => {
     setImageErrors(prev => ({ ...prev, [index]: true }));
   };
 
-  let imageList: any[] = [];
+  // Build imageList from all sources: general images, propertyRooms, hotelRoomTypes rooms
+  let imageList: Array<{ uri: string; roomName?: string }> = [];
+
+  // 1. General property images
   if (item.images && Array.isArray(item.images) && item.images.length > 0) {
     imageList = item.images.map((img: string) => ({ uri: img }));
-  } else {
+  }
+
+  // 2. PropertyRooms images (non-hotel properties with multiple rooms) - only if no unit selected
+  if (!selectedUnit && item.propertyRooms && Array.isArray(item.propertyRooms) && item.propertyRooms.length > 0) {
+    for (const room of item.propertyRooms) {
+      if (room.images && room.images.length > 0) {
+        for (const img of room.images) {
+          const uri = img.variants?.medium || img.variants?.large || img.originalUrl;
+          if (uri) {
+            imageList.push({ uri, roomName: room.roomName });
+          }
+        }
+      }
+    }
+  }
+
+  // 3. HotelRoomTypes rooms images
+  if (item.hotelRoomTypes && Array.isArray(item.hotelRoomTypes) && item.hotelRoomTypes.length > 0) {
+    for (const roomType of item.hotelRoomTypes) {
+      if (roomType.rooms && roomType.rooms.length > 0) {
+        for (const room of roomType.rooms) {
+          if (room.images && room.images.length > 0) {
+            for (const img of room.images) {
+              const uri = img.variants?.medium || img.variants?.large || img.originalUrl;
+              if (uri) {
+                imageList.push({ uri, roomName: room.roomName });
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 4. If a unit is selected, prepend its images to the carousel
+  if (selectedUnit && selectedUnitImages.length > 0) {
+    imageList = [...selectedUnitImages, ...imageList];
+  }
+
+  // Fallback if no images found
+  if (imageList.length === 0) {
     imageList = [{ uri: 'https://via.placeholder.com/400x300?text=No+Image' }];
   }
 
-  const link = (rel: BookingScreenRoute, additionalParams?: any) => {
+  const link = (rel: AllBookingRoutes, additionalParams?: any) => {
+    // Pass complete item data to avoid network requests in booking screens
+    const propertyData = {
+      ...item,
+      // Include normalized types for instant use
+      _normalizedPropertyType: propertyType,
+      _normalizedActionType: actionType,
+      // Include selected unit info for booking (non-hotel)
+      _selectedUnit: selectedUnit ? {
+        roomId: selectedUnit.roomId,
+        roomName: selectedUnit.roomName,
+        price: selectedUnit.price,
+        currency: selectedUnit.currency,
+        capacity: selectedUnit.capacity,
+      } : null,
+      // Include selected hotel room info for booking
+      _selectedHotelRoom: selectedHotelRoom || null,
+      // Flag to indicate data is pre-loaded
+      _dataPreloaded: true
+    };
     router.push({
-      pathname: rel,
-      params: { property: item.id, ...additionalParams }
+      pathname: rel as any,
+      params: { property: JSON.stringify(propertyData), ...additionalParams }
     });
   };
 
-  const isHotel = HOTEL_TYPES.some(hotelType =>
-    (item?.type || '').toLowerCase().includes(hotelType.toLowerCase())
-  );
+  // Get property config for display purposes (propertyType + actionType computed at top)
+  const propertyConfig = useMemo(() => {
+    return getPropertyConfig(propertyType, actionType);
+  }, [propertyType, actionType]);
+
+  // Check if direct booking is allowed (skip visit)
+  const allowsDirectBooking = useMemo(() => {
+    return canSkipVisit(propertyType, actionType);
+  }, [propertyType, actionType]);
+
+  // Check if instant booking is available
+  const hasInstantBooking = useMemo(() => {
+    return isInstantBookingAllowed(propertyType, actionType);
+  }, [propertyType, actionType]);
+
+  // Get booking flow message
+  const bookingMessage = useMemo(() => {
+    return getBookingFlowMessage(propertyType, actionType);
+  }, [propertyType, actionType]);
 
   const handleNavigate = () => {
-    if (isHotel) {
-      link("/booking/HotelBookingScreen");
-      return;
+    // Guard: do not navigate while activity is loading
+    if (activityLoading || !bookingNavigation) return;
+
+    const { route, params } = bookingNavigation;
+
+    if (route === '/contrat/ContratScreen') {
+      router.push({
+        pathname: '/contrat/ContratScreen',
+        params: {
+          activityId: params?.activityId || '',
+          paymentStatus: params?.paymentStatus || 'completed',
+        },
+      } as any);
+    } else if (route === '/bookingReview/bookingReview') {
+      link(route, {
+        reservationId: params?.reservationId || '',
+        propertyId: item.id,
+      });
+    } else if (route === '/wallet/Wallet') {
+      router.push('/wallet/Wallet');
+    } else {
+      link(route as BookingScreenRoute);
     }
-
-    if (!existentservice || existentservice.length === 0) {
-      link("/booking/VisitScreen");
-      return;
-    }
-
-    const lastActivity = existentservice[existentservice.length - 1];
-    if (!lastActivity) {
-      link("/booking/VisitScreen");
-      return;
-    }
-
-    const { reservationStatus, visiteStatus } = lastActivity;
-
-    if (reservationStatus) {
-      if (reservationStatus === "ACCEPTED") {
-        link("/payment/PaymentScreen", { reservationId: lastActivity.id, propertyId: item.id })
-        return;
-      }
-
-      if (
-        reservationStatus === "PENDING" ||
-        reservationStatus === "DRAFT" ||
-        reservationStatus === "REFUSED"
-      ) {
-        link("/booking/Bookingscreen");
-        return;
-      }
-    }
-
-    if (visiteStatus) {
-      if (visiteStatus === "ACCEPTED") {
-        link("/booking/Bookingscreen");
-        return;
-      }
-
-      if (visiteStatus === "PENDING" || visiteStatus === "DRAFT") {
-        link("/booking/VisitScreen");
-        return;
-      }
-    }
-
-    link("/booking/VisitScreen");
   };
 
-  const isDisabled = item.availibility === "SOLD" || item.availibility === "RENTED" || item.availibility === "DELETED";
+  // Allow the paying client to access their contract even if property is unavailable
+  const hasContract = bookingNavigation?.route === '/contrat/ContratScreen';
+  const isDisabled = !hasContract && item.availibility === "not available";
 
   const photosCount = imageList.length;
   const reviewsCount = item.reviewsCount || item.services?.length || 0;
-  const rating = item.rating || 4.8;
+  const rating = item.rating || 0.0;
 
   // Generate available dates (displayed in green)
   const markedDates = item?.propertyAvailability?.startDate && item?.propertyAvailability?.endDate
@@ -202,28 +414,53 @@ const ItemData = ({ itemData }: ItemDataProps) => {
     )
     : {};
 
-  // Equipment list
-  const equipments = item?.equipments?.map((eq: any, index: number) => {
+  // Determine if the property is a land property based on its type
+  const isLand = isLandProperty(item.type);
+
+  // Property equipments
+  const rawEquipments = item?.equipments?.map((eq: any, index: number) => {
     const IconLib = eq.lib === "MaterialCommunityIcons" ? MaterialCommunityIcons : FontAwesome5;
     return {
       id: eq.id ?? index.toString(),
       icon: eq.icon,
       text: eq.name,
+      name: eq.name,
       lib: IconLib
     };
   }) || [];
 
-  // Property features/assets
+  // Filtrer les équipements selon le type de propriété
+  const equipments = filterEquipmentsByType(rawEquipments, item.type);
+
+  // Property features/assets - filtré par type de propriété
   const getAtoutsData = () => {
+    let atouts: any[] = [];
     if (item.atouts && Array.isArray(item.atouts)) {
-      return item.atouts;
+      atouts = item.atouts;
+    } else if (item.features && Array.isArray(item.features)) {
+      atouts = item.features;
     }
-    if (item.features && Array.isArray(item.features)) {
-      return item.features;
-    }
-    return [];
+    // Filtrer les atouts selon le type de propriété
+    return filterAtoutsByType(atouts, item.type);
   };
   const atoutsData = getAtoutsData();
+
+
+  const getStatusBadge = (status:string) =>{
+    switch(status){
+      case 'verified':
+        return {color: '#10B981', text: 'Verified', icon:'check-circle'};
+      case "pending":
+      return {color: '#FBBF24', text: 'Pending', icon:'clock-outline'};
+      case "unverified":
+        return {color: '#EF4444', text: 'Unverified', icon:'close-circle'};
+      case"rejected": 
+        return {color: '#EF4444', text: 'Rejected', icon:'close-octagon'};
+      default:
+        return {color: '#EF4444', text: 'Unverified', icon:'help-circle'}
+
+  }}
+  const badge = getStatusBadge(item.status);
 
   return (
     <ThemedView style={styles.container}>
@@ -242,11 +479,33 @@ const ItemData = ({ itemData }: ItemDataProps) => {
                 </ThemedView>
               ) : (
                 <Image
-                  source={imageItem}
+                  source={{ uri: imageItem.uri }}
                   style={styles.carouselImage}
                   resizeMode="cover"
                   onError={() => handleImageError(index)}
                 />
+              )}
+              {imageItem.roomName && (
+                <ThemedView style={{
+                  position: 'absolute',
+                  bottom: 8,
+                  left: 8,
+                  backgroundColor: 'rgba(0,0,0,0.6)',
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 6,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                }}>
+                  <MaterialCommunityIcons name="door-open" size={14} color="white" />
+                  <ThemedText style={{ color: 'white', fontSize: 12, fontWeight: '700' }}>
+                    {imageItem.roomName}
+                  </ThemedText>
+                  <ThemedText style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>
+                    {index + 1}/{imageList.length}
+                  </ThemedText>
+                </ThemedView>
               )}
             </ThemedView>
           )}
@@ -257,14 +516,14 @@ const ItemData = ({ itemData }: ItemDataProps) => {
         />
 
         {/* Top navigation bar */}
-        <ThemedView variant = "surfaceVariant" style={styles.topNav}>
+        <ThemedView backgroundColor = "transparent" style={styles.topNav}>
           <TouchableOpacity style={styles.navButton} onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={20} color="white" />
           </TouchableOpacity>
         </ThemedView>
 
         {/* Image pagination dots */}
-        <ThemedView variant = "surfaceVariant" style={styles.paginationContainer}>
+        <ThemedView backgroundColor = "transparent" style={styles.paginationContainer}>
           {imageList.map((_, index) => (
             <ThemedView 
               key={index}
@@ -280,105 +539,556 @@ const ItemData = ({ itemData }: ItemDataProps) => {
       {/* White card overlay container */}
       <ThemedView style={styles.whiteCard}>
         {/* Property title */}
-        <ThemedText type="title" style={styles.propertyTitle}>{item.title || item.name || ""}</ThemedText>
+          <ThemedView style= {{ flexDirection: 'row', alignItems: 'center', gap:8, paddingBottom:8}}>
+          <ThemedText type="subtitle" intensity ="light"
+              style={{
+            lineHeight: 18,
+            letterSpacing: -0.2,
+            fontWeight:800
+          }} numberOfLines={1}
+            > {item.type} -</ThemedText>
 
-        {/* Property location */}
-        <ThemedView style={styles.locationRow}>
-          <Ionicons name="location-outline" size={16} color="#6B7280" />
-          <ThemedText type="caption" style={styles.locationText}>{item.location || item.address || "Non spécifié"}</ThemedText>
-        </ThemedView>
+            <ThemedText type="subtitle" intensity ="light" style={{
+            lineHeight: 18,
+            letterSpacing: -0.2,
+            fontWeight:800
+          }} numberOfLines={1}>
+            {item.title || 'Property'}
+          </ThemedText>
 
-        {/* Rating and reviews */}
-        <ThemedView style={styles.ratingRow}>
-          <FontAwesome name="star-o" size={14} color="#6B7280" />
-          <ThemedText type="caption" style={styles.ratingText}>{rating} Rating</ThemedText>
-          <ThemedText type="caption" style={styles.reviewsLink}>({reviewsCount} Reviews)</ThemedText>
-        </ThemedView>
+            </ThemedView>
 
-        {/* Navigation tabs */}
-        <ThemedView style={styles.tabsContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'Description' && styles.tabActive]}
-            onPress={() => setActiveTab('Description')}
-          >
-            <ThemedText type="normal" style={[styles.tabText, activeTab === 'Description' && styles.tabTextActive]}>Description</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'Criteria' && styles.tabActive]}
-            onPress={() => setActiveTab('Criteria')}
-          >
-            <ThemedText type="normal" style={[styles.tabText, activeTab === 'Criteria' && styles.tabTextActive]}>Criteria</ThemedText>
 
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'Services' && styles.tabActive]}
-            onPress={() => setActiveTab('Services')}
-          >
-            <ThemedText type="normal" style={[styles.tabText, activeTab === 'Services' && styles.tabTextActive]}>Sevices</ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
+        <ThemedView className = "flex  flex-row justify-between mb-1">
+          {/* Property location */}
+          <ThemedView style={styles.locationRow}>
+            <Ionicons name="location-outline" size={18} color="#6B7280" />
+            <ThemedText type="caption" style={styles.locationText}>{item.location || item.address || "Non spécifié"}</ThemedText>
+          </ThemedView>
 
-        {/* Tab content - scrollable area */}
-        <ThemedView style={styles.tabContentContainer}>
-          <ScrollView
+          {/* Rating and reviews */}
+          <ThemedView style={styles.ratingRow}>
+            <FontAwesome name="star-o" size={14} color="#6B7280" />
+            <ThemedText type="caption"  style={styles.ratingText}>{rating} Rating</ThemedText>
+            <ThemedText type="caption" variant="accent" style={styles.reviewsLink}>({reviewsCount} Reviews)</ThemedText>
+          </ThemedView>
+      </ThemedView>
+       <ScrollView
             style={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContentContainer}
             nestedScrollEnabled={true}
           >
+        {/* Room section - visible for all modes with rooms, clickable only for per_unit/both */}
+        {showRoomSection && item.propertyRooms && item.propertyRooms.length > 0 && (
+          <ThemedView style={{ marginBottom: 12 }}>
+            <ThemedView style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <MaterialCommunityIcons name="door-open" size={18} color={theme.primary as string} />
+                <ThemedText type="normaltitle" style={{ fontWeight: '700' }}>
+                  {isPerUnit ? 'Sélectionner une chambre' : isBothMode ? 'Chambres disponibles' : 'Chambres'}
+                </ThemedText>
+              </ThemedView>
+              {roomsAreClickable && selectedUnitIndex !== null && (
+                <TouchableOpacity onPress={() => setSelectedUnitIndex(null)}>
+                  <ThemedText type="caption" style={{ color: theme.primary as string, fontWeight: '600' }}>
+                    {isBothMode ? 'Propriété entière' : 'Tout voir'}
+                  </ThemedText>
+                </TouchableOpacity>
+              )}
+            </ThemedView>
+
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={item.propertyRooms}
+              keyExtractor={(room: any) => room.roomId}
+              contentContainerStyle={{ gap: 10 }}
+              renderItem={({ item: room, index }: any) => {
+                const isSelected = selectedUnitIndex === index;
+                const roomThumb = room.images?.[0]?.variants?.small || room.images?.[0]?.variants?.thumbnail || room.images?.[0]?.originalUrl;
+                const isRoomAvailable = room.isAvailable !== false;
+                return (
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (!roomsAreClickable) return;
+                      if (!isRoomAvailable) return;
+                      setSelectedUnitIndex(isSelected ? null : index);
+                    }}
+                    disabled={!roomsAreClickable || !isRoomAvailable}
+                    activeOpacity={roomsAreClickable ? 0.7 : 1}
+                    style={{
+                      width: 150,
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: isSelected ? (theme.primary as string) : (theme.outline as string) + '30',
+                      backgroundColor: isSelected ? (theme.primary as string) + '08' : 'transparent',
+                      overflow: 'hidden',
+                      opacity: !roomsAreClickable ? 1 : (isRoomAvailable ? 1 : 0.5),
+                    }}
+                  >
+                    {/* Image container with overlays */}
+                    <ThemedView style={{ position: 'relative', width: '100%', height: 100 }}>
+                      {roomThumb ? (
+                        <Image
+                          source={{ uri: roomThumb }}
+                          style={{ width: '100%', height: '100%' }}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <ThemedView style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: (theme.outline as string) + '15' }}>
+                          <MaterialCommunityIcons name="door-open" size={32} color={theme.outline as string} />
+                        </ThemedView>
+                      )}
+                      {/* Availability badge - only for per_unit/both */}
+                      {roomsAreClickable && (
+                        <ThemedView style={{
+                          position: 'absolute',
+                          top: 6,
+                          right: 6,
+                          backgroundColor: isRoomAvailable ? '#10b98130' : '#ef444430',
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                        }}>
+                          <ThemedText style={{
+                            fontSize: 9,
+                            fontWeight: '700',
+                            color: isRoomAvailable ? '#10b981' : '#ef4444',
+                          }}>
+                            {isRoomAvailable ? 'Disponible' : 'Réservée'}
+                          </ThemedText>
+                        </ThemedView>
+                      )}
+                      {/* Price overlay on photo - only for per_unit/both */}
+                      {roomsAreClickable && room.price > 0 && (
+                        <ThemedView style={{
+                          position: 'absolute',
+                          bottom: 8,
+                          left: 4,
+                          backgroundColor: 'rgba(0,0,0,0.7)',
+                          paddingHorizontal: 8,
+                          paddingVertical: 3,
+                          borderRadius: 8,
+                        }}>
+                          <ThemedText style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>
+                            {room.price?.toLocaleString()} {room.currency || item.ownerCriteria?.currency || 'XAF'}
+                          </ThemedText>
+                        </ThemedView>
+                      )}
+                      {/* Selection indicator on photo */}
+                      {isSelected && (
+                        <ThemedView style={{
+                          position: 'absolute',
+                          top: 6,
+                          left: 6,
+                          backgroundColor: (theme.primary as string) + 'CC',
+                          borderRadius: 12,
+                          padding: 2,
+                        }}>
+                          <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                        </ThemedView>
+                      )}
+                    </ThemedView>
+                    <ThemedView style={{ padding: 8, gap: 3, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <ThemedText type="caption" style={{ fontWeight: '700' }} numberOfLines={1}>
+                        {room.roomName}
+                      </ThemedText>
+                      {room.capacity && (
+                        <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                          <Ionicons name="people-outline" size={11} color={theme.onSurfaceVariant as string} />
+                          <ThemedText style={{ fontSize: 10, color: theme.onSurfaceVariant as string }}>
+                            {room.capacity} pers.
+                          </ThemedText>
+                        </ThemedView>
+                      )}
+                    </ThemedView>
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </ThemedView>
+        )}
+
+        {/* Hotel rooms section - classified by type, horizontally scrollable */}
+        {isHotelProperty && item.hotelRoomTypes && item.hotelRoomTypes.length > 0 && (
+          <ThemedView style={{ marginBottom: 12 }}>
+            <ThemedView style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <MaterialCommunityIcons name="bed-outline" size={18} color={theme.primary as string} />
+                <ThemedText type="normaltitle" style={{ fontWeight: '700' }}>
+                  Sélectionner une chambre
+                </ThemedText>
+              </ThemedView>
+              {selectedHotelRoom && (
+                <TouchableOpacity onPress={() => setSelectedHotelRoom(null)}>
+                  <ThemedText type="caption" style={{ color: theme.primary as string, fontWeight: '600' }}>
+                    Désélectionner
+                  </ThemedText>
+                </TouchableOpacity>
+              )}
+            </ThemedView>
+
+            {item.hotelRoomTypes.map((roomType: any) => {
+              const availableCount = roomType.rooms?.filter((r: any) => r.isAvailable !== false).length ?? roomType.available ?? 0;
+              const totalCount = roomType.rooms?.length ?? roomType.available ?? 0;
+              return (
+              <ThemedView key={roomType.roomTypeId} style={{ marginBottom: 14 }}>
+                {/* Compact type header: name | capacity | availability | price - single row */}
+                <ThemedView style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 6,
+                  paddingVertical: 6,
+                  paddingHorizontal: 10,
+                  backgroundColor: (theme.outline as string) + '10',
+                  borderRadius: 10,
+                }}>
+                  <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                    <MaterialCommunityIcons name="door" size={16} color={theme.primary as string} />
+                    <ThemedView>
+                      <ThemedText style={{ fontWeight: '700', fontSize: 13 }}>
+                        {roomType.name}
+                      </ThemedText>
+                      <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 }}>
+                        <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                          <Ionicons name="people-outline" size={10} color={theme.onSurfaceVariant as string} />
+                          <ThemedText style={{ fontSize: 10, color: theme.onSurfaceVariant as string }}>{roomType.capacity} pers.</ThemedText>
+                        </ThemedView>
+                        <ThemedView style={{
+                          flexDirection: 'row', alignItems: 'center', gap: 3,
+                          backgroundColor: availableCount === 0 ? '#ef444415' : availableCount < totalCount ? '#F59E0B15' : '#10b98115',
+                          paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4,
+                        }}>
+                          <ThemedView style={{
+                            width: 5, height: 5, borderRadius: 3,
+                            backgroundColor: availableCount === 0 ? '#ef4444' : availableCount < totalCount ? '#F59E0B' : '#10b981',
+                          }} />
+                          <ThemedText style={{
+                            fontSize: 9, fontWeight: '700',
+                            color: availableCount === 0 ? '#ef4444' : availableCount < totalCount ? '#F59E0B' : '#10b981',
+                          }}>
+                            {availableCount}/{totalCount} dispo.
+                          </ThemedText>
+                        </ThemedView>
+                      </ThemedView>
+                    </ThemedView>
+                  </ThemedView>
+                  <ThemedView style={{ backgroundColor: (theme.primary as string) + '15', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                    <ThemedText style={{ color: theme.primary as string, fontWeight: '800', fontSize: 12 }}>
+                      {roomType.pricePerNight?.toLocaleString()} {item.ownerCriteria?.currency || 'XAF'}
+                    </ThemedText>
+                  </ThemedView>
+                </ThemedView>
+
+                {/* Rooms horizontal scroll */}
+                {roomType.rooms && roomType.rooms.length > 0 && (
+                  <FlatList
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    data={roomType.rooms}
+                    keyExtractor={(room: any) => room.roomId}
+                    contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}
+                    renderItem={({ item: room }: any) => {
+                      const isHotelRoomSelected = selectedHotelRoom?.roomId === room.roomId;
+                      const roomThumb = room.images?.[0]?.variants?.small || room.images?.[0]?.variants?.thumbnail || room.images?.[0]?.originalUrl;
+                      const isRoomAvailable = room.isAvailable !== false;
+                      return (
+                        <TouchableOpacity
+                          onPress={() => {
+                            if (!isRoomAvailable) return;
+                            if (isHotelRoomSelected) {
+                              setSelectedHotelRoom(null);
+                            } else {
+                              setSelectedHotelRoom({
+                                roomTypeId: roomType.roomTypeId,
+                                roomId: room.roomId,
+                                roomName: room.roomName,
+                                pricePerNight: roomType.pricePerNight,
+                                roomTypeName: roomType.name,
+                              });
+                            }
+                          }}
+                          disabled={!isRoomAvailable}
+                          activeOpacity={0.7}
+                          style={{
+                            width: 130,
+                            borderRadius: 12,
+                            borderWidth: 1,
+                            borderColor: isHotelRoomSelected ? (theme.primary as string) : (theme.outline as string) + '20',
+                            backgroundColor: isHotelRoomSelected ? (theme.primary as string) + '08' : 'transparent',
+                            overflow: 'hidden',
+                            opacity: isRoomAvailable ? 1 : 0.45,
+                          }}
+                        > 
+                          {/* Image with overlays */}
+                          <ThemedView style={{ position: 'relative', width: '100%', height: 85 }}>
+                            {roomThumb ? (
+                              <Image
+                                source={{ uri: roomThumb }}
+                                style={{ width: '100%', height: '100%' }}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <ThemedView style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: (theme.outline as string) + '15' }}>
+                                <MaterialCommunityIcons name="bed-outline" size={28} color={theme.outline as string} />
+                              </ThemedView>
+                            )}
+                            {/* Availability badge */}
+                            <ThemedView style={{
+                              position: 'absolute', top: 4, right: 4,
+                              backgroundColor: isRoomAvailable ? '#10b98130' : '#ef444430',
+                              paddingHorizontal: 5, paddingVertical: 1, borderRadius: 5,
+                            }}>
+                              <ThemedText style={{ fontSize: 8, fontWeight: '700', color: isRoomAvailable ? '#10b981' : '#ef4444' }}>
+                                {isRoomAvailable ? 'Dispo' : 'Réservée'}
+                              </ThemedText>
+                            </ThemedView>
+                            {/* Selection indicator */}
+                            {isHotelRoomSelected && (
+                              <ThemedView style={{
+                                position: 'absolute', top: 4, left: 4,
+                                backgroundColor: (theme.primary as string) + 'CC',
+                                borderRadius: 10, padding: 1,
+                              }}>
+                                <Ionicons name="checkmark-circle" size={16} color="#fff" />
+                              </ThemedView>
+                            )}
+                          </ThemedView>
+                          {/* Room name */}
+                          <ThemedView style={{ paddingHorizontal: 6, paddingVertical: 4 }}>
+                            <ThemedText style={{ fontSize: 10, fontWeight: '600' }} numberOfLines={1}>
+                              {room.roomName}
+                            </ThemedText>
+                          </ThemedView>
+                        </TouchableOpacity>
+                      );
+                    }}
+                  />
+                )}
+              </ThemedView>
+              );
+            })}
+          </ThemedView>
+        )}
+
+        {/* Navigation tabs */}
+        <ThemedView style={styles.tabsContainer}>
+          <TouchableOpacity
+            style={{...styles.tab,borderColor:theme.outline + "70", backgroundColor: activeTab === 'Description'? theme.primary: theme.surfaceVariant + "80"}}
+            onPress={() => setActiveTab('Description')}
+          >
+            <ThemedText type="normal" intensity="light" color={activeTab === 'Description' ? '#FFFFFF' : undefined} style={{fontWeight:800}}>Description</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{...styles.tab,borderColor:theme.outline + "70", backgroundColor: activeTab === 'Criteria'? theme.primary: theme.surfaceVariant + "80"}}
+            onPress={() => setActiveTab('Criteria')}
+          >
+            <ThemedText type="normal" intensity="light" color={activeTab === 'Criteria' ? '#FFFFFF' : undefined} style={{fontWeight:800}}>Criteria</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{...styles.tab,borderColor:theme.outline + "70", backgroundColor: activeTab === 'Services'? theme.primary: theme.surfaceVariant + "80"}}
+            onPress={() => setActiveTab('Services')}
+          >
+            <ThemedText type="normal" intensity="light" color={activeTab === 'Services' ? '#FFFFFF' : undefined} style={{fontWeight:800}}>Services</ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+
+        {/* Tab content - scrollable area */}
+        <ThemedView style={styles.tabContentContainer}>
+         
           {activeTab === 'Description' && (
             <>
-              {/* Owner information section */}
-              <ThemedView style={styles.ownerSection}>
-                <Image
-                  source={{ uri: item.owner?.avatar || item.ownerAvatar || 'https://via.placeholder.com/50' }}
-                  style={styles.ownerAvatar}
-                />
-                <ThemedText type="subtitle" style={styles.ownerName}>{item.owner?.name || item.ownerName || "PT. Pencari Cinta Sejati"}</ThemedText>
+              {/* Owner information section - respects owner privacy settings */}
+              <ThemedView className="flex flex-row justify-between">
+                <TouchableOpacity onPress={onClick}>
+                  <ThemedView style={styles.ownerSection}>
+                    <Image
+                      source={{ uri: filteredOwner?.avatar || item.owner?.avatar || item.ownerAvatar || 'https://via.placeholder.com/50' }}
+                      style={styles.ownerAvatar}
+                    />
+                    {/* Show name based on privacy settings */}
+                    <ThemedText type="normaltitle" intensity ="light"  style={{
+                        lineHeight: 18,
+                        letterSpacing: -0.2,
+                        fontWeight:800
+                      }} numberOfLines={1}>
+                      {ownerPrivacy.canShowName
+                        ? (filteredOwner?.name || item.owner?.name || item.ownerName)
+                        : (filteredOwner?.name || item.owner?.name || item.ownerName || 'Propriétaire')
+                      }
+                    </ThemedText>
+                    {isPremium && isOwnerRole && hasVerifiedOwnerBadge && (
+                      <ThemedView style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#6C5CE7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginTop: 4 }}>
+                        <Ionicons name="shield-checkmark" size={10} color="white" />
+                        <ThemedText style={{ color: 'white', fontSize: 9, fontWeight: '600', marginLeft: 2 }}>{t('premium.verifiedOwner')}</ThemedText>
+                      </ThemedView>
+                    )}
+                  </ThemedView>
+                </TouchableOpacity>
+
+                {/* Owner contact details - respects both premium status AND owner privacy settings */}
+                {isPremium && isClientRole && hasOwnerInfo && (
+                  <ThemedView style={{ paddingHorizontal: 16, paddingVertical: 8, marginTop: 4, backgroundColor: '#FFD70010', borderRadius: 8, borderWidth: 1, borderColor: '#FFD70030' }}>
+                    {/* Show phone only if owner allows it */}
+                    {ownerPrivacy.canShowPhone && filteredOwner?.phone && (
+                      <ThemedView style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                        <Ionicons name="call" size={14} color="#FFD700" />
+                        <ThemedText type="caption" style={{ marginLeft: 6 }}>{filteredOwner.phone}</ThemedText>
+                      </ThemedView>
+                    )}
+                    {/* Show email only if owner allows it */}
+                    {ownerPrivacy.canShowEmail && filteredOwner?.email && (
+                      <ThemedView style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                        <Ionicons name="mail" size={14} color="#FFD700" />
+                        <ThemedText type="caption" style={{ marginLeft: 6 }}>{filteredOwner.email}</ThemedText>
+                      </ThemedView>
+                    )}
+                    {/* Show address only if owner allows it */}
+                    {ownerPrivacy.canShowAddress && filteredOwner?.address && (
+                      <ThemedView style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="location" size={14} color="#FFD700" />
+                        <ThemedText type="caption" style={{ marginLeft: 6 }}>{filteredOwner.address}</ThemedText>
+                      </ThemedView>
+                    )}
+                    {/* Show message if owner has hidden all contact info */}
+                    {!ownerPrivacy.canShowPhone && !ownerPrivacy.canShowEmail && !ownerPrivacy.canShowAddress && (
+                      <ThemedView style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="lock-closed" size={14} color="#FFD700" />
+                        <ThemedText type="caption" style={{ marginLeft: 6, fontStyle: 'italic' }}>Contact masqué par le propriétaire</ThemedText>
+                      </ThemedView>
+                    )}
+                    <ThemedView style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                      <Ionicons name="star" size={10} color="#FFD700" />
+                      <ThemedText type="caption" style={{ marginLeft: 4, color: '#FFD700', fontSize: 10, fontWeight: '600' }}>{t('premium.premiumBadge')}</ThemedText>
+                    </ThemedView>
+                  </ThemedView>
+                )}
+
+                <ThemedView style={{ paddingHorizontal: 6, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: badge.color + '20', borderWidth: 1, borderColor: badge.color + "10", height: 35 }}>
+                  <MaterialCommunityIcons
+                    name={badge.icon as any}
+                    size={16}
+                    color={badge.color}
+                  />
+                  <ThemedText type="caption" intensity = 'strong' style={{ color: badge.color }}> {badge.text} </ThemedText>
+                </ThemedView>
               </ThemedView>
 
               {/* Property description */}
               <ThemedView style={styles.section}>
-                <ThemedText type="subtitle" style={styles.sectionTitle}>Description</ThemedText>
-                <ThemedText type="body" style={styles.descriptionText}>
-                              {item.description || ""}
+                <ThemedText type="normaltitle"  style={styles.sectionTitle}>Description</ThemedText>
+                <ThemedText type="body" >
+                  {item.description || ""}
                 </ThemedText>
+                {/* Room-specific description when a unit is selected */}
+                {selectedUnit?.description && (
+                  <ThemedView style={{ marginTop: 12, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: (theme.primary as string) + '20', backgroundColor: (theme.primary as string) + '05' }}>
+                    <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <MaterialCommunityIcons name="door-open" size={16} color={theme.primary as string} />
+                      <ThemedText type="caption" intensity="strong" style={{ color: theme.primary as string }}>
+                        {selectedUnit.roomName}
+                      </ThemedText>
+                    </ThemedView>
+                    <ThemedText type="body" style={{ lineHeight: 20 }}>
+                      {selectedUnit.description}
+                    </ThemedText>
+                  </ThemedView>
+                )}
               </ThemedView>
 
-              {/* Property facilities */}
+              {/* Property facilities - Dynamic based on property type */}
               <ThemedView style={styles.section}>
-                <ThemedText type="subtitle" style={styles.sectionTitle}>Facilities</ThemedText>
+                <ThemedText type="normaltitle" style={styles.sectionTitle}>
+                  {getPropertyDisplayConfig(item.type).category === 'land' ? 'Caractéristiques du terrain' : 'Facilities'}
+                </ThemedText>
                 <ThemedView style={styles.facilitiesGrid}>
-                  <ThemedView style={styles.facilityItem}>
-                    <Ionicons name="bed-outline" size={20} color="#6B7280" />
-                    <ThemedText type="normal" style={styles.facilityText}>{item.generalInfo?.bedrooms || 3} Beds</ThemedText>
-                  </ThemedView>
-                  <ThemedView style={styles.facilityItem}>
-                    <MaterialCommunityIcons name="shower" size={20} color="#6B7280" />
-                    <ThemedText type="normal" style={styles.facilityText}>{item.generalInfo?.bathrooms || 2} Baths</ThemedText>
-                  </ThemedView>
-                  <ThemedView style={styles.facilityItem}>
-                    <MaterialCommunityIcons name="ruler-square" size={20} color="#6B7280" />
-                    <ThemedText type="normal" style={styles.facilityText}>{item.details?.surface || '120'} m²</ThemedText>
-                  </ThemedView>
-                  <ThemedView style={styles.facilityItem}>
-                    <Ionicons name="car-outline" size={20} color="#6B7280" />
-                    <ThemedText type="normal" style={styles.facilityText}>Parking</ThemedText>
-                  </ThemedView>
+                  <DynamicFacilities item={item} />
                 </ThemedView>
               </ThemedView>
 
-              {/* Equipment section */}
-              {equipments.length > 0 && (
+              {isLand && (
                 <ThemedView style={styles.section}>
-                  <ThemedText type="subtitle" style={styles.sectionTitle}>Équipements</ThemedText>
+                  <ThemedText type="normaltitle" style={styles.sectionTitle}>Accès et viabilisation</ThemedText>
+                  <ThemedView style={styles.accessGrid}>
+                    <AccessChipDisplay
+                      icon={<MaterialCommunityIcons name="water" size={18} color={item.generalInfo?.waterAccess ? "#3B82F6" : "#9CA3AF"} />}
+                      label="Eau"
+                      available={item.generalInfo?.waterAccess}
+                    />
+                    <AccessChipDisplay
+                      icon={<MaterialCommunityIcons name="flash" size={18} color={item.generalInfo?.electricityAccess ? "#F59E0B" : "#9CA3AF"} />}
+                      label="Électricité"
+                      available={item.generalInfo?.electricityAccess}
+                    />
+                    <AccessChipDisplay
+                      icon={<MaterialCommunityIcons name="road-variant" size={18} color={item.generalInfo?.roadAccess ? "#10B981" : "#9CA3AF"} />}
+                      label="Route"
+                      available={item.generalInfo?.roadAccess}
+                    />
+                  </ThemedView>
+                </ThemedView>
+              )}
+
+              {equipments.length > 0 && !isLand && (
+                <ThemedView style={styles.section}>
+                  <ThemedText type="normaltitle"  style={styles.sectionTitle}>Équipements</ThemedText>
                   <ThemedView style={styles.equipmentsGrid}>
-                    {equipments.map((eq: any) => (
-                      <ThemedView key={eq.id} style={styles.equipmentItem}>
-                        <eq.lib name={eq.icon} size={18} color="#6B7280"  />
-                        <ThemedText type="normal" style={styles.equipmentText}>{eq.text}</ThemedText>
+                    {equipments.map((eq: any) => {
+                      const IconComponent = eq.lib;
+                      return (
+                        <ThemedView variant="surfaceVariant" key={eq.id} style={styles.equipmentItem}>
+                          <IconComponent name={eq.icon as any} size={18} color="#6B7280" />
+                          <ThemedText type="caption" style={styles.equipmentText}>{eq.text}</ThemedText>
+                        </ThemedView>
+                      );
+                    })}
+                  </ThemedView>
+                </ThemedView>
+              )}
+
+              {/* Room-specific amenities when a unit is selected */}
+              {selectedUnit?.amenities && selectedUnit.amenities.length > 0 && (
+                <ThemedView style={styles.section}>
+                  <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                    <MaterialCommunityIcons name="door-open" size={18} color={theme.primary as string} />
+                    <ThemedText type="normaltitle" style={styles.sectionTitle}>
+                      Commodités — {selectedUnit.roomName}
+                    </ThemedText>
+                  </ThemedView>
+                  <ThemedView style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {selectedUnit.amenities.map((amenity: string, idx: number) => (
+                      <ThemedView key={idx} variant="surfaceVariant" style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, gap: 6, borderWidth: 1, borderColor: (theme.primary as string) + '20' }}>
+                        <Ionicons name="checkmark-circle" size={14} color={theme.primary as string} />
+                        <ThemedText type="caption">{amenity}</ThemedText>
                       </ThemedView>
                     ))}
+                  </ThemedView>
+                </ThemedView>
+              )}
+
+              {/* Room-specific capacity & price summary */}
+              {selectedUnit && (
+                <ThemedView style={[styles.section, { backgroundColor: (theme.primary as string) + '05', padding: 14, borderRadius: 12, borderWidth: 1, borderColor: (theme.primary as string) + '20' }]}>
+                  <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <MaterialCommunityIcons name="door-open" size={20} color={theme.primary as string} />
+                    <ThemedText type="normaltitle" intensity="strong">{selectedUnit.roomName}</ThemedText>
+                  </ThemedView>
+                  <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                    {selectedUnit.capacity && (
+                      <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Ionicons name="people-outline" size={16} color={theme.onSurfaceVariant as string} />
+                        <ThemedText type="caption" intensity="strong">{selectedUnit.capacity} pers. max</ThemedText>
+                      </ThemedView>
+                    )}
+                    {isPerUnitOrBoth && selectedUnit.price > 0 && (
+                      <ThemedView style={{ backgroundColor: (theme.primary as string) + '15', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 }}>
+                        <ThemedText type="normal" style={{ color: theme.primary as string, fontWeight: '700' }}>
+                          {selectedUnit.price?.toLocaleString()} {selectedUnit.currency || item.ownerCriteria?.currency || 'XAF'}/mois
+                        </ThemedText>
+                      </ThemedView>
+                    )}
                   </ThemedView>
                 </ThemedView>
               )}
@@ -386,12 +1096,12 @@ const ItemData = ({ itemData }: ItemDataProps) => {
               {/* Property features/highlights */}
               {atoutsData.length > 0 && (
                 <ThemedView style={styles.section}>
-                  <ThemedText type="subtitle" style={styles.sectionTitle}>Atouts</ThemedText>
+                  <ThemedText type="normaltitle"  style={styles.sectionTitle}>Atouts</ThemedText>
                   <ThemedView style={styles.atoutsGrid}>
                     {atoutsData.map((atout: any, index: number) => (
-                      <ThemedView key={atout.id || index} style={styles.atoutItem}>
+                      <ThemedView variant="surfaceVariant" key={atout.id || index} style={styles.atoutItem}>
                         <Ionicons name="checkmark-circle" size={16} color="#6B7280" />
-                        <ThemedText type="normal" style={styles.atoutText}>{atout.text || atout.name}</ThemedText>
+                        <ThemedText type="caption">{atout.text || atout.name}</ThemedText>
                       </ThemedView>
                     ))}
                   </ThemedView>
@@ -400,8 +1110,8 @@ const ItemData = ({ itemData }: ItemDataProps) => {
 
               {/* Availability calendar */}
               <ThemedView style={styles.section}>
-                <ThemedText type="subtitle" style={styles.sectionTitle}>Disponibilités</ThemedText>
-                <ThemedView style={styles.calendarWrapper}>
+                <ThemedText type="normaltitle" style={styles.sectionTitle}>Disponibilités</ThemedText>
+                <ThemedView variant="surfaceVariant" style={styles.calendarWrapper}>
                   <Calendar
                     markedDates={markedDates}
                     markingType="period"
@@ -434,36 +1144,130 @@ const ItemData = ({ itemData }: ItemDataProps) => {
                   />
                 </ThemedView>
               </ThemedView>
+
             </>
           )}
 
           {activeTab === 'Criteria' && (
             <ThemedView style={styles.criteriaContainer}>
-              <Criteria itemData={item} />
+              <Criteria itemData={selectedUnit ? {
+                ...item,
+                ownerCriteria: {
+                  ...item.ownerCriteria,
+                  monthlyRent: selectedUnit.price || item.ownerCriteria?.monthlyRent,
+                },
+                _selectedUnit: selectedUnit,
+              } : item} />
             </ThemedView>
           )}
 
           {activeTab === 'Services' && (
             <ThemedView style={styles.servicesContainer}>
-              <Services itemData={item} />
+              <Services itemData={selectedUnit ? {
+                ...item,
+                _selectedUnit: selectedUnit,
+              } : item} />
             </ThemedView>
           )}
-          </ScrollView>
         </ThemedView>
-
+       </ScrollView>
         {/* Bottom bar with price and booking button */}
-        <ThemedView variant="surface" style={styles.bottomBar}>
+        <ThemedView  style={styles.bottomBar}>
           <ThemedView>
-            <ThemedText type="caption" style={styles.priceLabel}>Total Price</ThemedText>
-            <ThemedText type="title" style={styles.priceValue}>${item.price || 150}<ThemedText type="normal" style={styles.priceUnit}></ThemedText></ThemedText>
+            <ThemedText type="caption" >
+              {selectedHotelRoom
+                ? selectedHotelRoom.roomName
+                : selectedUnit && isPerUnitOrBoth
+                  ? selectedUnit.roomName
+                  : 'Total Price'}
+            </ThemedText>
+            <ThemedView style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+              <ThemedText type="title" intensity="strong">
+                {selectedHotelRoom
+                  ? selectedHotelRoom.pricePerNight?.toLocaleString()
+                  : selectedUnit && isPerUnitOrBoth && selectedUnit.price > 0
+                    ? selectedUnit.price?.toLocaleString()
+                    : (item.price || 150)}
+              </ThemedText>
+              <ThemedText type="caption" style={{ marginLeft: 4 }}>
+                {(selectedUnit?.currency || item.ownerCriteria?.currency || item.currency || 'XAF')}
+                {selectedHotelRoom ? '/nuit' : ''}
+              </ThemedText>
+            </ThemedView>
           </ThemedView>
-          <TouchableOpacity
-            style={[styles.bookButton, isDisabled && styles.bookButtonDisabled]}
-            onPress={handleNavigate}
-            disabled={isDisabled}
-          >
-            <ThemedText type="normal" color="white" style={styles.bookButtonText}>{isDisabled ? 'Non disponible' : 'Book Now'}</ThemedText>
-          </TouchableOpacity>
+          <ThemedView style={styles.bookingActions}>
+            {/* Show premium priority contact badge */}
+            {isPremium && hasPriorityContact && (
+              <ThemedView style={{
+                flexDirection: 'row', alignItems: 'center',
+                backgroundColor: '#FFD700', paddingHorizontal: 6,
+                paddingVertical: 2, borderRadius: 4, marginBottom: 4,
+              }}>
+                <Ionicons name="star" size={10} color="white" />
+                <ThemedText style={{ color: 'white', fontSize: 9, fontWeight: '600', marginLeft: 3 }}>
+                  {t('premium.priorityContact')}
+                </ThemedText>
+              </ThemedView>
+            )}
+            {/* Require unit selection for per_unit properties (not both — both allows global booking) */}
+            {isPerUnit && hasUnits && selectedUnitIndex === null && !isDisabled && (
+              <ThemedText type="caption" style={{ color: '#F59E0B', fontSize: 10, fontWeight: '600', marginBottom: 2 }}>
+                Sélectionnez une chambre
+              </ThemedText>
+            )}
+            {/* Require hotel room selection */}
+            {isHotelProperty && item.hotelRoomTypes && item.hotelRoomTypes.length > 0 && !selectedHotelRoom && !isDisabled && (
+              <ThemedText type="caption" style={{ color: '#F59E0B', fontSize: 10, fontWeight: '600', marginBottom: 2 }}>
+                Sélectionnez une chambre
+              </ThemedText>
+            )}
+            {/* Show instant booking badge if available */}
+            {hasInstantBooking && !isDisabled && (
+              <ThemedView style={styles.instantBadge}>
+                <Ionicons name="flash" size={12} color="#F59E0B" />
+                <ThemedText type="caption" style={styles.instantBadgeText}>Instant</ThemedText>
+              </ThemedView>
+            )}
+            <TouchableOpacity
+              style={[
+                styles.bookButton,
+                (isDisabled
+                  || activityLoading
+                  || (isPerUnit && hasUnits && selectedUnitIndex === null)
+                  || (isHotelProperty && item.hotelRoomTypes?.length > 0 && !selectedHotelRoom)
+                ) && styles.bookButtonDisabled
+              ]}
+              onPress={handleNavigate}
+              disabled={
+                isDisabled
+                || activityLoading
+                || (isPerUnit && hasUnits && selectedUnitIndex === null)
+                || (isHotelProperty && item.hotelRoomTypes?.length > 0 && !selectedHotelRoom)
+              }
+            >
+              <ThemedText type="normal" intensity="strong" color="white">
+                {activityLoading
+                  ? '...'
+                  : isDisabled
+                    ? 'Non disponible'
+                    : (isPerUnit && hasUnits && selectedUnitIndex === null)
+                      || (isHotelProperty && item.hotelRoomTypes?.length > 0 && !selectedHotelRoom)
+                      ? 'Choisir une chambre'
+                      : isBothMode && hasUnits && selectedUnitIndex === null
+                        ? 'Réserver (propriété entière)'
+                        : bookingNavigation?.route === '/contrat/ContratScreen'
+                          ? 'Télécharger le contrat'
+                          : bookingNavigation?.route === '/bookingReview/bookingReview'
+                            ? 'Procéder au paiement'
+                            : bookingNavigation?.route === '/wallet/Wallet'
+                              ? 'Voir le paiement'
+                              : bookingNavigation?.route === '/booking/Bookingscreen' || bookingNavigation?.route === '/booking/HotelBookingScreen'
+                                ? (allowsDirectBooking ? propertyConfig.bookingText.submitButton : 'Planifier une réservation')
+                                : 'Planifier une visite'
+                }
+              </ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
         </ThemedView>
       </ThemedView>
     </ThemedView>
@@ -473,17 +1277,13 @@ const ItemData = ({ itemData }: ItemDataProps) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
   },
   emptyText: {
-    color: '#6B7280',
-    fontSize: 16,
   },
   imageContainer: {
     height: height * 0.40,
@@ -544,7 +1344,6 @@ const styles = StyleSheet.create({
   },
   whiteCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     marginTop: -50,
@@ -557,7 +1356,6 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   propertyTitle: {
-    fontWeight: '700',
     marginBottom: 4,
   },
   locationRow: {
@@ -566,8 +1364,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   locationText: {
-    color: '#6B7280',
-    fontSize: 14,
     marginLeft: 6,
   },
   ratingRow: {
@@ -576,13 +1372,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   ratingText: {
-    color: '#6B7280',
-    fontSize: 14,
     marginLeft: 6,
   },
   reviewsLink: {
-    color: '#F59E0B',
-    fontSize: 14,
     marginLeft: 4,
   },
   tabsContainer: {
@@ -597,28 +1389,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 25,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
   },
-  tabActive: {
-    backgroundColor: '#111827',
-    borderColor: '#111827',
-  },
-  tabText: {
-    color: '#6B7280',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  tabTextActive: {
-    color: '#FFFFFF',
-  },
-  tabBadge: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginLeft: 6,
-  },
+ 
+
   tabBadgeActive: {
     backgroundColor: '#374151',
   },
@@ -632,6 +1405,7 @@ const styles = StyleSheet.create({
   },
   tabContentContainer: {
     flex: 1,
+    marginBottom:2
   },
   scrollContent: {
     flex: 1,
@@ -641,8 +1415,6 @@ const styles = StyleSheet.create({
   },
   ownerSection: {
     flexDirection: 'row',
-
-
     alignItems: 'center',
     marginBottom: 24,
   },
@@ -655,22 +1427,14 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   ownerName: {
-    color: '#111827',
-    fontSize: 16,
-    fontWeight: '600',
   },
   section: {
     marginBottom: 24,
   },
   sectionTitle: {
-    color: '#111827',
-    fontSize: 18,
-    fontWeight: '700',
     marginBottom: 12,
   },
   descriptionText: {
-    color: '#6B7280',
-    fontSize: 14,
     lineHeight: 22,
   },
   facilitiesGrid: {
@@ -681,16 +1445,11 @@ const styles = StyleSheet.create({
   facilityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   facilityText: {
-    color: '#6B7280',
-    fontSize: 12,
     marginLeft: 8,
   },
   equipmentsGrid: {
@@ -701,17 +1460,29 @@ const styles = StyleSheet.create({
   equipmentItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    
   },
   equipmentText: {
-    color: '#374151',
-    fontSize: 12,
     marginLeft: 8,
+  },
+  amenitiesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  amenityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    gap: 6,
+  },
+  amenityText: {
+    marginLeft: 2,
   },
   atoutsGrid: {
     flexDirection: 'row',
@@ -721,20 +1492,16 @@ const styles = StyleSheet.create({
   atoutItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
   },
   atoutText: {
-    fontSize: 12,
     marginLeft: 4,
   },
   calendarWrapper: {
-    backgroundColor: '#F9FAFB',
     borderRadius: 20,
     padding: 6,
-   
   },
   criteriaContainer: {
     flex: 1,
@@ -752,7 +1519,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingVertical: 8,
     paddingBottom: Platform.OS === 'ios' ? 34 : 50,
@@ -765,19 +1531,30 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   priceLabel: {
-    color: '#6B7280',
-    fontSize: 12,
     marginBottom: 4,
   },
   priceValue: {
-    color: '#111827',
-    fontSize: 20,
-    fontWeight: '700',
   },
   priceUnit: {
-    color: '#6B7280',
-    fontSize: 14,
-    fontWeight: '400',
+  },
+  bookingActions: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  instantBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    gap: 4,
+  },
+  instantBadgeText: {
+    color: '#D97706',
+    fontSize: 10,
+    fontWeight: '600',
   },
   bookButton: {
     backgroundColor: '#F59E0B',
@@ -789,9 +1566,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#9CA3AF',
   },
   bookButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '700',
+  },
+  // Styles pour les terrains - accès et viabilisation
+  accessGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  accessChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  accessChipUnavailable: {
+    opacity: 0.6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+  },
+  accessTextUnavailable: {
+    textDecorationLine: 'line-through',
   },
 });
 

@@ -6,8 +6,8 @@ import {
   TouchableOpacity, 
   Dimensions 
 } from 'react-native';
-import { useTheme, useThemeControls,useThemeConfig } from '../contexts/theme/themehook';
-import { ThemeType } from '../contexts/theme/ThemeTypes';
+import { useTheme, useThemeControls,useThemeConfig } from '../../hooks/themehook';
+import { ThemeType } from '../../types/themeTypes';
 import { ThemedView } from '../ThemedView';
 import { ThemedText } from '../ThemedText';
 import { ThemedButton } from './ThemedButton';

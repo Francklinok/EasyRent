@@ -3,10 +3,11 @@ import { Text, View, TextInput, Alert } from "react-native";
 import { ScrollView } from "react-native";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import { ArrowLeft, ChevronDown, Bitcoin } from 'lucide-react-native';
-import { useTheme } from "../contexts/theme/themehook";
+import { useTheme } from "../../hooks/themehook";
 import _ from 'lodash';
 import { ThemedText } from "../ui/ThemedText";
 import { BackButton } from "../ui/BackButton";
+import { useLanguage } from '@/components/contexts/language';
 type WalletData = {
   balance: number;
   pendingBalance: number;
@@ -48,6 +49,7 @@ const RenderCrypto: React.FC<Props> = ({
 }) => {
   
   const {theme} = useTheme();
+  const { t } = useLanguage();
   
   return (
     <ThemedView className="h-full">
@@ -55,11 +57,11 @@ const RenderCrypto: React.FC<Props> = ({
       <ThemedView className=" flex-1 px-3">
         <ThemedView className="gap-4" style={styles.sectionHeader}>
           <BackButton/>
-          <ThemedText  type = "title" style={{color:theme.onSurface }}>Portefeuille Crypto</ThemedText>
+          <ThemedText  type = "title" style={{color:theme.onSurface }}>{t('walletComponents.cryptoWallet')}</ThemedText>
         </ThemedView>
         
         <ThemedView variant="surface" style={styles.cryptoBalanceSummary}>
-          <ThemedText type = 'subtitle' style={[styles.cryptoBalanceTitle, { color: theme.text }]}>Valeur totale</ThemedText>
+          <ThemedText type = 'subtitle' style={[styles.cryptoBalanceTitle, { color: theme.text }]}>{t('walletComponents.totalValue')}</ThemedText>
           <ThemedText style={[styles.cryptoBalanceAmount, { color: theme.primary }]}>
             {showBalance ? formatAmount(walletData.cryptoBalances.reduce((acc, curr) => acc + curr.value, 0)) : '••••••'}
           </ThemedText>
@@ -75,7 +77,7 @@ const RenderCrypto: React.FC<Props> = ({
           >
             <ThemedText  intensity="light" style={[
               { color: activeTab === 'overview' ? theme.primary : theme.onSurface }
-            ]}>Aperçu</ThemedText>
+            ]}>{t('walletComponents.overview')}</ThemedText>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -87,32 +89,32 @@ const RenderCrypto: React.FC<Props> = ({
           >
             <ThemedText intensity="light" style={[
               { color: activeTab === 'buy' ? theme.primary : theme.onSurface }
-            ]}>Acheter</ThemedText>
+            ]}>{t('walletComponents.buy')}</ThemedText>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={[
-              styles.cryptoTab, 
+              styles.cryptoTab,
               { borderBottomColor: activeTab === 'sell' ? theme.primary : 'transparent' }
             ]}
             onPress={() => setActiveTab('sell')}
           >
-            <ThemedText 
+            <ThemedText
                intensity="light"  style={[
                 { color: activeTab === 'sell' ? theme.primary : theme.onSurface }
-            ]}>Vendre</ThemedText>
+            ]}>{t('walletComponents.sell')}</ThemedText>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={[
-              styles.cryptoTab, 
+              styles.cryptoTab,
               { borderBottomColor: activeTab === 'transfer' ? theme.primary : 'transparent' }
             ]}
             onPress={() => setActiveTab('transfer')}
           >
             <ThemedText intensity="light"  style={[
               { color: activeTab === 'transfer' ? theme.primary : theme.onSurface}
-            ]}>Transférer</ThemedText>
+            ]}>{t('walletComponents.transfer')}</ThemedText>
           </TouchableOpacity>
         </ThemedView>
         
@@ -150,16 +152,16 @@ const RenderCrypto: React.FC<Props> = ({
                       setActiveTab('buy');
                     }}
                   >
-                    <ThemedText style = {{color:theme.surface}}>Acheter</ThemedText>
+                    <ThemedText style = {{color:theme.surface}}>{t('walletComponents.buy')}</ThemedText>
                   </TouchableOpacity>
-                  
-                  <TouchableOpacity 
+
+                  <TouchableOpacity
                     style={[styles.cryptoCardAction, { backgroundColor: theme.secondary }]}
                     onPress={() => {
                       setActiveTab('sell');
                     }}
                   >
-                    <ThemedText style = {{color:theme.surface}}>Vendre</ThemedText>
+                    <ThemedText style = {{color:theme.surface}}>{t('walletComponents.sell')}</ThemedText>
                   </TouchableOpacity>
                 </ThemedView>
               </ThemedView>
@@ -169,128 +171,128 @@ const RenderCrypto: React.FC<Props> = ({
         
         {activeTab === 'buy' && (
           <ThemedView className=" flex-col gap-4 h-full px-2">
-            <ThemedText style={{ color: theme.onSurface }}>Crypto-monnaie</ThemedText>
+            <ThemedText style={{ color: theme.onSurface }}>{t('walletComponents.cryptocurrency')}</ThemedText>
             <TouchableOpacity style={[styles.selectInput, { borderColor: theme.outline }]}>
               <ThemedText style={{ color: theme.onSurface }}>Bitcoin (BTC)</ThemedText>
               <ChevronDown size={16} color={theme.onSurface} />
             </TouchableOpacity>
-            
-            <ThemedText style={ { color: theme.onSurface }}>Montant</ThemedText>
+
+            <ThemedText style={ { color: theme.onSurface }}>{t('walletComponents.amount')}</ThemedText>
             <TextInput
               placeholder="0.00"
               keyboardType="numeric"
               style={{ borderColor: theme.outline, color: theme.onSurface }}
               placeholderTextColor={theme.onSurface}
             />
-            
-            <ThemedText style={ { color: theme.onSurface}}>Équivalent en {selectedCurrency}</ThemedText>
+
+            <ThemedText style={ { color: theme.onSurface}}>{t('walletComponents.equivalentIn')} {selectedCurrency}</ThemedText>
             <ThemedText style={ { color: theme.onSurface }}>
               {formatAmount(0)}
             </ThemedText>
-            
-            <ThemedText style={ { color: theme.onSurface }}>Méthode de paiement</ThemedText>
+
+            <ThemedText style={ { color: theme.onSurface }}>{t('walletComponents.paymentMethod')}</ThemedText>
             <TouchableOpacity style={[styles.selectInput, { borderColor: theme.outline }]}>
               <Text style={{ color: theme.onSurface }}>Visa •••• 4582</Text>
               <ChevronDown size={16} color={theme.onSurface} />
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: theme.primary }]}
               onPress={() => handleCryptoTransfer(0.001, 'BTC', 'buy')}
             >
-              <ThemedText style = {{color:theme.surface}}>Acheter BTC</ThemedText>
+              <ThemedText style = {{color:theme.surface}}>{t('walletComponents.buyBTC')}</ThemedText>
             </TouchableOpacity>
           </ThemedView>
         )}
         
         {activeTab === 'sell' && (
           <ThemedView className="flex-col gap-4 h-full px-2">
-            <ThemedText style={ { color: theme.onSurface }}>Crypto-monnaie</ThemedText>
+            <ThemedText style={ { color: theme.onSurface }}>{t('walletComponents.cryptocurrency')}</ThemedText>
             <TouchableOpacity style={[styles.selectInput, { borderColor: theme.outline }]}>
               <ThemedText style={{ color: theme.onSurface }}>Bitcoin (BTC)</ThemedText>
               <ChevronDown size={16} color={theme.onSurface} />
             </TouchableOpacity>
-            
-            <ThemedText style={ { color: theme.onSurface }}>Montant</ThemedText>
+
+            <ThemedText style={ { color: theme.onSurface }}>{t('walletComponents.amount')}</ThemedText>
             <TextInput
               placeholder="0.00"
               keyboardType="numeric"
               style={[styles.formInput, { borderColor: theme.outline, color: theme.onSurface }]}
               placeholderTextColor={theme.onSurface}
             />
-            
-            <ThemedText style={ { color: theme.onSurface}}>Équivalent en {selectedCurrency}</ThemedText>
+
+            <ThemedText style={ { color: theme.onSurface}}>{t('walletComponents.equivalentIn')} {selectedCurrency}</ThemedText>
             <ThemedText style={ { color: theme.onSurface }}>
               {formatAmount(0)}
             </ThemedText>
-            
-            <ThemedText style={ { color: theme.onSurface}}>Méthode de réception</ThemedText>
+
+            <ThemedText style={ { color: theme.onSurface}}>{t('walletComponents.receiveMethod')}</ThemedText>
             <TouchableOpacity style={[styles.selectInput, { borderColor: theme.outline }]}>
               <ThemedText style={{ color: theme.onSurface }}>Compte Courant •••• 7823</ThemedText>
               <ChevronDown size={16} color={theme.onSurface} />
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: theme.secondary }]}
               onPress={() => handleCryptoTransfer(0.001, 'BTC', 'sell')}
             >
-              <ThemedText style={styles.primaryButtonText}>Vendre BTC</ThemedText>
+              <ThemedText style={styles.primaryButtonText}>{t('walletComponents.sellBTC')}</ThemedText>
             </TouchableOpacity>
           </ThemedView>
         )}
         
         {activeTab === 'transfer' && (
           <ThemedView className="flex-col gap-4 h-full px-2">
-            <ThemedText style={ { color: theme.onSurface }}>Crypto-monnaie</ThemedText>
+            <ThemedText style={ { color: theme.onSurface }}>{t('walletComponents.cryptocurrency')}</ThemedText>
             <TouchableOpacity style={[styles.selectInput, { borderColor: theme.outline }]}>
               <ThemedText style={{ color: theme.onSurface }}>Bitcoin (BTC)</ThemedText>
               <ChevronDown size={16} color={theme.onSurface} />
             </TouchableOpacity>
-            
-            <ThemedText style={ { color: theme.onSurface }}>Montant</ThemedText>
+
+            <ThemedText style={ { color: theme.onSurface }}>{t('walletComponents.amount')}</ThemedText>
             <TextInput
               placeholder="0.00"
               keyboardType="numeric"
               style={[styles.formInput, { borderColor: theme.outline, color: theme.onSurface }]}
               placeholderTextColor={theme.onSurface}
             />
-            
-            <ThemedText style={ { color: theme.onSurface}}>Adresse de destination</ThemedText>
+
+            <ThemedText style={ { color: theme.onSurface}}>{t('walletComponents.destinationAddress')}</ThemedText>
             <TextInput
-              placeholder="Adresse du portefeuille"
+              placeholder={t('walletComponents.walletAddress')}
               style={[styles.formInput, { borderColor: theme.outline, color: theme.onSurface }]}
               placeholderTextColor={theme.onSurface}
             />
-            
+
             <ThemedView className="flex-col gap-4">
-              <ThemedText style={ { color: theme.onSurface }}>Frais de réseau</ThemedText>
+              <ThemedText style={ { color: theme.onSurface }}>{t('walletComponents.networkFees')}</ThemedText>
               <ThemedView style={styles.transferFeeOptions}>
                 <TouchableOpacity style={[styles.feeOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
-                  <ThemedText style={ { color: theme.onSurface }}>Économique</ThemedText>
+                  <ThemedText style={ { color: theme.onSurface }}>{t('walletComponents.economic')}</ThemedText>
                   <ThemedText style={ { color: theme.onSurface }}>0.0001 BTC</ThemedText>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity style={[styles.feeOption, { borderColor: theme.primary, backgroundColor: theme.surfaceVariant }]}>
-                  <ThemedText style={ { color: theme.onSurface }}>Standard</ThemedText>
+                  <ThemedText style={ { color: theme.onSurface }}>{t('walletComponents.standard')}</ThemedText>
                   <ThemedText style={ { color: theme.onSurface}}>0.0005 BTC</ThemedText>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity style={[styles.feeOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
-                  <ThemedText style={ { color: theme.onSurface }}>Rapide</ThemedText>
+                  <ThemedText style={ { color: theme.onSurface }}>{t('walletComponents.fast')}</ThemedText>
                   <ThemedText style={ { color: theme.onSurface}}>0.001 BTC</ThemedText>
                 </TouchableOpacity>
               </ThemedView>
             </ThemedView>
-            
+
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: theme.accent }]}
               onPress={() => {
                 // Logique de transfert crypto
-                Alert.alert('Transfert initié', 'Votre transfert crypto a été initié. Veuillez vérifier l\'état dans l\'historique des transactions.');
+                Alert.alert(t('walletComponents.transferInitiated'), t('walletComponents.transferInitiatedMsg'));
                 setCurrentSection('main');
               }}
             >
-              <ThemedText style={styles.primaryButtonText}>Transférer BTC</ThemedText>
+              <ThemedText style={styles.primaryButtonText}>{t('walletComponents.transferBTC')}</ThemedText>
             </TouchableOpacity>
           </ThemedView>
         )}

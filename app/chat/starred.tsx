@@ -6,7 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { useTheme } from '@/components/contexts/theme/themehook';
+import { useTheme } from '@/hooks/themehook';
 import Header from '@/components/ui/header';
 
 interface StarredMessage {

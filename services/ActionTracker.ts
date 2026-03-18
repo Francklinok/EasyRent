@@ -115,14 +115,37 @@ class ActionTrackerService {
     }
   }
 
+  // Vide toutes les actions locales
+  async clearAllActions(): Promise<void> {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.ALL_ACTIONS, JSON.stringify([]));
+      console.log('🧹 [ActionTracker] All local actions cleared');
+    } catch (error) {
+      console.error('Error clearing actions:', error);
+    }
+  }
+
   // Synchronise avec les activités du backend
   async syncFromActivities(activities: any[]): Promise<void> {
     try {
       console.log('🔄 [ActionTracker] Syncing from activities:', activities.length);
-      console.log('🔄 [ActionTracker] Activities data:', JSON.stringify(activities, null, 2));
 
       const currentActions = await this.getAllActions();
       console.log('🔄 [ActionTracker] Current local actions:', currentActions.length);
+
+      // Si le backend retourne 0 activités, on nettoie les actions locales qui venaient du backend
+      if (activities.length === 0) {
+        const localOnlyActions = currentActions.filter(a => {
+          // Garder uniquement les actions créées localement (pas celles synchronisées du backend)
+          const isFromBackend = a.id.startsWith('action_') && a.metadata?.reservationId;
+          return !isFromBackend;
+        });
+        if (localOnlyActions.length !== currentActions.length) {
+          console.log(`🧹 [ActionTracker] Backend empty - removing ${currentActions.length - localOnlyActions.length} stale actions`);
+          await AsyncStorage.setItem(STORAGE_KEYS.ALL_ACTIONS, JSON.stringify(localOnlyActions));
+        }
+        return;
+      }
 
       const newActions: UserAction[] = [];
       const actionsToRemove: string[] = [];
@@ -212,6 +235,18 @@ class ActionTrackerService {
                 activityType: activityType
             }
         });
+      }
+
+      // Supprimer les actions locales dont l'activité n'existe plus sur le backend
+      const backendActivityIds = new Set(activities.map(a => a.id));
+      for (const localAction of currentActions) {
+        // Vérifier uniquement les actions synchronisées depuis le backend
+        if (localAction.metadata?.reservationId && !backendActivityIds.has(localAction.metadata.reservationId)) {
+          if (!actionsToRemove.includes(localAction.id)) {
+            console.log('🧹 [ActionTracker] Activity no longer on backend, removing:', localAction.id);
+            actionsToRemove.push(localAction.id);
+          }
+        }
       }
 
       // Appliquer les changements (Suppressions et Ajouts)

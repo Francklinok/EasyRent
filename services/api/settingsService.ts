@@ -98,8 +98,8 @@ export interface UpdateProfileInput {
 // ==================== GRAPHQL QUERIES ====================
 
 const PRIVACY_SETTINGS_QUERY = `
-  query GetPrivacySettings($userId: ID!) {
-    privacySettings(userId: $userId) {
+  query GetPrivacySettings {
+    privacySettings {
       profileVisibility
       showEmail
       showPhone
@@ -121,9 +121,22 @@ const PRIVACY_SETTINGS_QUERY = `
   }
 `;
 
+const USER_PRIVACY_SETTINGS_QUERY = `
+  query GetUserPrivacySettings($userId: ID!) {
+    userPrivacySettings(userId: $userId) {
+      profileVisibility
+      showEmail
+      showPhone
+      showAddress
+      showOnlineStatus
+      showLastActive
+    }
+  }
+`;
+
 const UPDATE_PRIVACY_SETTINGS_MUTATION = `
-  mutation UpdatePrivacySettings($userId: ID!, $input: PrivacySettingsInput!) {
-    updatePrivacySettings(userId: $userId, input: $input) {
+  mutation UpdatePrivacySettings($input: UpdatePrivacySettingsInput!) {
+    updatePrivacySettings(input: $input) {
       profileVisibility
       showEmail
       showPhone
@@ -146,8 +159,8 @@ const UPDATE_PRIVACY_SETTINGS_MUTATION = `
 `;
 
 const SECURITY_SETTINGS_QUERY = `
-  query GetSecuritySettings($userId: ID!) {
-    securitySettings(userId: $userId) {
+  query GetSecuritySettings {
+    securitySettings {
       twoFactorEnabled
       twoFactorMethod
       loginNotifications
@@ -190,8 +203,8 @@ const ACTIVE_SESSIONS_QUERY = `
 `;
 
 const BLOCKED_USERS_QUERY = `
-  query GetBlockedUsers($userId: ID!) {
-    blockList(userId: $userId) {
+  query GetBlockedUsers {
+    blockList {
       id
       username
       avatar
@@ -306,19 +319,21 @@ const REVOKE_ALL_SESSIONS_MUTATION = `
 `;
 
 const BLOCK_USER_MUTATION = `
-  mutation BlockUser($userId: ID!, $targetUserId: ID!) {
-    blockUser(userId: $userId, targetUserId: $targetUserId) {
-      success
-      message
+  mutation BlockUser($userId: ID!, $reason: String) {
+    blockUser(userId: $userId, reason: $reason) {
+      profileVisibility
+      showEmail
+      showPhone
     }
   }
 `;
 
 const UNBLOCK_USER_MUTATION = `
-  mutation UnblockUser($userId: ID!, $targetUserId: ID!) {
-    unblockUser(userId: $userId, targetUserId: $targetUserId) {
-      success
-      message
+  mutation UnblockUser($userId: ID!) {
+    unblockUser(userId: $userId) {
+      profileVisibility
+      showEmail
+      showPhone
     }
   }
 `;
@@ -366,7 +381,7 @@ class SettingsService {
     try {
       const response = await this.graphqlService.query<{ privacySettings: PrivacySettings }>(
         PRIVACY_SETTINGS_QUERY,
-        { userId }
+        {}
       );
       return response.privacySettings;
     } catch (error) {
@@ -397,16 +412,41 @@ class SettingsService {
   async updatePrivacySettings(userId: string, settings: Partial<PrivacySettings>): Promise<PrivacySettings> {
     const response = await this.graphqlService.query<{ updatePrivacySettings: PrivacySettings }>(
       UPDATE_PRIVACY_SETTINGS_MUTATION,
-      { userId, input: settings }
+      { input: settings }
     );
     return response.updatePrivacySettings;
+  }
+
+  /**
+   * Get privacy settings for a specific user (e.g., property owner)
+   * Used to determine what info to show in property details
+   */
+  async getUserPrivacySettings(targetUserId: string): Promise<Partial<PrivacySettings>> {
+    try {
+      const response = await this.graphqlService.query<{ userPrivacySettings: Partial<PrivacySettings> }>(
+        USER_PRIVACY_SETTINGS_QUERY,
+        { userId: targetUserId }
+      );
+      return response.userPrivacySettings || {
+        showEmail: false,
+        showPhone: false,
+        showAddress: false,
+      };
+    } catch {
+      // Default to hiding info if we can't fetch settings
+      return {
+        showEmail: false,
+        showPhone: false,
+        showAddress: false,
+      };
+    }
   }
 
   async getBlockedUsers(userId: string): Promise<BlockedUser[]> {
     try {
       const response = await this.graphqlService.query<{ blockList: BlockedUser[] }>(
         BLOCKED_USERS_QUERY,
-        { userId }
+        {}
       );
       return response.blockList || [];
     } catch (error) {
@@ -415,20 +455,20 @@ class SettingsService {
     }
   }
 
-  async blockUser(userId: string, targetUserId: string): Promise<boolean> {
-    const response = await this.graphqlService.query<{ blockUser: { success: boolean } }>(
+  async blockUser(userId: string, targetUserId: string, reason?: string): Promise<boolean> {
+    const response = await this.graphqlService.query<{ blockUser: any }>(
       BLOCK_USER_MUTATION,
-      { userId, targetUserId }
+      { userId: targetUserId, reason }
     );
-    return response.blockUser.success;
+    return !!response.blockUser;
   }
 
   async unblockUser(userId: string, targetUserId: string): Promise<boolean> {
-    const response = await this.graphqlService.query<{ unblockUser: { success: boolean } }>(
+    const response = await this.graphqlService.query<{ unblockUser: any }>(
       UNBLOCK_USER_MUTATION,
-      { userId, targetUserId }
+      { userId: targetUserId }
     );
-    return response.unblockUser.success;
+    return !!response.unblockUser;
   }
 
   // ==================== SECURITY ====================
@@ -437,7 +477,7 @@ class SettingsService {
     try {
       const response = await this.graphqlService.query<{ securitySettings: SecuritySettings }>(
         SECURITY_SETTINGS_QUERY,
-        { userId }
+        {}
       );
       return response.securitySettings;
     } catch (error) {
@@ -471,7 +511,7 @@ class SettingsService {
   async updateSecuritySettings(userId: string, settings: Partial<SecuritySettings>): Promise<SecuritySettings> {
     const response = await this.graphqlService.query<{ updateSecuritySettings: SecuritySettings }>(
       UPDATE_SECURITY_SETTINGS_MUTATION,
-      { input: { userId, ...settings } }
+      { input: settings }
     );
     return response.updateSecuritySettings;
   }

@@ -3,7 +3,7 @@ import { View, TouchableOpacity, Animated, PanResponder } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
-import { useTheme } from '../contexts/theme/themehook';
+import { useTheme } from '../../hooks/themehook';
 import { ThemedView } from '../ui/ThemedView';
 import { ThemedText } from '../ui/ThemedText';
 import { useRecentActivities } from '../../hooks/useActivity';

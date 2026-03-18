@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Alert, AppState, AppStateStatus } from 'react-native';
 import { ChatService, Message, Conversation, SendMessageInput, MessageType } from '../services/api/chatService';
+import { offlineFirstChatService } from '../services/sync/offlineFirstChatService';
 import { getChatSubscriptions } from '../services/realtime/chatSubscriptions';
 import { connectWebSocket, disconnectWebSocket } from '../services/realtime/websocketService';
 
@@ -50,16 +51,17 @@ export const useChat = ({
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
 
-  // Refs
+  // Refs - use offline-first service for data, direct service for mutations
   const chatService = useRef(new ChatService()).current;
   const chatSubscriptions = useRef(getChatSubscriptions()).current;
+  const offlineChat = offlineFirstChatService;
   const unsubscribeRefs = useRef<(() => void)[]>([]);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fonction pour charger la conversation
+  // Fonction pour charger la conversation (offline-first: SQLite cache -> API)
   const loadConversation = useCallback(async () => {
     try {
-      const conv = await chatService.getConversation(conversationId);
+      const conv = await offlineChat.getConversation(conversationId);
       if (conv) {
         setConversation(conv);
         setError(null);
@@ -68,9 +70,9 @@ export const useChat = ({
       console.error('Error loading conversation:', err);
       setError('Impossible de charger la conversation');
     }
-  }, [conversationId, chatService]);
+  }, [conversationId, offlineChat]);
 
-  // Fonction pour charger les messages
+  // Fonction pour charger les messages (offline-first: SQLite cache -> API)
   const loadMessages = useCallback(async (offset = 0) => {
     try {
       if (offset === 0) {
@@ -79,10 +81,10 @@ export const useChat = ({
         setLoadingMore(true);
       }
 
-      const response = await chatService.getMessages(conversationId, {
-        limit: 50,
-        offset,
-      });
+      const response = await offlineChat.getMessages(
+        conversationId,
+        { limit: 50, offset }
+      );
 
       const newMessages = response.edges.map(edge => edge.node);
 
@@ -101,7 +103,7 @@ export const useChat = ({
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [conversationId, chatService]);
+  }, [conversationId, offlineChat]);
 
   // Fonction pour envoyer un message
   const sendMessage = useCallback(async (
@@ -122,7 +124,11 @@ export const useChat = ({
         attachments,
       };
 
-      await chatService.sendMessage(input);
+      const sentMessage = await offlineChat.sendMessage(input);
+      // Optimistically add the message to the list
+      if (sentMessage) {
+        setMessages(prev => [sentMessage, ...prev]);
+      }
     } catch (err) {
       console.error('Error sending message:', err);
       setError('Impossible d\'envoyer le message');
@@ -130,7 +136,7 @@ export const useChat = ({
     } finally {
       setSending(false);
     }
-  }, [conversationId, chatService]);
+  }, [conversationId, offlineChat]);
 
   // Fonction pour charger plus de messages
   const loadMoreMessages = useCallback(async () => {

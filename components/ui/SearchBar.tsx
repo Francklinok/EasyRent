@@ -1,6 +1,6 @@
 import React from 'react';
 import { ViewStyle, StyleProp } from 'react-native';
-import { useTheme, useThemeTransition } from '../contexts/theme/themehook';
+import { useTheme, useThemeTransition } from '../../hooks/themehook';
 import { ThemedView } from './ThemedView';
 type SearchBarProps = {
   children: React.ReactNode;

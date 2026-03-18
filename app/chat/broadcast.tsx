@@ -6,9 +6,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { useTheme } from '@/components/contexts/theme/themehook';
+import { useTheme } from '@/hooks/themehook';
 import Header from '@/components/ui/header';
-import chatListData from '@/assets/data/chatListData';
+import chatListData from '@/assets/data/chatListData'; 
 
 export default function BroadcastMessage() {
   const { theme } = useTheme();
@@ -37,10 +37,7 @@ export default function BroadcastMessage() {
     const isSelected = selectedContacts.includes(item.id);
     
     return (
-      <MotiView
-        from={{ opacity: 0, translateX: -30 }}
-        animate={{ opacity: 1, translateX: 0 }}
-        transition={{ delay: index * 50, type: 'spring' }}
+      <ThemedView
         style={{ marginBottom: 8 }}
       >
         <TouchableOpacity
@@ -86,7 +83,7 @@ export default function BroadcastMessage() {
             </ThemedView>
           </ThemedView>
         </TouchableOpacity>
-      </MotiView>
+      </ThemedView>
     );
   };
 
@@ -95,10 +92,7 @@ export default function BroadcastMessage() {
       
       <ThemedView style={{ flex: 1, padding: 16 }}>
         {/* Message Input */}
-        <MotiView
-          from={{ opacity: 0, translateY: -20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'spring' }}
+        <ThemedView
           style={{ marginBottom: 20 }}
         >
           <ThemedView style={{
@@ -131,14 +125,11 @@ export default function BroadcastMessage() {
               }}
             />
           </ThemedView>
-        </MotiView>
+        </ThemedView>
 
         {/* Selected Count */}
         {selectedContacts.length > 0 && (
-          <MotiView
-            from={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: 'spring' }}
+          <ThemedView
             style={{ marginBottom: 16 }}
           >
             <ThemedView style={{
@@ -153,7 +144,7 @@ export default function BroadcastMessage() {
                 {selectedContacts.length} contact{selectedContacts.length > 1 ? 's' : ''} sélectionné{selectedContacts.length > 1 ? 's' : ''}
               </ThemedText>
             </ThemedView>
-          </MotiView>
+          </ThemedView>
         )}
 
         {/* Contacts List */}

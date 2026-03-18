@@ -21,7 +21,9 @@ import {
   SubscribeServiceInput,
   ContractType,
 } from '../../services/api/serviceMarketplaceService';
-
+import { ThemedView } from '../ui/ThemedView';
+import { ThemedText } from '../ui/ThemedText';
+import { useLanguage } from '../contexts/language';
 const { width: screenWidth } = Dimensions.get('window');
 
 interface ServiceDetailScreenProps {
@@ -41,15 +43,14 @@ const ServiceDetailScreen: React.FC<ServiceDetailScreenProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const serviceMarketplace = getServiceMarketplaceService();
+  const { t } = useLanguage();
 
-  // États
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showFullDescription, setShowFullDescription] = useState(false);
 
-  // Charger le service
   useEffect(() => {
     loadService();
   }, [serviceId]);
@@ -63,18 +64,17 @@ const ServiceDetailScreen: React.FC<ServiceDetailScreenProps> = ({
       console.error('Erreur lors du chargement du service:', error);
       Alert.alert(
         'Erreur',
-        'Impossible de charger les détails du service.',
-        [{ text: 'Retour', onPress: onBack }]
+        t('services.loadError'),
+        [{ text: t('common.back'), onPress: onBack }]
       );
     } finally {
       setLoading(false);
     }
   };
 
-  // S'abonner au service
   const handleSubscribe = async (contractType: ContractType) => {
     if (!service || !userId || !propertyId) {
-      Alert.alert('Erreur', 'Informations manquantes pour s\'abonner au service.');
+      Alert.alert('Erreur', t('services.subscribeError'));
       return;
     }
 
@@ -92,15 +92,15 @@ const ServiceDetailScreen: React.FC<ServiceDetailScreenProps> = ({
       const subscription = await serviceMarketplace.subscribeToService(subscribeInput);
 
       Alert.alert(
-        'Succès',
-        'Vous êtes maintenant abonné à ce service !',
+        t('common.success'),
+        t('services.subscribeSuccess'),
         [{ text: 'OK', onPress: () => onSubscribe?.(subscription) }]
       );
     } catch (error) {
       console.error('Erreur lors de l\'abonnement:', error);
       Alert.alert(
-        'Erreur',
-        'Impossible de s\'abonner au service. Veuillez réessayer.',
+        t('common.error'),
+        t('services.subscribeRetry'),
         [{ text: 'OK' }]
       );
     } finally {
@@ -117,11 +117,11 @@ const ServiceDetailScreen: React.FC<ServiceDetailScreenProps> = ({
       onPress: () => handleSubscribe(type),
     }));
 
-    options.push({ text: 'Annuler', onPress: () => {} });
+    options.push({ text: t('common.cancel'), onPress: () => { } });
 
     Alert.alert(
-      'Choisir un type de contrat',
-      'Quel type de contrat souhaitez-vous ?',
+      t('services.chooseContract'),
+      t('services.contractType'),
       options
     );
   };
@@ -129,11 +129,11 @@ const ServiceDetailScreen: React.FC<ServiceDetailScreenProps> = ({
   // Obtenir le label d'un type de contrat
   const getContractTypeLabel = (type: ContractType): string => {
     const labels = {
-      [ContractType.SHORT_TERM]: 'Court terme',
-      [ContractType.LONG_TERM]: 'Long terme',
-      [ContractType.SEASONAL]: 'Saisonnier',
-      [ContractType.ON_DEMAND]: 'À la demande',
-      [ContractType.EMERGENCY]: 'Urgence',
+      [ContractType.SHORT_TERM]: t('services.contract.shortTerm'),
+      [ContractType.LONG_TERM]: t('services.contract.longTerm'),
+      [ContractType.SEASONAL]: t('services.contract.seasonal'),
+      [ContractType.ON_DEMAND]: t('services.contract.onDemand'),
+      [ContractType.EMERGENCY]: t('services.contract.emergency'),
     };
     return labels[type] || type;
   };
@@ -150,58 +150,58 @@ const ServiceDetailScreen: React.FC<ServiceDetailScreenProps> = ({
 
   if (loading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.header}>
+      <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+        <ThemedView style={styles.header}>
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#2D3436" />
           </TouchableOpacity>
-        </View>
-        <View style={styles.loadingContainer}>
+        </ThemedView>
+        <ThemedView style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Chargement...</Text>
-        </View>
-      </View>
+          <ThemedText style={styles.loadingText}>{t('common.loading')}</ThemedText>
+        </ThemedView>
+      </ThemedView>
     );
   }
 
   if (!service) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.header}>
+      <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+        <ThemedView style={styles.header}>
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#2D3436" />
           </TouchableOpacity>
-        </View>
-        <View style={styles.errorContainer}>
+        </ThemedView>
+        <ThemedView style={styles.errorContainer}>
           <Ionicons name="alert-circle" size={64} color="#E17055" />
-          <Text style={styles.errorTitle}>Service introuvable</Text>
-          <Text style={styles.errorSubtitle}>
-            Ce service n'existe pas ou n'est plus disponible.
-          </Text>
-        </View>
-      </View>
+          <ThemedText style={styles.errorTitle}>{t('services.notFound')}</ThemedText>
+          <ThemedText style={styles.errorSubtitle}>
+            {t('services.notFoundMsg')}
+          </ThemedText>
+        </ThemedView>
+      </ThemedView>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* En-tête */}
-      <View style={styles.header}>
+    <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+      {/* header */}
+      <ThemedView style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#2D3436" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
+        <ThemedText style={styles.headerTitle} numberOfLines={1}>
           {service.title}
-        </Text>
+        </ThemedText>
         <TouchableOpacity style={styles.shareButton}>
           <Ionicons name="share-outline" size={24} color="#2D3436" />
         </TouchableOpacity>
-      </View>
+      </ThemedView>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ThemedView style={styles.content}>
         {/* Galerie d'images */}
         {service.media.photos.length > 0 && (
-          <View style={styles.imageGallery}>
+          <ThemedView style={styles.imageGallery}>
             <ScrollView
               horizontal
               pagingEnabled
@@ -223,9 +223,9 @@ const ServiceDetailScreen: React.FC<ServiceDetailScreenProps> = ({
               ))}
             </ScrollView>
             {service.media.photos.length > 1 && (
-              <View style={styles.imageIndicators}>
+              <ThemedView style={styles.imageIndicators}>
                 {service.media.photos.map((_, index) => (
-                  <View
+                  <ThemedView
                     key={index}
                     style={[
                       styles.imageIndicator,
@@ -233,157 +233,157 @@ const ServiceDetailScreen: React.FC<ServiceDetailScreenProps> = ({
                     ]}
                   />
                 ))}
-              </View>
+              </ThemedView>
             )}
-          </View>
+          </ThemedView>
         )}
 
         {/* Informations principales */}
-        <View style={styles.mainInfo}>
-          <View style={styles.titleRow}>
-            <Text style={styles.title}>{service.title}</Text>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>{service.category}</Text>
-            </View>
-          </View>
+        <ThemedView style={styles.mainInfo}>
+          <ThemedView style={styles.titleRow}>
+            <ThemedText style={styles.title}>{service.title}</ThemedText>
+            <ThemedView style={styles.categoryBadge}>
+              <ThemedText style={styles.categoryText}>{service.category}</ThemedText>
+            </ThemedView>
+          </ThemedView>
 
-          <View style={styles.ratingRow}>
-            <View style={styles.rating}>
+          <ThemedView style={styles.ratingRow}>
+            <ThemedView style={styles.rating}>
               <Ionicons name="star" size={16} color="#FDCB6E" />
-              <Text style={styles.ratingText}>{service.rating.toFixed(1)}</Text>
-              <Text style={styles.reviewCount}>({service.totalReviews} avis)</Text>
-            </View>
+              <ThemedText style={styles.ratingText}>{service.rating.toFixed(1)}</ThemedText>
+              <ThemedText style={styles.reviewCount}>({service.totalReviews} avis)</ThemedText>
+            </ThemedView>
             {service.availability.isEmergency && (
-              <View style={styles.emergencyBadge}>
+              <ThemedView style={styles.emergencyBadge}>
                 <Ionicons name="flash" size={14} color="#E17055" />
-                <Text style={styles.emergencyText}>Urgence</Text>
-              </View>
+                <ThemedText style={styles.emergencyText}>Urgence</ThemedText>
+              </ThemedView>
             )}
-          </View>
+          </ThemedView>
 
-          <View style={styles.priceRow}>
-            <Text style={styles.price}>
+          <ThemedView style={styles.priceRow}>
+            <ThemedText style={styles.price}>
               {formatPrice(service.pricing.basePrice, service.pricing.currency)}
-            </Text>
-            <Text style={styles.billingPeriod}>
+            </ThemedText>
+            <ThemedText style={styles.billingPeriod}>
               /{service.pricing.billingPeriod}
-            </Text>
-          </View>
-        </View>
+            </ThemedText>
+          </ThemedView>
+        </ThemedView>
 
         {/* Fournisseur */}
         {service.provider && (
-          <View style={styles.providerSection}>
-            <Text style={styles.sectionTitle}>Prestataire</Text>
-            <View style={styles.providerInfo}>
-              <View style={styles.providerHeader}>
-                <Text style={styles.providerName}>
+          <ThemedView style={styles.providerSection}>
+            <ThemedText style={styles.sectionTitle}>Prestataire</ThemedText>
+            <ThemedView style={styles.providerInfo}>
+              <ThemedView style={styles.providerHeader}>
+                <ThemedText style={styles.providerName}>
                   {service.provider.companyName || 'Prestataire'}
-                </Text>
+                </ThemedText>
                 {service.provider.isVerified && (
-                  <View style={styles.verifiedBadge}>
+                  <ThemedView style={styles.verifiedBadge}>
                     <Ionicons name="checkmark-circle" size={16} color="#00B894" />
-                    <Text style={styles.verifiedText}>Vérifié</Text>
-                  </View>
+                    <ThemedText style={styles.verifiedText}>Vérifié</ThemedText>
+                  </ThemedView>
                 )}
-              </View>
-              <Text style={styles.providerDescription}>
+              </ThemedView>
+              <ThemedText style={styles.providerDescription}>
                 {service.provider.description}
-              </Text>
-              <View style={styles.providerStats}>
-                <Text style={styles.providerStat}>
+              </ThemedText>
+              <ThemedView style={styles.providerStats}>
+                <ThemedText style={styles.providerStat}>
                   ⭐ {service.provider.rating.toFixed(1)} ({service.provider.totalReviews} avis)
-                </Text>
-              </View>
-            </View>
-          </View>
+                </ThemedText>
+              </ThemedView>
+            </ThemedView>
+          </ThemedView>
         )}
 
         {/* Description */}
-        <View style={styles.descriptionSection}>
-          <Text style={styles.sectionTitle}>Description</Text>
-          <Text
+        <ThemedView style={styles.descriptionSection}>
+          <ThemedText style={styles.sectionTitle}>Description</ThemedText>
+          <ThemedText
             style={styles.description}
             numberOfLines={showFullDescription ? undefined : 3}
           >
             {service.description}
-          </Text>
+          </ThemedText>
           <TouchableOpacity
             onPress={() => setShowFullDescription(!showFullDescription)}
           >
-            <Text style={styles.showMoreText}>
+            <ThemedText style={styles.showMoreText}>
               {showFullDescription ? 'Voir moins' : 'Voir plus'}
-            </Text>
+            </ThemedText>
           </TouchableOpacity>
-        </View>
+        </ThemedView>
 
         {/* Informations pratiques */}
-        <View style={styles.practicalInfo}>
-          <Text style={styles.sectionTitle}>Informations pratiques</Text>
+        <ThemedView style={styles.practicalInfo}>
+          <ThemedText style={styles.sectionTitle}>Informations pratiques</ThemedText>
 
           {/* Types de contrat disponibles */}
-          <View style={styles.infoItem}>
+          <ThemedView style={styles.infoItem}>
             <Ionicons name="document-text" size={20} color="#636E72" />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Types de contrat</Text>
-              <Text style={styles.infoValue}>
+            <ThemedView style={styles.infoContent}>
+              <ThemedText style={styles.infoLabel}>Types de contrat</ThemedText>
+              <ThemedText style={styles.infoValue}>
                 {service.contractTypes.map(getContractTypeLabel).join(', ')}
-              </Text>
-            </View>
-          </View>
+              </ThemedText>
+            </ThemedView>
+          </ThemedView>
 
           {/* Zones de service */}
-          <View style={styles.infoItem}>
+          <ThemedView style={styles.infoItem}>
             <Ionicons name="location" size={20} color="#636E72" />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Zones de service</Text>
-              <Text style={styles.infoValue}>
+            <ThemedView style={styles.infoContent}>
+              <ThemedText style={styles.infoLabel}>Zones de service</ThemedText>
+              <ThemedText style={styles.infoValue}>
                 {service.availability.zones.join(', ')}
-              </Text>
-            </View>
-          </View>
+              </ThemedText>
+            </ThemedView>
+          </ThemedView>
 
           {/* Horaires */}
-          <View style={styles.infoItem}>
+          <ThemedView style={styles.infoItem}>
             <Ionicons name="time" size={20} color="#636E72" />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Horaires</Text>
-              <Text style={styles.infoValue}>
+            <ThemedView style={styles.infoContent}>
+              <ThemedText style={styles.infoLabel}>Horaires</ThemedText>
+              <ThemedText style={styles.infoValue}>
                 {service.availability.schedule.days.join(', ')} - {service.availability.schedule.hours}
-              </Text>
-            </View>
-          </View>
+              </ThemedText>
+            </ThemedView>
+          </ThemedView>
 
           {/* Types de propriété */}
-          <View style={styles.infoItem}>
+          <ThemedView style={styles.infoItem}>
             <Ionicons name="home" size={20} color="#636E72" />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Types de propriété</Text>
-              <Text style={styles.infoValue}>
+            <ThemedView style={styles.infoContent}>
+              <ThemedText style={styles.infoLabel}>Types de propriété</ThemedText>
+              <ThemedText style={styles.infoValue}>
                 {service.requirements.propertyTypes.join(', ')}
-              </Text>
-            </View>
-          </View>
-        </View>
+              </ThemedText>
+            </ThemedView>
+          </ThemedView>
+        </ThemedView>
 
         {/* Tags */}
         {service.tags.length > 0 && (
-          <View style={styles.tagsSection}>
+          <ThemedView style={styles.tagsSection}>
             <Text style={styles.sectionTitle}>Tags</Text>
-            <View style={styles.tagsContainer}>
+            <ThemedView style={styles.tagsContainer}>
               {service.tags.map((tag, index) => (
-                <View key={index} style={styles.tag}>
+                <ThemedView key={index} style={styles.tag}>
                   <Text style={styles.tagText}>{tag}</Text>
-                </View>
+                </ThemedView>
               ))}
-            </View>
-          </View>
+            </ThemedView>
+          </ThemedView>
         )}
-      </ScrollView>
+      </ThemedView>
 
       {/* Footer avec bouton d'abonnement */}
       {userId && propertyId && (
-        <View style={styles.footer}>
+        <ThemedView style={styles.footer}>
           <TouchableOpacity
             style={[styles.subscribeButton, subscribing && styles.subscribeButtonDisabled]}
             onPress={showSubscribeOptions}
@@ -398,9 +398,9 @@ const ServiceDetailScreen: React.FC<ServiceDetailScreenProps> = ({
               </>
             )}
           </TouchableOpacity>
-        </View>
+        </ThemedView>
       )}
-    </View>
+    </ThemedView>
   );
 };
 
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     paddingVertical: 12,
     backgroundColor: 'white',
     borderBottomWidth: 1,

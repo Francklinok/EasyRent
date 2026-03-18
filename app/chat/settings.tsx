@@ -5,7 +5,7 @@ import { MotiView } from 'moti';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { useTheme } from '@/components/contexts/theme/themehook';
+import { useTheme } from '@/hooks/themehook';
 import Header from '@/components/ui/header';
 
 export default function ChatSettings() {

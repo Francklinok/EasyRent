@@ -1,6 +1,6 @@
 import { ThemedText } from "./ThemedText";
-import { useTheme } from "../contexts/theme/themehook";
-import { useThemeTransition } from "../contexts/theme/themehook";
+import { useTheme } from "../../hooks/themehook";
+import { useThemeTransition } from "../../hooks/themehook";
 import LinearGradient from "react-native-linear-gradient";
 import { ViewProps,View } from "react-native";
 

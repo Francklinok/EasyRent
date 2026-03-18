@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { ThemedView } from '@/components/ui/ThemedView';
-import { useTheme } from '@/components/contexts/theme/themehook';
+import { useTheme } from '@/hooks/themehook';
 import { MaterialIcons } from '@expo/vector-icons';
 
 interface Step {

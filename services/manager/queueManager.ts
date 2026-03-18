@@ -1,100 +1,152 @@
+/**
+ * QueueManager - Wrapper de compatibilité vers OfflineQueueService
+ *
+ * @deprecated Utilisez offlineQueueService depuis '@/services/offline' à la place.
+ * Ce service est maintenu pour compatibilité descendante uniquement.
+ *
+ * MIGRATION: Les nouveaux composants devraient importer directement:
+ * import { offlineQueueService } from '@/services/offline';
+ */
 
-// ========== SYSTÈME DE FILE D'ATTENTE ==========
+import { offlineQueueService, QueuePriority, EntityTable } from '@/services/offline';
+import type { QueuePriorityValue } from '@/services/offline';
+import { QueuedAction } from '@/types/fotype';
 
-// src/services/queueManager.ts
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { v4 as uuidv4 } from 'uuid';
-import { QueuedAction } from '../types';
-
-const QUEUE_STORAGE_KEY = 'offline_action_queue';
-
+/**
+ * @deprecated Utilisez offlineQueueService.enqueue() à la place
+ */
 export class QueueManager {
-  private queue: QueuedAction[] = [];
   private isInitialized = false;
 
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
-    
-    try {
-      const storedQueue = await AsyncStorage.getItem(QUEUE_STORAGE_KEY);
-      if (storedQueue) {
-        this.queue = JSON.parse(storedQueue);
-      }
-      this.isInitialized = true;
-    } catch (error) {
-      console.error('Error initializing queue:', error);
-      this.queue = [];
-    }
+    // OfflineQueueService s'initialise automatiquement
+    this.isInitialized = true;
+    console.log('[QueueManager] Initialized (wrapper mode - using OfflineQueueService)');
   }
 
+  /**
+   * @deprecated Utilisez offlineQueueService.enqueue() à la place
+   */
   async addToQueue<T>(action: Omit<QueuedAction<T>, 'id' | 'timestamp' | 'retries' | 'priority'>): Promise<string> {
     await this.initialize();
-    
-    const queueItem: QueuedAction<T> = {
-      ...action,
-      id: uuidv4(),
-      timestamp: Date.now(),
-      retries: 0,
+
+    // Map old action types to entity types
+    const entityType = this.mapActionTypeToEntity(action.type);
+    const queueAction = this.mapActionTypeToAction(action.type);
+
+    const id = await offlineQueueService.enqueue({
+      entityType,
+      entityId: (action.data as any)?.id || `temp_${Date.now()}`,
+      action: queueAction,
+      data: {
+        ...action.data,
+        endpoint: action.endpoint,
+        method: action.method,
+        entity: action.entity,
+        originalType: action.type,
+      },
       priority: this.getPriorityForAction(action.type),
-    };
-    
-    this.queue.push(queueItem);
-    await this.persistQueue();
-    
-    return queueItem.id;
+    });
+
+    return id;
   }
 
+  /**
+   * @deprecated Utilisez offlineQueueService.getQueue() à la place
+   */
   async getQueue(): Promise<QueuedAction[]> {
     await this.initialize();
-    return [...this.queue].sort((a, b) => b.priority - a.priority);
+    const items = await offlineQueueService.getQueue();
+
+    // Convert to legacy format
+    return items.map((item) => ({
+      id: item.id,
+      type: item.data?.originalType || `${item.action}_${item.entityType}`.toUpperCase(),
+      endpoint: item.data?.endpoint || `/${item.entityType}`,
+      method: this.actionToMethod(item.action),
+      data: item.data,
+      entity: item.entityType,
+      timestamp: item.createdAt,
+      retries: item.retryCount,
+      priority: item.priority,
+    }));
   }
 
+  /**
+   * @deprecated Utilisez offlineQueueService.dequeue() à la place
+   */
   async removeFromQueue(id: string): Promise<void> {
     await this.initialize();
-    this.queue = this.queue.filter(item => item.id !== id);
-    await this.persistQueue();
+    await offlineQueueService.dequeue(id);
   }
 
+  /**
+   * @deprecated Pas d'équivalent direct - géré automatiquement par OfflineQueueService
+   */
   async updateActionRetry(id: string): Promise<void> {
-    await this.initialize();
-    const index = this.queue.findIndex(item => item.id === id);
-    if (index !== -1) {
-      this.queue[index].retries += 1;
-      await this.persistQueue();
-    }
+    // OfflineQueueService gère automatiquement les retries
+    console.log(`[QueueManager] updateActionRetry called for ${id} - handled automatically`);
   }
 
+  /**
+   * @deprecated Utilisez offlineQueueService.clearQueue() à la place
+   */
   async clearQueue(): Promise<void> {
-    this.queue = [];
-    await AsyncStorage.removeItem(QUEUE_STORAGE_KEY);
+    await offlineQueueService.clearQueue();
   }
 
-  private async persistQueue(): Promise<void> {
-    try {
-      await AsyncStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(this.queue));
-    } catch (error) {
-      console.error('Error persisting queue:', error);
-    }
-  }
-
-  private getPriorityForAction(type: string): number {
-    // Définir des priorités pour différents types d'actions
+  private getPriorityForAction(type: string): QueuePriorityValue {
     switch (type) {
       case 'CREATE_CONTRACT':
       case 'UPDATE_CONTRACT':
-        return 100; // Priorité la plus élevée
+        return QueuePriority.CRITICAL;
       case 'CREATE_MESSAGE':
       case 'UPDATE_MESSAGE':
-        return 80;
+        return QueuePriority.HIGH;
       case 'CREATE_PROPERTY':
       case 'UPDATE_PROPERTY':
-        return 60;
+        return QueuePriority.NORMAL;
       case 'UPLOAD_IMAGE':
-        return 40;
+        return QueuePriority.LOW;
       default:
-        return 50;
+        return QueuePriority.NORMAL;
+    }
+  }
+
+  private mapActionTypeToEntity(type: string): EntityTable {
+    if (type.includes('CONTRACT')) return 'activities';
+    if (type.includes('MESSAGE')) return 'messages';
+    if (type.includes('PROPERTY')) return 'properties';
+    if (type.includes('SERVICE')) return 'services';
+    if (type.includes('WALLET') || type.includes('TRANSACTION')) return 'transactions';
+    if (type.includes('NOTIFICATION')) return 'notifications';
+    if (type.includes('USER') || type.includes('PROFILE')) return 'users';
+    return 'properties'; // Default
+  }
+
+  private mapActionTypeToAction(type: string): 'CREATE' | 'UPDATE' | 'DELETE' {
+    if (type.startsWith('CREATE_')) return 'CREATE';
+    if (type.startsWith('UPDATE_') || type.startsWith('UPLOAD_')) return 'UPDATE';
+    if (type.startsWith('DELETE_')) return 'DELETE';
+    return 'UPDATE';
+  }
+
+  private actionToMethod(action: string): 'POST' | 'PUT' | 'PATCH' | 'DELETE' {
+    switch (action) {
+      case 'CREATE':
+        return 'POST';
+      case 'UPDATE':
+        return 'PUT';
+      case 'DELETE':
+        return 'DELETE';
+      default:
+        return 'PUT';
     }
   }
 }
 
+/**
+ * @deprecated Utilisez offlineQueueService depuis '@/services/offline' à la place
+ */
 export const queueManager = new QueueManager();

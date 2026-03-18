@@ -183,53 +183,64 @@ export class PremiumService {
     startDate: string;
     endDate: string;
   }> {
+    const tier = planId || 'premium';
+    const paymentMethodId = paymentDetails?.paymentMethodId || `pm_${paymentMethod}_${Date.now()}`;
+    const promoCode = paymentDetails?.promoCode || null;
+    const billingCycle = paymentDetails?.billingCycle || 'monthly';
+
     const mutation = `
-      mutation SubscribeToPlan(
-        $userId: ID!,
-        $planId: ID!,
-        $paymentMethod: PaymentMethod!,
-        $paymentDetails: PaymentDetailsInput!
+      mutation UpgradePremium(
+        $tier: PremiumTier!,
+        $paymentMethodId: String!,
+        $promoCode: String
       ) {
-        subscribeToPlan(
-          userId: $userId,
-          planId: $planId,
-          paymentMethod: $paymentMethod,
-          paymentDetails: $paymentDetails
+        upgradePremium(
+          tier: $tier,
+          paymentMethodId: $paymentMethodId,
+          promoCode: $promoCode
         ) {
-          success
-          subscriptionId
-          transactionId
+          tier
+          status
           startDate
           endDate
-          errors
+          autoRenew
+          paymentMethod
         }
       }
     `;
 
     const response = await this.graphqlService.mutate(mutation, {
-      userId,
-      planId,
-      paymentMethod,
-      paymentDetails
+      tier,
+      paymentMethodId,
+      ...(promoCode ? { promoCode } : {})
     });
 
-    return response.subscribeToPlan;
+    const settings = response.upgradePremium;
+    return {
+      success: settings.status === 'active',
+      subscriptionId: `sub_${Date.now()}`,
+      transactionId: paymentMethodId,
+      startDate: settings.startDate || new Date().toISOString(),
+      endDate: settings.endDate || '',
+    };
   }
 
   async cancelSubscription(userId: string, reason?: string): Promise<boolean> {
+    // Backend: cancelPremium: PremiumSettings! (no args)
     const mutation = `
-      mutation CancelSubscription($userId: ID!, $reason: String) {
-        cancelSubscription(userId: $userId, reason: $reason) {
-          success
-          cancelledAt
-          refundAmount
-          refundStatus
+      mutation CancelPremium {
+        cancelPremium {
+          tier
+          status
+          startDate
+          endDate
+          autoRenew
         }
       }
     `;
 
-    const response = await this.graphqlService.mutate(mutation, { userId, reason });
-    return response.cancelSubscription.success;
+    const response = await this.graphqlService.mutate(mutation);
+    return response.cancelPremium.status === 'cancelled';
   }
 
   async changePlan(userId: string, newPlanId: string): Promise<{
@@ -464,6 +475,374 @@ export class PremiumService {
 
     const response = await this.graphqlService.query(query, { userId });
     return response.invoices;
+  }
+  // ============================
+  // NEW PREMIUM ENDPOINTS
+  // ============================
+
+  async getPremiumStatus(userId: string): Promise<{
+    isPremium: boolean;
+    plan: string | null;
+    tier: string | null;
+    expiry: string | null;
+    autoRenew: boolean | null;
+    isExpired: boolean;
+  }> {
+    const query = `
+      query PremiumStatus($userId: ID!) {
+        premiumStatus(userId: $userId) {
+          isPremium
+          plan
+          tier
+          expiry
+          autoRenew
+          isExpired
+        }
+      }
+    `;
+    const response = await this.graphqlService.query(query, { userId });
+    return response.premiumStatus;
+  }
+
+  async getOwnerDashboard(): Promise<any> {
+    const query = `
+      query OwnerDashboard {
+        ownerDashboard {
+          overview {
+            totalProperties
+            activeProperties
+            boostedProperties
+            rentedProperties
+            occupancyRate
+            totalMonthlyRevenue
+          }
+          analytics {
+            totalViews
+            totalClicks
+            totalImpressions
+            totalContactRequests
+            totalFavorites
+            avgClickThroughRate
+            avgContactRate
+          }
+          properties
+        }
+      }
+    `;
+    const response = await this.graphqlService.query(query);
+    return response.ownerDashboard;
+  }
+
+  async getPremiumPropertyStats(propertyId: string, period?: string): Promise<any> {
+    const query = `
+      query PremiumPropertyStats($propertyId: ID!, $period: String) {
+        premiumPropertyStats(propertyId: $propertyId, period: $period) {
+          propertyId
+          period
+          totalViews
+          totalClicks
+          totalImpressions
+          totalContactRequests
+          totalFavorites
+          totalShares
+          clickThroughRate
+          contactRate
+          viewSources {
+            search
+            recommendation
+            direct
+            boost
+            share
+          }
+          averageViewDuration
+          lastViewedAt
+          dailyBreakdown {
+            date
+            views
+            clicks
+            impressions
+            contactRequests
+          }
+        }
+      }
+    `;
+    const response = await this.graphqlService.query(query, { propertyId, period });
+    return response.premiumPropertyStats;
+  }
+
+  async getMarketAnalysis(area?: string): Promise<any> {
+    const query = `
+      query MarketAnalysis($area: String) {
+        marketAnalysis(area: $area) {
+          areaAnalysis {
+            area
+            avgRent
+            minRent
+            maxRent
+            avgSurface
+            avgPricePerSqm
+            totalListings
+            availableListings
+          }
+          typeDistribution {
+            type
+            count
+            avgRent
+          }
+          priceTrends {
+            period
+            avgRent
+            count
+          }
+          generatedAt
+        }
+      }
+    `;
+    const response = await this.graphqlService.query(query, { area });
+    return response.marketAnalysis;
+  }
+
+  async getTenantScreening(tenantId: string): Promise<any> {
+    const query = `
+      query TenantScreening($tenantId: ID!) {
+        tenantScreening(tenantId: $tenantId) {
+          tenant {
+            id
+            firstName
+            lastName
+            email
+            phoneNumber
+            memberSince
+            lastActive
+            isVerified
+          }
+          activitySummary {
+            totalActivities
+            completedVisits
+          }
+          reliabilityScore
+        }
+      }
+    `;
+    const response = await this.graphqlService.query(query, { tenantId });
+    return response.tenantScreening;
+  }
+
+  async getSmartRecommendations(page: number = 1, limit: number = 20): Promise<any> {
+    const query = `
+      query SmartRecommendations($page: Int, $limit: Int) {
+        smartRecommendations(page: $page, limit: $limit) {
+          properties
+          total
+          page
+          limit
+          totalPages
+        }
+      }
+    `;
+    const response = await this.graphqlService.query(query, { page, limit });
+    return response.smartRecommendations;
+  }
+
+  async getPriceHistory(area: string, propertyType?: string, months?: number): Promise<any> {
+    const query = `
+      query PriceHistory($area: String!, $propertyType: String, $months: Int) {
+        priceHistory(area: $area, propertyType: $propertyType, months: $months) {
+          area
+          propertyType
+          months
+          data {
+            period
+            avgRent
+            minRent
+            maxRent
+            count
+            avgSurface
+            avgPricePerSqm
+          }
+        }
+      }
+    `;
+    const response = await this.graphqlService.query(query, { area, propertyType, months });
+    return response.priceHistory;
+  }
+
+  async getNeighborhoodInsights(area: string): Promise<any> {
+    const query = `
+      query NeighborhoodInsights($area: String!) {
+        neighborhoodInsights(area: $area) {
+          area
+          overview {
+            totalListings
+            availableListings
+            avgRent
+            minRent
+            maxRent
+            avgSurface
+            avgPricePerSqm
+          }
+          propertyTypeBreakdown {
+            type
+            count
+            avgRent
+            percentage
+          }
+          priceRangeDistribution {
+            range
+            count
+            percentage
+          }
+          trends {
+            listingsGrowth
+            avgRentChange
+          }
+          nearbyAreas {
+            area
+            avgRent
+            totalListings
+          }
+        }
+      }
+    `;
+    const response = await this.graphqlService.query(query, { area });
+    return response.neighborhoodInsights;
+  }
+
+  async getPriceHeatmap(): Promise<any[]> {
+    const query = `
+      query PriceHeatmap {
+        priceHeatmap {
+          area
+          avgRent
+          minRent
+          maxRent
+          count
+          avgPricePerSqm
+        }
+      }
+    `;
+    const response = await this.graphqlService.query(query);
+    return response.priceHeatmap;
+  }
+
+  async getEarlyAccessProperties(page: number = 1, limit: number = 20): Promise<any> {
+    const query = `
+      query EarlyAccessProperties($page: Int, $limit: Int) {
+        earlyAccessProperties(page: $page, limit: $limit) {
+          properties
+          total
+          page
+          limit
+          totalPages
+        }
+      }
+    `;
+    const response = await this.graphqlService.query(query, { page, limit });
+    return response.earlyAccessProperties;
+  }
+
+  async getAvailableAreas(): Promise<string[]> {
+    const query = `
+      query AvailableAreas {
+        availableAreas
+      }
+    `;
+    const response = await this.graphqlService.query(query);
+    return response.availableAreas;
+  }
+
+  async boostProperty(propertyId: string, boostType?: string, durationDays?: number): Promise<any> {
+    const mutation = `
+      mutation BoostProperty($propertyId: ID!, $boostType: BoostStatus, $durationDays: Int) {
+        boostProperty(propertyId: $propertyId, boostType: $boostType, durationDays: $durationDays) {
+          success
+          boostStatus
+          boostedUntil
+        }
+      }
+    `;
+    const response = await this.graphqlService.mutate(mutation, { propertyId, boostType, durationDays });
+    return response.boostProperty;
+  }
+
+  async removeBoost(propertyId: string): Promise<any> {
+    const mutation = `
+      mutation RemoveBoost($propertyId: ID!) {
+        removeBoost(propertyId: $propertyId) {
+          success
+        }
+      }
+    `;
+    const response = await this.graphqlService.mutate(mutation, { propertyId });
+    return response.removeBoost;
+  }
+
+  async generateRentReceipt(
+    propertyId: string,
+    tenantId: string,
+    month: number,
+    year: number,
+    amount: number,
+    currency?: string
+  ): Promise<any> {
+    const mutation = `
+      mutation GenerateRentReceipt(
+        $propertyId: ID!,
+        $tenantId: ID!,
+        $month: Int!,
+        $year: Int!,
+        $amount: Float!,
+        $currency: String
+      ) {
+        generateRentReceipt(
+          propertyId: $propertyId,
+          tenantId: $tenantId,
+          month: $month,
+          year: $year,
+          amount: $amount,
+          currency: $currency
+        ) {
+          receiptId
+          generatedAt
+          period { month year }
+          owner { name email phone }
+          tenant { name email phone }
+          property { id title address }
+          payment { amount currency monthlyRent }
+        }
+      }
+    `;
+    const response = await this.graphqlService.mutate(mutation, {
+      propertyId, tenantId, month, year, amount, currency
+    });
+    return response.generateRentReceipt;
+  }
+
+  // activatePremium and cancelPremiumSubscription are handled by
+  // subscribeToPlan (→ upgradePremium) and cancelSubscription (→ cancelPremium) above
+
+  async trackView(propertyId: string, source?: string, duration?: number): Promise<boolean> {
+    // TODO: Implement trackView mutation on backend
+    // For now, return true silently to avoid errors
+    console.debug('[PremiumService] trackView called for:', propertyId, '- mutation not implemented on backend');
+    return true;
+  }
+
+  async trackClick(propertyId: string): Promise<boolean> {
+    // TODO: Implement trackClick mutation on backend
+    // For now, return true silently to avoid errors
+    console.debug('[PremiumService] trackClick called for:', propertyId, '- mutation not implemented on backend');
+    return true;
+  }
+
+  async trackContactRequest(propertyId: string): Promise<boolean> {
+    const mutation = `
+      mutation TrackContactRequest($propertyId: ID!) {
+        trackContactRequest(propertyId: $propertyId)
+      }
+    `;
+    const response = await this.graphqlService.mutate(mutation, { propertyId });
+    return response.trackContactRequest;
   }
 }
 

@@ -1,31 +1,28 @@
+import date from '@nozbe/watermelondb/decorators/date';
 import { getGraphQLService } from './graphqlService';
 
 export interface Activity {
   id: string;
   propertyId: string;
-  clientId: string;
-  isVisited: boolean;
-  visitDate?: string;
-  isVisitAccepted: boolean;
-  isReservation: boolean;
-  message: string;
+  paymentId?: string;
+  visitId?: string;
+  visitStatus?: string;
+  paymentStatus?: string;
+  reservationId?: string;
+  reservationStatus?: string;
+  amount?: number;
   reservationDate?: string;
-  isReservationAccepted: boolean;
-  booking: boolean;
-  isFileRequired: boolean;
-  documentsUploaded: boolean;
-  uploadedFiles: UploadedFile[];
-  isBookingAccepted?: boolean;
-  isPayment?: boolean;
-  amount: number;
-  paymentDate?: string;
-  conversationId?: string;
-  reason?: string;
-  refusDate?: string;
-  acceptedDate?: string;
-  activityId: string;
   createdAt: string;
   updatedAt: string;
+
+  // Contract fields
+  contractUrl?: string;
+  contractGeneratedAt?: string;
+  isPayment?: boolean;
+  paymentDeadline?: string;
+  isContratEnd?: boolean;
+  contratEndDate?: string;
+  currency?: string;
 
   // Relations
   property?: Property;
@@ -43,11 +40,51 @@ export interface UploadedFile {
   uploadedAt: string;
 }
 
+export interface GeneralHouseInfo {
+  rooms: number;
+  bedrooms: number;
+  bathrooms: number;
+  toilets?: number;
+  surface: number;
+  area: string;
+  furnished: boolean;
+  pets: boolean;
+  smoking: boolean;
+  maxOccupants: number;
+}
+
+export interface GeneralLandInfo {
+  surface: number;
+  constructible: boolean;
+  cultivable: boolean;
+  fence: boolean;
+}
+
 export interface Property {
   id: string;
   title: string;
+  description?: string;
   address: string;
   ownerId: string;
+  ownerName?: string;
+  ownerEmail?: string;
+  ownerPhone?: string;
+  ownerAvatar?: string;
+  actionType?: string;
+  propertyType?: string;
+  images?: string[];
+  amenities?: string[];
+  availableFrom?: string;
+  status?: string;
+  generalHInfo?: GeneralHouseInfo;
+  generalLandinfo?: GeneralLandInfo;
+  ownerCriteria?: {
+    monthlyRent?: number;
+    depositAmount?: number;
+    currency?: string;
+    minimumDuration?: number;
+    acceptedPaymentMethods?: string[];
+  };
 }
 
 export interface User {
@@ -203,23 +240,65 @@ export class ActivityService {
           }
           isBookingAccepted
           isPayment
+          paymentStatus
           amount
           paymentDate
-          conversationId
-          reason
-          refusDate
-          acceptedDate
-          activityId
+          paymentDeadline
+          contractUrl
+          contractGeneratedAt
           createdAt
           updatedAt
           status
           type
           urgency
+          bookingInfo {
+            fullName
+            startDate
+            endDate
+            numberOfOccupants
+            monthlyIncome
+          }
           property {
             id
             title
+            description
             address
             ownerId
+            ownerName
+            ownerEmail
+            ownerPhone
+            ownerAvatar
+            actionType
+            propertyType
+            images
+            amenities
+            availableFrom
+            status
+            generalHInfo {
+              rooms
+              bedrooms
+              bathrooms
+              toilets
+              surface
+              area
+              furnished
+              pets
+              smoking
+              maxOccupants
+            }
+            generalLandinfo {
+              surface
+              constructible
+              cultivable
+              fence
+            }
+            ownerCriteria {
+              monthlyRent
+              depositAmount
+              currency
+              minimumDuration
+              acceptedPaymentMethods
+            }
           }
           client {
             id
@@ -277,11 +356,6 @@ export class ActivityService {
               isPayment
               amount
               paymentDate
-              conversationId
-              reason
-              refusDate
-              acceptedDate
-              activityId
               createdAt
               updatedAt
               status
@@ -335,31 +409,18 @@ export class ActivityService {
   ): Promise<ActivityConnection> {
     const query = `
       query GetUserActivities($userId: ID!, $pagination: PaginationInput, $filters: ActivityFilters) {
-        userActivities(userId: $userId, pagination: $pagination, filters: $filters) {
+        activities(userId: $userId, pagination: $pagination, filters: $filters) {
           edges {
             node {
               id
               propertyId
               clientId
-              isVisited
-              visitDate
-              isVisitAccepted
-              isReservation
-              message
-              reservationDate
-              isReservationAccepted
-              booking
-              isFileRequired
-              documentsUploaded
-              uploadedFiles {
-                fileName
-                fileUrl
-                uploadedAt
-              }
-              isBookingAccepted
               isPayment
+              paymentStatus
+              visiteStatus
+              reservationStatus
               amount
-              paymentDate
+              reservationDate
               createdAt
               updatedAt
               status
@@ -368,8 +429,14 @@ export class ActivityService {
               property {
                 id
                 title
+                images
                 address
                 ownerId
+                actionType
+                ownerCriteria {
+                  monthlyRent
+                  depositAmount
+                }
               }
               client {
                 id
@@ -392,11 +459,13 @@ export class ActivityService {
     `;
 
     try {
-      const response = await this.graphqlService.query<{ userActivities: ActivityConnection }>(
+      console.log('🔍 [ActivityService] Fetching activities for user:', userId);
+      const response = await this.graphqlService.query<{ activities: ActivityConnection }>(
         query,
         { userId, pagination, filters }
       );
-      return response.userActivities;
+      console.log('📥 [ActivityService] Activities response:', response?.activities?.edges?.length, 'items');
+      return response.activities;
     } catch (error) {
       console.error('Error fetching user activities:', error);
       throw error;
@@ -499,11 +568,6 @@ export class ActivityService {
           isPayment
           amount
           paymentDate
-          conversationId
-          reason
-          refusDate
-          acceptedDate
-          activityId
           createdAt
           updatedAt
           status
@@ -566,11 +630,6 @@ export class ActivityService {
           isPayment
           amount
           paymentDate
-          conversationId
-          reason
-          refusDate
-          acceptedDate
-          activityId
           createdAt
           updatedAt
           status
@@ -617,9 +676,6 @@ export class ActivityService {
         updateActivityStatus(id: $id, status: $status, reason: $reason) {
           id
           status
-          reason
-          refusDate
-          acceptedDate
           updatedAt
         }
       }
@@ -640,20 +696,27 @@ export class ActivityService {
   /**
    * Traite un paiement pour une activité
    */
-  async processPayment(
-    activityId: string,
-    amount: number,
-    paymentMethod?: string
-  ): Promise<Activity> {
+  async processPayment(activityId: string, amount: number): Promise<Activity> {
     const mutation = `
-      mutation ProcessPayment($activityId: ID!, $amount: Float!, $paymentMethod: String) {
-        processPayment(activityId: $activityId, amount: $amount, paymentMethod: $paymentMethod) {
+      mutation ProcessPayment($activityId: ID!, $amount: Float!) {
+        processPayment(activityId: $activityId, amount: $amount) {
           id
           isPayment
           amount
           paymentDate
+          paymentStatus
           status
           updatedAt
+          property {
+            id
+            title
+            address
+            actionType
+            ownerCriteria {
+              monthlyRent
+              depositAmount
+            }
+          }
         }
       }
     `;
@@ -661,12 +724,95 @@ export class ActivityService {
     try {
       const response = await this.graphqlService.mutate<{ processPayment: Activity }>(
         mutation,
-        { activityId, amount, paymentMethod }
+        { activityId, amount }
       );
       return response.processPayment;
     } catch (error) {
       console.error('Error processing payment:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Sauvegarde l'URL du contrat généré côté client dans la base de données
+   */
+  async saveContractUrl(activityId: string, contractUrl: string): Promise<Activity> {
+    const mutation = `
+      mutation SaveContractUrl($activityId: ID!, $contractUrl: String!) {
+        saveContractUrl(activityId: $activityId, contractUrl: $contractUrl) {
+          id
+          contractUrl
+          contractGeneratedAt
+          updatedAt
+        }
+      }
+    `;
+
+    try {
+      const response = await this.graphqlService.mutate<{ saveContractUrl: Activity }>(
+        mutation,
+        { activityId, contractUrl }
+      );
+      return response.saveContractUrl;
+    } catch (error) {
+      console.error('Error saving contract URL:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Récupère les activités avec contrat généré pour un utilisateur
+   */
+  async getUserContracts(userId: string): Promise<Activity[]> {
+    const query = `
+      query GetUserContracts($userId: ID!) {
+        activities(userId: $userId) {
+          edges {
+            node {
+              id
+              isPayment
+              paymentStatus
+              contractUrl
+              contractGeneratedAt
+              amount
+              currency
+              isContratEnd
+              contratEndDate
+              reservationDate
+              createdAt
+              updatedAt
+              property {
+                id
+                title
+                address
+                actionType
+                ownerCriteria {
+                  monthlyRent
+                  depositAmount
+                }
+              }
+              client {
+                id
+                fullName
+                email
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    try {
+      const response = await this.graphqlService.query<{ activities: ActivityConnection }>(
+        query,
+        { userId }
+      );
+      return (response.activities?.edges || [])
+        .map((e) => e.node)
+        .filter((a) => a.isPayment && a.contractUrl);
+    } catch (error) {
+      console.error('Error fetching user contracts:', error);
+      return [];
     }
   }
 
@@ -679,8 +825,6 @@ export class ActivityService {
         cancelActivity(id: $id, reason: $reason) {
           id
           status
-          reason
-          refusDate
           updatedAt
         }
       }
@@ -694,6 +838,30 @@ export class ActivityService {
       return response.cancelActivity;
     } catch (error) {
       console.error('Error canceling activity:', error);
+      throw error;
+    }
+  }
+
+  async activityEnded(activityId:string,  date:Date):Promise<Activity> {
+    const mutation = `
+      mutation EndActivitySession($activityId: ID!, $date: String!) {
+        endActivitySession(activityId: $activityId, date: $date) {
+          id
+          status
+          isContratEnd
+          contratEndDate
+          updatedAt
+        }
+      }
+    `;
+    try{
+      const  result = await this.graphqlService.mutate<{ endActivitySession: Activity }>(
+        mutation,
+        { activityId, date: date.toISOString() }
+      );
+      return result.endActivitySession;
+    }catch(error){
+      console.error('Error ended activity:', error);
       throw error;
     }
   }

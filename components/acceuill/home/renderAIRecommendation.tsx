@@ -7,7 +7,8 @@
  import { MotiView, MotiText } from "moti";
  import { ThemedText } from "@/components/ui/ThemedText";
  import { ThemedView } from "@/components/ui/ThemedView";
-import { useTheme } from "@/components/contexts/theme/themehook";
+import { useTheme } from "@/hooks/themehook";
+import { useLanguage } from '@/components/contexts/language';
 
  
 type Props = {
@@ -18,6 +19,7 @@ type Props = {
 
  const RenderAIRecommendation:React.FC<Props> = ({showAIRecommendations,setShowAIRecommendations}) => {
     if (!showAIRecommendations) return null;
+    const { t } = useLanguage();
     
     return (
       <MotiView
@@ -51,10 +53,10 @@ type Props = {
                 </ThemedView>
                 <ThemedView style={{ backgroundColor: 'transparent' }}>
                   <ThemedText style={{ fontWeight: '700', color:"#60a5fa"}}>
-                    Assistant RenHome AI
+                    {t('homeComponents.aiAssistant')}
                   </ThemedText>
                   <ThemedText style={{ fontSize: 12, color:"#93c5fd"}}>
-                    Recommandations personnalisées
+                    {t('homeComponents.personalizedRecommendations')}
                   </ThemedText>
                 </ThemedView>
               </ThemedView>
@@ -64,8 +66,7 @@ type Props = {
                 style={{ backgroundColor:'rgba(30, 58, 138, 0.3)'}}
               >
                 <ThemedText  type ='caption' className="leading-1  w-70 text-wrap text-justify" style={{ color:"#bfdbfe"  }}>
-                  Basé sur vos préférences, nous avons sélectionné 3 propriétés qui correspondent à vos critères. 
-                  Notre analyse IA suggère que la propriété à "California" correspond le mieux à votre style de vie.
+                  {t('homeComponents.aiRecommendationText')}
                 </ThemedText>
               </ThemedView>
 
@@ -78,7 +79,7 @@ type Props = {
                   }}
                 >
                   <ThemedText style={{ color:"#93c5fd",  fontWeight: '600', fontSize: 12 }}>
-                    Voir les suggestions
+                    {t('homeComponents.viewSuggestions')}
                   </ThemedText>
                 </TouchableOpacity>
                 
@@ -89,7 +90,7 @@ type Props = {
                   }}
                 >
                   <ThemedText style={{ color: '#ffffff', fontWeight: '600', fontSize: 12 }}>
-                    Affiner mes critères
+                    {t('homeComponents.refineCriteria')}
                   </ThemedText>
                 </TouchableOpacity>
               </ThemedView>

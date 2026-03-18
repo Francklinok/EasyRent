@@ -9,24 +9,36 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
-  StatusBar
+  SafeAreaView,
+  StatusBar,
+  ScrollView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { authService } from '@/components/services/authService';
+import { authService } from '@/services/restApiService/authService';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeColors } from '@/hooks/themehook';
 
 const VerifyEmail = () => {
+  const colors = useThemeColors();
   const [verificationCode, setVerificationCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  
+
   const router = useRouter();
   const { email } = useLocalSearchParams<{ email: string }>();
+
+  const BG       = colors.primary + '15';
+  const BTN      = colors.primary + '80';
+  const TEXT     = colors.text;
+  const GRAY     = colors.input.placeholder;
+  const INPUT_BG = colors.surfaceVariant;
+  const BORDER   = colors.input.border;
+  const PRIMARY  = colors.primary;
 
   useEffect(() => {
     if (!email) {
       Alert.alert('Erreur', 'Email manquant pour la vérification.', [
-        { text: 'OK', onPress: () => router.replace('/Auth/Register') }
+        { text: 'OK', onPress: () => router.replace('/Auth/Register') },
       ]);
     }
   }, [email]);
@@ -36,14 +48,13 @@ const VerifyEmail = () => {
       Alert.alert('Code invalide', 'Veuillez entrer un code à 6 chiffres');
       return;
     }
-
     setLoading(true);
     try {
       const result = await authService.verifyAccount(email!, verificationCode);
       if (result.success || result.autoLogin) {
         router.push({
           pathname: '/Auth/PhotoUpload',
-          params: { email: email || '' }
+          params: { email: email || '' },
         });
       } else {
         Alert.alert('Erreur', result.message || 'Code invalide');
@@ -74,172 +85,172 @@ const VerifyEmail = () => {
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-      style={styles.container}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
-      
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#25D366" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Vérifier le numéro</Text>
-      </View>
-
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="mail" size={80} color="#25D366" />
-        </View>
-
-        <Text style={styles.title}>Vérifiez votre email</Text>
-        <Text style={styles.subtitle}>
-          Nous avons envoyé un SMS avec un code de vérification au numéro
-        </Text>
-        <Text style={styles.phoneNumber}>{email}</Text>
-
-        <View style={styles.codeContainer}>
-          <Text style={styles.codeLabel}>Entrez le code à 6 chiffres</Text>
-          <TextInput
-            value={verificationCode}
-            onChangeText={formatCode}
-            keyboardType="numeric"
-            style={styles.codeInput}
-            maxLength={6}
-            placeholder="------"
-            placeholderTextColor="#ccc"
-            textAlign="center"
-            editable={!loading}
-          />
-        </View>
-
-        <TouchableOpacity 
-          onPress={handleVerifyCode}
-          style={[styles.verifyButton, (loading || verificationCode.length !== 6) && styles.buttonDisabled]}
-          disabled={loading || verificationCode.length !== 6}
+    <SafeAreaView style={[styles.safe, { backgroundColor: BG }]}>
+      <StatusBar barStyle="dark-content" backgroundColor={BG} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {loading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.verifyButtonText}>Vérifier</Text>
-          )}
-        </TouchableOpacity>
+          {/* Back button */}
+          <TouchableOpacity onPress={() => router.back()} style={styles.backRow}>
+            <Ionicons name="arrow-back" size={22} color={TEXT} />
+          </TouchableOpacity>
 
-        <View style={styles.resendContainer}>
-          <Text style={styles.resendText}>Vous n'avez pas reçu le code ? </Text>
-          <TouchableOpacity onPress={handleResendCode} disabled={resendLoading}>
-            {resendLoading ? (
-              <ActivityIndicator size="small" color="#25D366" />
+          {/* Header */}
+          <Ionicons name="mail-outline" size={56} color={BTN} style={styles.icon} />
+          <Text style={[styles.title, { color: TEXT }]}>Vérifiez votre email</Text>
+          <Text style={[styles.subtitle, { color: GRAY }]}>
+            Nous avons envoyé un code de vérification à
+          </Text>
+          <View style={[styles.emailBox, { backgroundColor: INPUT_BG, borderColor: BORDER }]}>
+            <Text style={[styles.emailText, { color: TEXT }]}>{email}</Text>
+          </View>
+
+          {/* Code input */}
+          <Text style={[styles.codeLabel, { color: GRAY }]}>Entrez le code à 6 chiffres</Text>
+          <View style={[styles.inputWrap, { backgroundColor: INPUT_BG, borderColor: BORDER }]}>
+            <TextInput
+              value={verificationCode}
+              onChangeText={formatCode}
+              keyboardType="numeric"
+              style={[styles.codeInput, { color: TEXT }]}
+              maxLength={6}
+              placeholder="------"
+              placeholderTextColor={GRAY}
+              textAlign="center"
+              editable={!loading}
+            />
+          </View>
+
+          {/* Verify button */}
+          <TouchableOpacity
+            style={[
+              styles.btn,
+              { backgroundColor: BTN },
+              (loading || verificationCode.length !== 6) && { opacity: 0.5 },
+            ]}
+            onPress={handleVerifyCode}
+            disabled={loading || verificationCode.length !== 6}
+            activeOpacity={0.85}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.resendLink}>Renvoyer</Text>
+              <Text style={styles.btnText}>Vérifier</Text>
             )}
           </TouchableOpacity>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+
+          {/* Resend */}
+          <View style={styles.resendRow}>
+            <Text style={[styles.resendText, { color: GRAY }]}>Vous n'avez pas reçu le code ? </Text>
+            <TouchableOpacity onPress={handleResendCode} disabled={resendLoading}>
+              {resendLoading ? (
+                <ActivityIndicator size="small" color={PRIMARY} />
+              ) : (
+                <Text style={[styles.resendLink, { color: PRIMARY }]}>Renvoyer</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
-  header: {
+  scroll: {
+    paddingHorizontal: 28,
+    paddingTop: 40,
+    paddingBottom: 40,
+    alignItems: 'center',
+  },
+  backRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingBottom: 16,
-    backgroundColor: '#f8f9fa',
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginLeft: 16,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    alignItems: 'center',
-  },
-  iconContainer: {
+    alignSelf: 'flex-start',
+    gap: 6,
     marginBottom: 32,
+  },
+  backText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  icon: {
+    marginBottom: 16,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 30,
+    fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 8,
+    lineHeight: 20,
+    marginBottom: 12,
   },
-  phoneNumber: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#25D366',
-    textAlign: 'center',
-    marginBottom: 40,
-  },
-  codeContainer: {
+  emailBox: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
     width: '100%',
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 22,
+  },
+  emailText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   codeLabel: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 16,
-    textAlign: 'center',
+    fontSize: 14,
+    marginBottom: 12,
+    alignSelf: 'flex-start',
+  },
+  inputWrap: {
+    borderRadius: 12,
+    height: 54,
+    marginBottom: 28,
+    borderWidth: 1,
+    width: '100%',
+    justifyContent: 'center',
   },
   codeInput: {
-    width: 200,
-    height: 50,
-    borderBottomWidth: 2,
-    borderBottomColor: '#25D366',
     fontSize: 24,
-    fontWeight: '600',
-    color: '#333',
-    letterSpacing: 8,
+    fontWeight: '700',
+    letterSpacing: 10,
+    textAlign: 'center',
   },
-  verifyButton: {
-    backgroundColor: '#25D366',
-    paddingVertical: 14,
-    paddingHorizontal: 40,
-    borderRadius: 25,
-    marginBottom: 32,
+  btn: {
+    borderRadius: 30,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    marginBottom: 28,
   },
-  buttonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  verifyButtonText: {
-    color: 'white',
+  btnText: {
+    color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
-  resendContainer: {
+  resendRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   resendText: {
     fontSize: 14,
-    color: '#666',
   },
   resendLink: {
     fontSize: 14,
-    color: '#25D366',
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
 

@@ -2,6 +2,7 @@ import { GraphQLService, getGraphQLService } from './graphqlService';
 import { getActivityService } from './activityService';
 import { getChatService, ConversationType } from './chatService';
 import { getNotificationService, NotificationType } from './notificationService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Types
 export interface BookingRequest {
@@ -18,6 +19,13 @@ export interface BookingRequest {
   financingType?: string;
   timeframe?: string;
   currentSituation?: string;
+  // For per-unit reservations
+  unitId?: string;
+  unitName?: string;
+  // Client identity + payment delay
+  fullName?: string;
+  proposedPaymentDays?: number;
+  proposedPaymentDate?: string;
 }
 
 export type ActivityStatus =
@@ -45,6 +53,8 @@ export type ActivityType =
   updatedAt: string;
   visiteStatus: ActivityStatus;
   reservationStatus: ActivityStatus;
+  isPayment?: boolean;
+  contractUrl?: string;
 }
 
 
@@ -59,6 +69,9 @@ export interface VisitRequest {
   visitType?: VisitType;
   numberOfVisitors?: number;
   message?: string;
+  // For per-unit visits
+  unitId?: string;
+  unitName?: string;
 }
 
 export interface VisitResponse {
@@ -196,7 +209,7 @@ class BookingService {
   }
 
   // Generate professional visit request message
-  private generateVisitRequestMessage(request: VisitRequest, propertyTitle: string, clientName: string): string {
+  private generateVisitRequestMessage(request: VisitRequest, propertyTitle: string, _clientName: string): string {
     const visitDate = new Date(request.visitDate);
     const formattedDate = visitDate.toLocaleDateString('fr-FR', {
       weekday: 'long',
@@ -212,49 +225,38 @@ class BookingService {
     }[request.visitType || 'physical'];
 
     const visitorsText = request.numberOfVisitors && request.numberOfVisitors > 1
-      ? ` (${request.numberOfVisitors} personnes)`
+      ? ` pour ${request.numberOfVisitors} personnes`
       : '';
 
-    return `📋 **Nouvelle demande de visite**
+    const unitText = request.unitName ? `\nChambre: ${request.unitName}` : '';
 
-Bonjour,
+    let message = `DEMANDE DE VISITE\n${propertyTitle}${unitText}\n${visitTypeText}${visitorsText}\n${formattedDate} à ${request.visitTime}`;
 
-Je souhaiterais planifier une ${visitTypeText} pour le bien "${propertyTitle}".
+    if (request.message) {
+      message += `\n\n${request.message}`;
+    }
 
-📅 **Date souhaitée :** ${formattedDate}
-🕐 **Heure :** ${request.visitTime}${visitorsText}
-
-${request.message ? `💬 **Message :** ${request.message}\n\n` : ''}Merci de me confirmer votre disponibilité pour ce créneau.
-
-Cordialement,
-${clientName}`;
+    return message;
   }
 
   // Generate professional booking/reservation request message
   private generateBookingRequestMessage(
     request: BookingRequest,
     propertyTitle: string,
-    clientName: string,
+    _clientName: string,
     listType: 'rent' | 'sale'
   ): string {
     const isForSale = listType === 'sale';
 
     if (isForSale) {
       // Message pour achat
-      return `🎯 **Nouvelle manifestation d'intérêt**
+      let message = `DEMANDE D'ACQUISITION\n${propertyTitle}\nBudget: ${request.budget?.toLocaleString() || 'À définir'} €\nFinancement: ${request.financingType || 'À définir'}\nDélai: ${request.timeframe || 'Flexible'}`;
 
-Bonjour,
+      if (request.currentSituation) {
+        message += `\n\n${request.currentSituation}`;
+      }
 
-Je suis très intéressé(e) par l'acquisition de votre bien "${propertyTitle}".
-
-💰 **Budget :** ${request.budget?.toLocaleString() || 'À définir'} €
-🏦 **Type de financement :** ${request.financingType || 'À définir'}
-⏰ **Délai souhaité :** ${request.timeframe || 'Flexible'}
-${request.currentSituation ? `\n💬 **Message :**\n${request.currentSituation}\n` : ''}
-Je reste à votre disposition pour organiser une visite ou discuter des modalités.
-
-Cordialement,
-${clientName}`;
+      return message;
     } else {
       // Message pour location
       const formattedStartDate = new Date(request.startDate).toLocaleDateString('fr-FR', {
@@ -269,22 +271,15 @@ ${clientName}`;
         year: 'numeric'
       });
 
-      return `🏠 **Nouvelle demande de réservation**
+      const unitText = request.unitName ? `\nChambre: ${request.unitName}` : '';
 
-Bonjour,
+      let message = `DEMANDE DE RÉSERVATION\n${propertyTitle}${unitText}\nDu ${formattedStartDate} au ${formattedEndDate}\n${request.numberOfOccupants} occupant${request.numberOfOccupants > 1 ? 's' : ''} · Revenu: ${request.monthlyIncome?.toLocaleString() || 'N/A'} €${request.hasGuarantor ? ' · Garant: Oui' : ''}${request.visitCompleted ? ' · Visite effectuée' : ''}`;
 
-Je souhaiterais réserver votre bien "${propertyTitle}".
+      if (request.currentSituation) {
+        message += `\n\n${request.currentSituation}`;
+      }
 
-📅 **Période souhaitée :** Du ${formattedStartDate} au ${formattedEndDate}
-👥 **Nombre d'occupants :** ${request.numberOfOccupants}
-💵 **Revenu mensuel :** ${request.monthlyIncome?.toLocaleString() || 'N/A'} €/mois
-🛡️ **Garant :** ${request.hasGuarantor ? 'Oui' : 'Non'}
-${request.visitCompleted ? '✅ **Visite effectuée**\n' : ''}
-${request.currentSituation ? `\n💬 **Message :**\n${request.currentSituation}\n` : ''}
-Je suis disponible pour fournir tous les justificatifs nécessaires et répondre à vos questions.
-
-Cordialement,
-${clientName}`;
+      return message;
     }
   }
 
@@ -303,6 +298,13 @@ ${clientName}`;
           visitDate
           message
           status
+          visitInfo {
+            visitType
+            visitDate
+            visitTime
+            numberOfVisitors
+            notes
+          }
         }
       }
     `;
@@ -329,7 +331,16 @@ ${clientName}`;
           propertyId: request.propertyId,
           message: professionalMessage,
           isVisited: true,
-          visitDate: request.visitDate
+          visitDate: request.visitDate,
+          ...(request.unitId && { unitId: request.unitId }),
+          ...(request.unitName && { unitName: request.unitName }),
+          visitInfo: {
+            visitType: request.visitType || 'physical',
+            visitDate: request.visitDate,
+            visitTime: request.visitTime,
+            numberOfVisitors: request.numberOfVisitors || 1,
+            notes: request.message || ''
+          }
         }
       });
 
@@ -441,40 +452,41 @@ ${clientName}`;
     }
   }
 
-  async getPropertyActivityService (propertyId:string):Promise<Activity[]|null> {
-    const query = `query GetPropertyActivity($propertyId: ID!) {
-      getPropertyActivity(propertyId: $propertyId) {
-       id
-      status
-      type
-      message
-      createdAt
-      updatedAt
-      visiteStatus
-      reservationStatus
-     }} `
-   try{
-    const result = await this.graphql.query(query, {propertyId})
-    if(!result.getPropertyActivity){
+  async getPropertyActivityService(propertyId: string, userId?: string): Promise<Activity[] | null> {
+    const query = `query GetPropertyActivity($propertyId: ID!, $userId: ID) {
+      getPropertyActivity(propertyId: $propertyId, userId: $userId) {
+        id
+        status
+        type
+        message
+        createdAt
+        updatedAt
+        visiteStatus
+        reservationStatus
+        isPayment
+        contractUrl
+      }
+    }`;
+    try {
+      const result = await this.graphql.query(query, { propertyId, userId: userId || null });
+      if (!result.getPropertyActivity) {
+        return [];
+      }
+      return result.getPropertyActivity;
+    } catch (error) {
+      console.error('Error fetching property activity:', error);
       return [];
     }
-    return result.getPropertyActivity;
-   } catch (error) {
-    console.error('Error fetching property activity:', error);
-    return [];
-   }
   }
 
   // Get user's existing visit for a property
   async getUserVisitForProperty(propertyId: string, clientId: string): Promise<any | null> {
-    console.log('\n╔═══════════════════════════════════════════════════════════╗');
-    console.log('║  getUserVisitForProperty - DÉBUT                          ║');
-    console.log('╚═══════════════════════════════════════════════════════════╝');
+    console.log('🔍 [getUserVisitForProperty] Starting...');
     console.log('📍 PropertyId:', propertyId);
     console.log('👤 ClientId:', clientId);
 
     try {
-
+      // Ajouter isReservation pour filtrer côté client si besoin
       const query = `
         query GetUserVisitForProperty($propertyId: ID!, $userId: ID!) {
           getUserVisitForProperty(propertyId: $propertyId, userId: $userId) {
@@ -483,6 +495,8 @@ ${clientName}`;
             clientId
             isVisited
             isVisiteAccepted
+            isReservation
+            visiteStatus
             status
             visitDate
             message
@@ -493,20 +507,37 @@ ${clientName}`;
         }
       `;
 
+      console.log('📤 Sending GraphQL query with variables:', { propertyId, userId: clientId });
+      console.log('📤 PropertyId type:', typeof propertyId, 'length:', propertyId?.length);
+      console.log('📤 ClientId type:', typeof clientId, 'length:', clientId?.length);
+
       try {
         const result = await this.graphql.query(query, {
           propertyId,
           userId: clientId
         });
 
+        console.log('📥 GraphQL raw result:', JSON.stringify(result, null, 2));
+
         if (result.getUserVisitForProperty) {
+          console.log('✅ GraphQL returned visit:', result.getUserVisitForProperty);
           return result.getUserVisitForProperty;
         } else {
-          console.log('⚠️ GraphQL OK mais aucun résultat');
+          console.log('⚠️ GraphQL OK mais result.getUserVisitForProperty est null/undefined');
+          console.log('📦 Full result object:', result);
+          console.log('💡 Possible causes:');
+          console.log('   - No activity exists with these IDs');
+          console.log('   - IDs format mismatch (24 hex chars expected)');
+          console.log('   - Authentication issue');
         }
       } catch (graphqlError: any) {
         console.log('❌ ÉCHEC GraphQL');
         console.log('Erreur:', graphqlError.message || graphqlError);
+        console.log('Erreur complète:', JSON.stringify(graphqlError, null, 2));
+        // Check for specific error types
+        if (graphqlError.message?.includes('Authentication')) {
+          console.log('🔐 Authentication error - token may be missing or expired');
+        }
       }
 
       const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.107:3000';
@@ -618,6 +649,21 @@ ${clientName}`;
           status
           createdAt
           updatedAt
+          bookingInfo {
+            fullName
+            startDate
+            endDate
+            numberOfOccupants
+            hasGuarantor
+            monthlyIncome
+            budget
+            financingType
+            intendedUse
+            specialRequirements
+            messageToOwner
+            proposedPaymentDays
+            proposedPaymentDate
+          }
         }
       }
     `;
@@ -638,12 +684,40 @@ ${clientName}`;
 
       console.log('📝 Message de réservation généré:', professionalMessage);
 
+      // Build bookingInfo from request data
+      const bookingInfo: Record<string, any> = {
+        fullName: request.fullName || clientName || undefined,
+        startDate: request.startDate,
+        endDate: request.endDate,
+        numberOfOccupants: request.numberOfOccupants,
+        hasGuarantor: request.hasGuarantor,
+        monthlyIncome: request.monthlyIncome,
+        messageToOwner: request.currentSituation || undefined,
+        proposedPaymentDays: request.proposedPaymentDays || undefined,
+        proposedPaymentDate: request.proposedPaymentDate || undefined,
+      };
+
+      // Add sale-specific fields
+      if (finalListType === 'sale') {
+        bookingInfo.budget = request.budget;
+        bookingInfo.financingType = request.financingType;
+        bookingInfo.intendedUse = request.timeframe; // reuse timeframe for intendedUse
+      }
+
+      // Remove undefined values
+      Object.keys(bookingInfo).forEach(key => {
+        if (bookingInfo[key] === undefined) delete bookingInfo[key];
+      });
+
       const result = await this.graphql.mutate(mutation, {
         input: {
           propertyId: request.propertyId,
           message: professionalMessage,
           reservationDate: request.startDate,
-          uploadedFiles: []
+          ...(request.unitId && { unitId: request.unitId }),
+          ...(request.unitName && { unitName: request.unitName }),
+          uploadedFiles: [],
+          bookingInfo
         }
       });
 
@@ -1127,6 +1201,11 @@ ${clientName}`;
             status
             message
             reservationDate
+            paymentDeadline
+            extensionStatus
+            extensionRequestedDays
+            extensionRequestedDate
+            extensionGrantedDeadline
             createdAt
             updatedAt
           }
@@ -1231,24 +1310,14 @@ ${clientName}`;
         year: 'numeric'
       });
 
-      const visitTypeText = {
-        physical: 'visite physique',
-        virtual: 'visite virtuelle',
-        'self-guided': 'visite autonome'
-      }[visitType];
-
-      const visitorsText = numberOfVisitors && numberOfVisitors > 1
-        ? ` (${numberOfVisitors} personnes)`
-        : '';
-
-      const notificationMessage = `${visitTypeText} demandée pour "${propertyTitle || 'votre propriété'}" le ${formattedDate} à ${visitTime}${visitorsText}`;
+      const notificationMessage = `${propertyTitle || 'Propriété'} - ${formattedDate} à ${visitTime}`;
 
       // Send comprehensive notification (push + in-app)
       await this.notificationService.sendNotification(
         property.ownerId,
         {
           type: NotificationType.VISIT_SCHEDULED,
-          title: '📅 Nouvelle demande de visite',
+          title: 'Nouvelle demande de visite',
           message: notificationMessage,
           priority: 'high', // Priorité haute pour les visites
           propertyId,
@@ -1381,21 +1450,31 @@ ${clientName}`;
     );
   }
 
-  // Get owner's pending requests (visits + reservations)
+  // Get owner's pending requests (visits + reservations) — GraphQL
   async getOwnerRequests(ownerId: string): Promise<any[]> {
-    try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL 
-      const response = await fetch(`${apiUrl}/api/visits/owner/${ownerId}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch owner requests');
+    const query = `
+      query GetOwnerPendingRequests($ownerId: ID!) {
+        getOwnerPendingRequests(ownerId: $ownerId) {
+          id
+          type
+          propertyId
+          propertyTitle
+          clientId
+          clientName
+          date
+          time
+          status
+          message
+          isReservation
+          rejectionReason
+          visiteStatus
+          reservationStatus
+        }
       }
-
-      const visits = await response.json();
-      return visits || [];
+    `;
+    try {
+      const result = await this.graphql.query(query, { ownerId });
+      return result.getOwnerPendingRequests || [];
     } catch (error) {
       console.error('Error getting owner requests:', error);
       return [];
@@ -1409,8 +1488,17 @@ ${clientName}`;
           id
           title
           ownerId
+          images
           actionType
-          price
+          propertyType
+          address
+          acceptedPaymentMethods
+          ownerCriteria {
+            monthlyRent
+            currency
+            depositAmount
+            acceptedPaymentMethods
+          }
         }
       }
     `;
@@ -1625,27 +1713,12 @@ ${clientName}`;
 
       // Construire le message texte
       let messageText = isForSale
-        ? `🎯 Nouvelle manifestation d'intérêt pour votre propriété "${bookingData.propertyTitle}"!\n\n`
-        : `🏠 Nouvelle demande de réservation pour votre propriété "${bookingData.propertyTitle}"!\n\n`;
-
-      messageText += `👤 Client: ${bookingData.clientName || 'Client'}\n\n`;
-
-      if (isForSale) {
-        messageText += `💰 Budget: ${bookingData.budget?.toLocaleString() || 'N/A'} €\n`;
-        messageText += `🏦 Financement: ${bookingData.financingType || 'Non spécifié'}\n`;
-        messageText += `⏰ Délai: ${bookingData.timeframe || 'Non spécifié'}\n`;
-      } else {
-        messageText += `📅 Période: ${new Date(bookingData.startDate || '').toLocaleDateString('fr-FR')} - ${new Date(bookingData.endDate || '').toLocaleDateString('fr-FR')}\n`;
-        messageText += `👥 Occupants: ${bookingData.numberOfOccupants || 1}\n`;
-        messageText += `💵 Revenu: ${bookingData.monthlyIncome?.toLocaleString() || 'N/A'} €/mois\n`;
-        messageText += `🛡️ Garant: ${bookingData.hasGuarantor ? 'Oui' : 'Non'}\n`;
-      }
+        ? `DEMANDE D'ACQUISITION\n${bookingData.propertyTitle}\nBudget: ${bookingData.budget?.toLocaleString() || 'N/A'} €\nFinancement: ${bookingData.financingType || 'Non spécifié'}\nDélai: ${bookingData.timeframe || 'Non spécifié'}`
+        : `DEMANDE DE RÉSERVATION\n${bookingData.propertyTitle}\n${new Date(bookingData.startDate || '').toLocaleDateString('fr-FR')} - ${new Date(bookingData.endDate || '').toLocaleDateString('fr-FR')}\n${bookingData.numberOfOccupants || 1} occupant${(bookingData.numberOfOccupants || 1) > 1 ? 's' : ''} · Revenu: ${bookingData.monthlyIncome?.toLocaleString() || 'N/A'} €${bookingData.hasGuarantor ? ' · Garant: Oui' : ''}`;
 
       if (bookingData.clientMessage) {
-        messageText += `\n💬 Message du client:\n"${bookingData.clientMessage}"`;
+        messageText += `\n\n${bookingData.clientMessage}`;
       }
-
-      messageText += `\n\nVous pouvez accepter ou refuser cette demande ci-dessous.`;
 
       // Envoyer le message avec les données de réservation
       await chatService.sendMessage({
@@ -1709,14 +1782,14 @@ ${clientName}`;
   /**
    * Refuser une demande de réservation
    */
-  async rejectReservation(reservationId: string, reason: string): Promise<any> {
+  async rejectReservation(reservationId: string, reason?: string): Promise<any> {
     const mutation = `
-      mutation RefuseReservation($activityId: ID!, $reason: String!) {
-        refuseReservation(activityId: $activityId, reason: $reason) {
+      mutation RejectReservation($activityId: ID!, $reason: String) {
+        rejectReservation(activityId: $activityId, reason: $reason) {
           id
           status
           isReservationAccepted
-          reason
+          rejectionReason
         }
       }
     `;
@@ -1724,10 +1797,10 @@ ${clientName}`;
     try {
       const result = await this.graphql.mutate(mutation, {
         activityId: reservationId,
-        reason
+        reason: reason || 'Demande refusée'
       });
-      console.log('✅ Réservation refusée:', result.refuseReservation);
-      return result.refuseReservation;
+      console.log('✅ Réservation refusée:', result.rejectReservation);
+      return result.rejectReservation;
     } catch (error) {
       console.error('❌ Erreur refus réservation:', error);
       throw error;
@@ -1738,60 +1811,140 @@ ${clientName}`;
    * Récupérer l'historique complet des activités de l'utilisateur
    */
   async getUserActivities(userId: string): Promise<any[]> {
+    // Query avec les vrais noms de champs du backend ActivityProgress
     const query = `
       query GetUserActivities($userId: ID!) {
         getUserActivities(userId: $userId) {
           id
           propertyId
           propertyTitle
-          propertyImage
           visitStatus
           visitId
           reservationStatus
           reservationId
           paymentStatus
           paymentId
+          amount
+          currency
           updatedAt
-          currentStep
+          createdAt
+          reservationDate
         }
       }
     `;
 
     try {
-      // Note: currentStep n'est pas dans le schéma backend, mais on le calcule côté client
-      // On demande les autres champs
-      const queryNoStep = `
-        query GetUserActivities($userId: ID!) {
-          getUserActivities(userId: $userId) {
-            id
-            propertyId
-            propertyTitle
-            propertyImage
-            visitStatus
-            visitId
-            reservationStatus
-            reservationId
-            paymentStatus
-            paymentId
-            updatedAt
-          }
-        }
-      `;
-      
-      const response = await this.graphql.query(queryNoStep, { userId });
+      console.log('🔍 [BookingService] Fetching user activities for:', userId);
+      const response = await this.graphql.query(query, { userId });
+      console.log('📥 [BookingService] Raw activities response:', response);
       return response.getUserActivities || [];
     } catch (error) {
-      console.error('Error fetching user activities:', error);
+      console.error('❌ [BookingService] Error fetching user activities:', error);
       return [];
     }
   }
 
-  
+  /**
+   * Récupérer l'historique complet des activités de l'utilisateur via REST API (fallback)
+   */
+  async getUserActivitiesREST(userId: string): Promise<any[]> {
+    try {
+      console.log('🔍 [BookingService] Fetching user activities via REST API for:', userId);
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.107:3000';
+      const token = await AsyncStorage.getItem('@auth_access_token') ||
+          await AsyncStorage.getItem('accessToken');
 
+      const response = await fetch(`${apiUrl}/api/activities/user/${userId}`, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📥 [BookingService] REST activities response:', data);
+        return Array.isArray(data) ? data : [];
+      } else {
+        console.error('❌ [BookingService] REST API Error:', response.status);
+        return [];
+      }
+    } catch (error) {
+      console.error('❌ [BookingService] Error fetching user activities via REST:', error);
+      return [];
+    }
+  }
+
+  async getOwnerExtensionRequests(ownerId: string): Promise<any[]> {
+    const query = `
+      query GetOwnerExtensionRequests($ownerId: ID!) {
+        getOwnerExtensionRequests(ownerId: $ownerId) {
+          id
+          propertyId
+          propertyTitle
+          clientId
+          clientName
+          paymentDeadline
+          extensionRequestedDays
+          extensionRequestedDate
+          extensionStatus
+          createdAt
+        }
+      }
+    `;
+    try {
+      const result = await this.graphql.query(query, { ownerId });
+      return result.getOwnerExtensionRequests || [];
+    } catch (error) {
+      console.error('Error fetching extension requests:', error);
+      return [];
+    }
+  }
+
+  async requestPaymentExtension(activityId: string, days?: number, date?: string): Promise<any> {
+    const mutation = `
+      mutation RequestPaymentExtension($activityId: ID!, $days: Int, $date: String) {
+        requestPaymentExtension(activityId: $activityId, days: $days, date: $date) {
+          id
+          paymentDeadline
+          extensionStatus
+          extensionRequestedDays
+          extensionRequestedDate
+          extensionGrantedDeadline
+          updatedAt
+        }
+      }
+    `;
+    try {
+      const result = await this.graphql.mutate(mutation, { activityId, days, date });
+      return result.requestPaymentExtension;
+    } catch (error) {
+      console.error('Error requesting payment extension:', error);
+      throw error;
+    }
+  }
+
+  async respondToExtensionRequest(activityId: string, accepted: boolean): Promise<any> {
+    const mutation = `
+      mutation RespondToExtensionRequest($activityId: ID!, $accepted: Boolean!) {
+        respondToExtensionRequest(activityId: $activityId, accepted: $accepted) {
+          id
+          paymentDeadline
+          extensionStatus
+          extensionGrantedDeadline
+          updatedAt
+        }
+      }
+    `;
+    try {
+      const result = await this.graphql.mutate(mutation, { activityId, accepted });
+      return result.respondToExtensionRequest;
+    } catch (error) {
+      console.error('Error responding to extension request:', error);
+      throw error;
+    }
+  }
 }
-
-
-
 
 // Singleton instance
 let bookingServiceInstance: BookingService | null = null;

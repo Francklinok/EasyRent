@@ -8,73 +8,65 @@ import {
   Modal,
   Animated,
   Alert,
-  Dimensions,
   Vibration,
   TextInput,
   Linking,
-  Clipboard,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons, MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
+import { Ionicons } from "@expo/vector-icons";
 import { MessageBodyProps } from "@/types/MessageTypes";
-import { ThemedText } from "@/components/ui/ThemedText";
+import { useTheme } from "@/hooks/themehook";
+import { usePrivacy } from "@/components/contexts/privacy/PrivacyContext";
+import { getBookingService } from "@/services/api/bookingService";
 import { ThemedView } from "@/components/ui/ThemedView";
-import { useTheme } from "@/components/contexts/theme/themehook";
 
-const { width: screenWidth } = Dimensions.get('window');
+// Single source of truth for message body typography
+const MSG_FONT = { fontSize: 14, lineHeight: 22 } as const;
 
 const MessageDisplay = ({
   message,
   currentUserId,
+  isSent: isSentProp,
   onReply,
   onDelete,
   onReact,
   onMarkAsRead,
-  onEdit
+  onEdit,
 }: MessageBodyProps) => {
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editText, setEditText] = useState(message.content);
-  const [isPressed, setIsPressed] = useState(false);
-  const [showActions, setShowActions] = useState(false);
-  
+  const [visitActionLoading, setVisitActionLoading] = useState(false);
+
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const contextMenuScale = useRef(new Animated.Value(0)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const actionsOpacity = useRef(new Animated.Value(0)).current;
 
-  const isSent = message.senderId === currentUserId;
-  const senderAvatar = message.sender?.avatar || `https://ui-avatars.com/api/?name=${message.sender?.name || 'User'}&background=random`;
-  const senderName = message.sender?.name || 'Unknown';
+  const isSent =
+    isSentProp !== undefined
+      ? isSentProp
+      : Boolean(
+          message.isSent !== undefined
+            ? message.isSent
+            : currentUserId &&
+              message.senderId &&
+              String(message.senderId) === String(currentUserId)
+        );
+
   const { theme } = useTheme();
+  const { isReadReceiptsEnabled } = usePrivacy();
 
-  const colors = {
-    primary: '#1DA1F2',
-    primaryHover: '#1A91DA',
-    background: theme.surface,
-    backgroundHover: theme.surfaceVariant + '30',
-    text: theme.onSurface,
-    textSecondary: theme.onSurface + '70',
-    textMuted: theme.onSurface + '50',
-    border: theme.outline + '20',
-    like: '#F91880',
-    retweet: '#17BF63',
-    verified: '#1DA1F2',
-    link: '#1DA1F2'
-  };
+  const bubbleBg = isSent ? theme.primary : theme.surface;
+  const textColor = isSent ? "#FFFFFF" : theme.onSurface;
+  const timestampColor = isSent ? "rgba(255,255,255,0.65)" : theme.outline;
 
-  const reactionEmojis = ['❤️', '😂', '😮', '😢', '😡', '👍', '👎', '🔥'];
+  const reactionEmojis = ["❤️", "😂", "😮", "😢", "😡", "👍"];
 
   useEffect(() => {
     if (onMarkAsRead && !isSent) {
-      onMarkAsRead();
+      onMarkAsRead(message.msgId);
     }
   }, []);
-
-  const handleLongPress = () => {
-    Vibration.vibrate(50);
-    showContextMenuAnimated();
-  };
 
   const showContextMenuAnimated = () => {
     setShowContextMenu(true);
@@ -89,7 +81,7 @@ const MessageDisplay = ({
         tension: 100,
         friction: 8,
         useNativeDriver: true,
-      })
+      }),
     ]).start();
   };
 
@@ -103,33 +95,19 @@ const MessageDisplay = ({
       Animated.spring(contextMenuScale, {
         toValue: 0,
         useNativeDriver: true,
-      })
+      }),
     ]).start(() => {
       setShowContextMenu(false);
     });
   };
 
-  const showActionsAnimated = () => {
-    setShowActions(true);
-    Animated.timing(actionsOpacity, {
-      toValue: 1,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const hideActions = () => {
-    Animated.timing(actionsOpacity, {
-      toValue: 0,
-      duration: 150,
-      useNativeDriver: true,
-    }).start(() => {
-      setShowActions(false);
-    });
+  const handleLongPress = () => {
+    Vibration.vibrate(50);
+    showContextMenuAnimated();
   };
 
   const handleReaction = (emoji: string) => {
-    onReact?.(emoji);
+    onReact?.(message.msgId, emoji);
     hideContextMenu();
   };
 
@@ -143,10 +121,14 @@ const MessageDisplay = ({
     hideContextMenu();
     Alert.alert(
       "Supprimer le message",
-      "Êtes-vous sûr de vouloir supprimer ce message ?",
+      "Voulez-vous vraiment supprimer ce message ?",
       [
         { text: "Annuler", style: "cancel" },
-        { text: "Supprimer", style: "destructive", onPress: () => onDelete?.() }
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: () => onDelete?.(message.msgId),
+        },
       ]
     );
   };
@@ -158,117 +140,139 @@ const MessageDisplay = ({
 
   const handleReply = () => {
     hideContextMenu();
-    onReply?.();
+    onReply?.(message);
   };
 
-  const parseTextContent = (text: string) => {
+  const handleAcceptVisit = async () => {
+    if (!message.visitData?.id) {
+      Alert.alert("Erreur", "Données de visite manquantes");
+      return;
+    }
+    setVisitActionLoading(true);
+    try {
+      const bookingService = getBookingService();
+      await bookingService.respondToVisitRequest(
+        message.visitData.id,
+        currentUserId,
+        true
+      );
+      Alert.alert("Visite acceptée", "La demande de visite a été acceptée.");
+    } catch (error: any) {
+      Alert.alert("Erreur", error.message || "Une erreur est survenue");
+    } finally {
+      setVisitActionLoading(false);
+    }
+  };
+
+  const handleRejectVisit = async () => {
+    if (!message.visitData?.id) {
+      Alert.alert("Erreur", "Données de visite manquantes");
+      return;
+    }
+    Alert.alert(
+      "Refuser la visite",
+      "Voulez-vous refuser cette demande de visite ?",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Refuser",
+          style: "destructive",
+          onPress: async () => {
+            setVisitActionLoading(true);
+            try {
+              const bookingService = getBookingService();
+              await bookingService.respondToVisitRequest(
+                message.visitData!.id,
+                currentUserId,
+                false,
+                "Créneau non disponible"
+              );
+              Alert.alert(
+                "Visite refusée",
+                "La demande de visite a été refusée."
+              );
+            } catch (error: any) {
+              Alert.alert("Erreur", error.message || "Une erreur est survenue");
+            } finally {
+              setVisitActionLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const parseTextWithLinks = (text: string) => {
     const linkRegex = /(https?:\/\/[^\s]+)/g;
-    const mentionRegex = /@(\w+)/g;
-    const hashtagRegex = /#(\w+)/g;
-    
-    const parts = [];
+    const parts: { type: "text" | "link"; content: string; key: string }[] =
+      [];
     let lastIndex = 0;
+    const matches = Array.from(text.matchAll(linkRegex));
 
-    const allMatches = [
-      ...Array.from(text.matchAll(linkRegex)).map(m => ({ ...m, type: 'link' })),
-      ...Array.from(text.matchAll(mentionRegex)).map(m => ({ ...m, type: 'mention' })),
-      ...Array.from(text.matchAll(hashtagRegex)).map(m => ({ ...m, type: 'hashtag' })),
-    ].sort((a, b) => a.index! - b.index!);
-
-    allMatches.forEach((match, i) => {
+    matches.forEach((match, i) => {
       if (match.index! > lastIndex) {
         parts.push({
-          type: 'text',
+          type: "text",
           content: text.slice(lastIndex, match.index),
-          key: `text-${i}`
+          key: `text-${i}`,
         });
       }
-
-      parts.push({
-        type: match.type,
-        content: match[0],
-        key: `${match.type}-${i}`
-      });
-
+      parts.push({ type: "link", content: match[0], key: `link-${i}` });
       lastIndex = match.index! + match[0].length;
     });
 
     if (lastIndex < text.length) {
       parts.push({
-        type: 'text',
+        type: "text",
         content: text.slice(lastIndex),
-        key: 'text-end'
+        key: "text-end",
       });
     }
 
-    return parts.length > 0 ? parts : [{ type: 'text', content: text, key: 'text-only' }];
-  };
-
-  const renderTextPart = (part: any) => {
-    switch (part.type) {
-      case 'link':
-        return (
-          <ThemedText
-            key={part.key}
-            style={{ color: colors.link, textDecorationLine: 'underline' }}
-            onPress={() => Linking.openURL(part.content)}
-          >
-            {part.content}
-          </ThemedText>
-        );
-      case 'mention':
-        return (
-          <ThemedText
-            key={part.key}
-            style={{ color: colors.primary, fontWeight: '500' }}
-          >
-            {part.content}
-          </ThemedText>
-        );
-      case 'hashtag':
-        return (
-          <ThemedText
-            key={part.key}
-            style={{ color: colors.primary, fontWeight: '500' }}
-          >
-            {part.content}
-          </ThemedText>
-        );
-      default:
-        return (
-          <ThemedText key={part.key} style={{ color: colors.text }}>
-            {part.content}
-          </ThemedText>
-        );
-    }
+    return parts.length > 0
+      ? parts
+      : [{ type: "text" as const, content: text, key: "text-only" }];
   };
 
   const renderMessageContent = () => {
     switch (message.messageType) {
-      case "text":
-        const textParts = parseTextContent(message.content);
+      case "text": {
+        const parts = parseTextWithLinks(message.content);
         return (
-          <ThemedText style={{ fontSize: 15, lineHeight: 20, marginTop: 2 }}>
-            {textParts.map(renderTextPart)}
-          </ThemedText>
+          <Text style={[MSG_FONT, { color: textColor }]}>
+            {parts.map((part) =>
+              part.type === "link" ? (
+                <Text
+                  key={part.key}
+                  style={[
+                    MSG_FONT,
+                    {
+                      color: isSent ? "rgba(255,255,255,0.85)" : theme.primary,
+                      textDecorationLine: "underline",
+                    },
+                  ]}
+                  onPress={() => Linking.openURL(part.content)}
+                >
+                  {part.content}
+                </Text>
+              ) : (
+                <Text key={part.key} style={[MSG_FONT, { color: textColor }]}>
+                  {part.content}
+                </Text>
+              )
+            )}
+          </Text>
         );
+      }
 
       case "image":
         return (
-          <View style={{ 
-            marginTop: 12, 
-            borderRadius: 16, 
-            overflow: 'hidden', 
-            borderWidth: 1,
-            borderColor: colors.border
-          }}>
+          <View
+            style={{ borderRadius: 12, overflow: "hidden", marginBottom: 4 }}
+          >
             <Image
               source={{ uri: message.content }}
-              style={{ 
-                width: '100%', 
-                height: 200, 
-                borderRadius: 16 
-              }}
+              style={{ width: 200, height: 150, borderRadius: 12 }}
               resizeMode="cover"
             />
           </View>
@@ -276,464 +280,541 @@ const MessageDisplay = ({
 
       case "video":
         return (
-          <ThemedView style={{
-            marginTop: 12,
-            borderRadius: 16,
-            backgroundColor: colors.backgroundHover,
-            padding: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            borderWidth: 1,
-            borderColor: colors.border
-          }}>
-            <ThemedView style={{
-              width: 48,
-              height: 48,
-              borderRadius: 24,
-              backgroundColor: colors.primary,
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Ionicons name="play" size={20} color="white" />
-            </ThemedView>
-            <ThemedView style={{ marginLeft: 12, flex: 1 }}>
-              <ThemedText style={{ color: colors.text, fontWeight: '600', fontSize: 15 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: isSent
+                ? "rgba(255,255,255,0.15)"
+                : "rgba(0,0,0,0.06)",
+              borderRadius: 10,
+              padding: 10,
+            }}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: isSent
+                  ? "rgba(255,255,255,0.25)"
+                  : "rgba(0,0,0,0.1)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons
+                name="play"
+                size={18}
+                color={isSent ? "#FFFFFF" : "#374151"}
+              />
+            </View>
+            <View style={{ marginLeft: 10 }}>
+              <Text
+                style={[MSG_FONT, { color: textColor, fontWeight: "600" }]}
+              >
                 Vidéo
-              </ThemedText>
-              <ThemedText style={{ color: colors.textSecondary, fontSize: 13 }}>
-                Cliquer pour lire
-              </ThemedText>
-            </ThemedView>
-          </ThemedView>
+              </Text>
+              <Text
+                style={{
+                  fontSize: 12,
+                  lineHeight: 16,
+                  color: isSent ? "rgba(255,255,255,0.65)" : "#6B7280",
+                  marginTop: 1,
+                }}
+              >
+                Appuyer pour lire
+              </Text>
+            </View>
+          </View>
         );
+
+      case "visit_request": {
+        const visitStatus = message.visitData?.status;
+        const statusColors: Record<string, { bg: string; text: string }> = {
+          pending: { bg: "#F59E0B20", text: "#F59E0B" },
+          confirmed: { bg: "#10B98120", text: "#10B981" },
+          completed: { bg: "#6366F120", text: "#6366F1" },
+          cancelled: { bg: "#EF444420", text: "#EF4444" },
+        };
+        const statusLabels: Record<string, string> = {
+          pending: "En attente",
+          confirmed: "Confirmée",
+          completed: "Terminée",
+          cancelled: "Annulée",
+        };
+        const statusStyle =
+          visitStatus && statusColors[visitStatus]
+            ? statusColors[visitStatus]
+            : { bg: "#9CA3AF20", text: "#9CA3AF" };
+
+        return (
+          <View style={{ paddingTop: 2 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginBottom: 6,
+                gap: 6,
+              }}
+            >
+              <Ionicons
+                name="calendar"
+                size={16}
+                color={isSent ? "rgba(255,255,255,0.85)" : "#6366F1"}
+              />
+              <Text
+                style={[
+                  MSG_FONT,
+                  { color: textColor, fontWeight: "700" },
+                ]}
+              >
+                Demande de visite
+              </Text>
+            </View>
+            <Text style={[MSG_FONT, { color: textColor }]}>
+              {message.content || "Demande de visite"}
+            </Text>
+            {visitStatus && (
+              <View
+                style={{
+                  marginTop: 8,
+                  alignSelf: "flex-start",
+                  paddingHorizontal: 8,
+                  paddingVertical: 3,
+                  borderRadius: 10,
+                  backgroundColor: statusStyle.bg,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11,
+                    fontWeight: "600",
+                    color: statusStyle.text,
+                  }}
+                >
+                  {statusLabels[visitStatus] ?? visitStatus}
+                </Text>
+              </View>
+            )}
+            {message.visitData && !isSent && visitStatus === "pending" && (
+              <View
+                style={{ flexDirection: "row", gap: 8, marginTop: 10 }}
+              >
+                <TouchableOpacity
+                  onPress={handleAcceptVisit}
+                  disabled={visitActionLoading}
+                  style={{
+                    flex: 1,
+                    backgroundColor: theme.success,
+                    paddingVertical: 8,
+                    borderRadius: 8,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+                      fontWeight: "600",
+                      fontSize: 13,
+                    }}
+                  >
+                    Accepter
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleRejectVisit}
+                  disabled={visitActionLoading}
+                  style={{
+                    flex: 1,
+                    backgroundColor: theme.error,
+                    paddingVertical: 8,
+                    borderRadius: 8,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+                      fontWeight: "600",
+                      fontSize: 13,
+                    }}
+                  >
+                    Refuser
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        );
+      }
+
+      case "reservation_request": {
+        const resStatus = message.visitData?.status;
+        const resStatusColors: Record<string, { bg: string; text: string }> = {
+          pending: { bg: "#F59E0B20", text: "#F59E0B" },
+          confirmed: { bg: "#10B98120", text: "#10B981" },
+          completed: { bg: "#6366F120", text: "#6366F1" },
+          cancelled: { bg: "#EF444420", text: "#EF4444" },
+        };
+        const resStatusLabels: Record<string, string> = {
+          pending: "En attente",
+          confirmed: "Confirmée",
+          completed: "Terminée",
+          cancelled: "Annulée",
+        };
+        const resStyle =
+          resStatus && resStatusColors[resStatus]
+            ? resStatusColors[resStatus]
+            : { bg: "#9CA3AF20", text: "#9CA3AF" };
+
+        return (
+          <View style={{ paddingTop: 2 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginBottom: 6,
+                gap: 6,
+              }}
+            >
+              <Ionicons
+                name="home"
+                size={16}
+                color={isSent ? "rgba(255,255,255,0.85)" : theme.primary}
+              />
+              <Text
+                style={[
+                  MSG_FONT,
+                  { color: textColor, fontWeight: "700" },
+                ]}
+              >
+                Demande de réservation
+              </Text>
+            </View>
+            <Text style={[MSG_FONT, { color: textColor }]}>
+              {message.content || "Demande de réservation"}
+            </Text>
+            {resStatus && (
+              <View
+                style={{
+                  marginTop: 8,
+                  alignSelf: "flex-start",
+                  paddingHorizontal: 8,
+                  paddingVertical: 3,
+                  borderRadius: 10,
+                  backgroundColor: resStyle.bg,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11,
+                    fontWeight: "600",
+                    color: resStyle.text,
+                  }}
+                >
+                  {resStatusLabels[resStatus] ?? resStatus}
+                </Text>
+              </View>
+            )}
+          </View>
+        );
+      }
 
       default:
         return (
-          <ThemedText style={{ color: colors.text, fontSize: 15, lineHeight: 20 }}>
+          <Text style={[MSG_FONT, { color: textColor }]}>
             {message.content}
-          </ThemedText>
+          </Text>
         );
     }
   };
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
-    const now = new Date();
-    const diffInMinutes = (now.getTime() - date.getTime()) / (1000 * 60);
-    
-    if (diffInMinutes < 1) return "maintenant";
-    if (diffInMinutes < 60) return `${Math.floor(diffInMinutes)}m`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
-  const getVerifiedBadge = () => {
-    if (message.isBot) {
-      return (
-        <Ionicons 
-          name="checkmark-circle" 
-          size={16} 
-          color={colors.verified} 
-          style={{ marginLeft: 4 }}
-        />
-      );
-    }
-    return null;
-  };
+  const isRead =
+    message.status.read.length > 0 && isReadReceiptsEnabled();
 
   return (
     <>
       <Pressable
         onLongPress={handleLongPress}
+        delayLongPress={150}
         onPressIn={() => {
           Animated.spring(scaleAnim, {
             toValue: 0.98,
             useNativeDriver: true,
           }).start();
-          showActionsAnimated();
         }}
         onPressOut={() => {
           Animated.spring(scaleAnim, {
             toValue: 1,
             useNativeDriver: true,
           }).start();
-          setTimeout(hideActions, 2000);
         }}
       >
         <Animated.View
           style={{
             transform: [{ scale: scaleAnim }],
-            backgroundColor: colors.background,
-            paddingHorizontal: 16,
-            paddingVertical: 12,
-            borderBottomWidth: 0.5,
-            borderBottomColor: colors.border
+            flexDirection: "row",
+            justifyContent: isSent ? "flex-end" : "flex-start",
+            paddingHorizontal: 14,
+            paddingVertical: 2,
           }}
         >
-          <ThemedView style={{ flexDirection: 'row' }}>
-            {/* Avatar */}
-            <TouchableOpacity style={{ marginRight: 12 }}>
-              <Image
-                source={{ uri: senderAvatar }}
+          <View
+            style={{
+              maxWidth: "80%",
+              backgroundColor: bubbleBg,
+              borderRadius: 20,
+              borderTopLeftRadius: isSent ? 20 : 6,
+              borderTopRightRadius: isSent ? 6 : 20,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+            }}
+          >
+            {renderMessageContent()}
+
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                marginTop: 2,
+                gap: 2,
+              }}
+            >
+              <Text
                 style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 24
-                }}
-              />
-            </TouchableOpacity>
-
-            {/* Content */}
-            <ThemedView style={{ flex: 1, minWidth: 0 }}>
-              {/* Header */}
-              <ThemedView style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center', 
-                marginBottom: 2,
-                flexWrap: 'wrap'
-              }}>
-                <ThemedText style={{
-                  color: colors.text,
-                  fontWeight: '700',
-                  fontSize: 15,
-                  marginRight: 4
-                }}>
-                  {senderName}
-                </ThemedText>
-                {getVerifiedBadge()}
-                <ThemedText style={{
-                  color: colors.textSecondary,
-                  fontSize: 15,
-                  marginLeft: 4
-                }}>
-                  @{senderName.toLowerCase().replace(' ', '')}
-                </ThemedText>
-                <ThemedText style={{
-                  color: colors.textMuted,
-                  fontSize: 15,
-                  marginLeft: 4
-                }}>
-                  · {formatTime(message.createdAt)}
-                  {message.isEdited && " · modifié"}
-                </ThemedText>
-              </ThemedView>
-
-              {/* Message Content */}
-              <ThemedView style={{ marginBottom: 8 }}>
-                {renderMessageContent()}
-              </ThemedView>
-
-              {/* Reactions */}
-              {message.reactions && message.reactions.length > 0 && (
-                <ThemedView style={{ 
-                  flexDirection: 'row', 
-                  flexWrap: 'wrap', 
-                  marginBottom: 8 
-                }}>
-                  {message.reactions.map((reaction, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      onPress={() => handleReaction(reaction.emoji)}
-                      style={{
-                        backgroundColor: colors.backgroundHover,
-                        borderRadius: 16,
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                        marginRight: 6,
-                        marginBottom: 4,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        borderWidth: 1,
-                        borderColor: colors.border
-                      }}
-                    >
-                      <Text style={{ fontSize: 14, marginRight: 4 }}>
-                        {reaction.emoji}
-                      </Text>
-                      <ThemedText style={{ 
-                        color: colors.textSecondary, 
-                        fontSize: 12, 
-                        fontWeight: '500' 
-                      }}>
-                        1
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </ThemedView>
-              )}
-
-              {/*  Action Bar */}
-              
-              {/* <Animated.View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  paddingTop: 4,
-                  opacity: showActions ? actionsOpacity : 0.7,
-                  maxWidth: 425
+                  fontSize: 11,
+                  lineHeight: 14,
+                  color: timestampColor,
                 }}
               >
-                <TouchableOpacity
-                  onPress={handleReply}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    padding: 8,
-                    borderRadius: 20,
-                    minWidth: 60
-                  }}
-                >
-                  <Ionicons 
-                    name="chatbubble-outline" 
-                    size={18} 
-                    color={colors.textMuted} 
-                  />
-                  <ThemedText style={{ 
-                    color: colors.textMuted, 
-                    fontSize: 13, 
-                    marginLeft: 4,
-                    fontWeight: '500'
-                  }}>
-                    {Math.floor(Math.random() * 10)}
-                  </ThemedText>
-                </TouchableOpacity>
+                {formatTime(message.createdAt)}
+                {message.isEdited ? " · modifié" : ""}
+              </Text>
+              {isSent && (
+                <Ionicons
+                  name={isRead ? "checkmark-done" : "checkmark"}
+                  size={14}
+                  color={isRead ? "#60A5FA" : "rgba(255,255,255,0.65)"}
+                />
+              )}
+            </View>
 
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    padding: 8,
-                    borderRadius: 20,
-                    minWidth: 60
-                  }}
-                >
-                  <Ionicons 
-                    name="repeat-outline" 
-                    size={18} 
-                    color={colors.textMuted} 
-                  />
-                  <Text style={{ 
-                    color: colors.textMuted, 
-                    fontSize: 13, 
-                    marginLeft: 4,
-                    fontWeight: '500'
-                  }}>
-                    {Math.floor(Math.random() * 20)}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => handleReaction('❤️')}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    padding: 8,
-                    borderRadius: 20,
-                    minWidth: 60
-                  }}
-                >
-                  <Ionicons 
-                    name={message.reactions?.some(r => r.emoji === '❤️') ? "heart" : "heart-outline"}
-                    size={18} 
-                    color={message.reactions?.some(r => r.emoji === '❤️') ? colors.like : colors.textMuted}
-                  />
-                  <ThemedText style={{ 
-                    color: message.reactions?.some(r => r.emoji === '❤️') ? colors.like : colors.textMuted,
-                    fontSize: 13, 
-                    marginLeft: 4,
-                    fontWeight: '500'
-                  }}>
-                    {Math.floor(Math.random() * 50)}
-                  </ThemedText>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => setShowContextMenu(true)}
-                  style={{
-                    padding: 8,
-                    borderRadius: 20
-                  }}
-                >
-                  <Ionicons 
-                    name="share-outline" 
-                    size={18} 
-                    color={colors.textMuted} 
-                  />
-                </TouchableOpacity>
-              </Animated.View> */}
-
-
-            </ThemedView>
-          </ThemedView>
+            {message.reactions && message.reactions.length > 0 && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  marginTop: 6,
+                  gap: 4,
+                }}
+              >
+                {message.reactions.map((reaction, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => handleReaction(reaction.emoji)}
+                    style={{
+                      backgroundColor: isSent
+                        ? "rgba(255,255,255,0.2)"
+                        : "#E5E7EB",
+                      borderRadius: 12,
+                      paddingHorizontal: 6,
+                      paddingVertical: 2,
+                      flexDirection: "row",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ fontSize: 12 }}>{reaction.emoji}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
         </Animated.View>
       </Pressable>
 
-      {/* Context Menu */}
+      {/* Context Menu Modal */}
       <Modal transparent visible={showContextMenu} animationType="none">
         <Animated.View
           style={{
             flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.4)',
-            opacity: overlayOpacity
+            backgroundColor: "rgba(0,0,0,0.45)",
+            opacity: overlayOpacity,
           }}
         >
           <TouchableOpacity
-            style={{ flex: 1 }}
+            style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
             onPress={hideContextMenu}
             activeOpacity={1}
           >
-            <ThemedView style={{ 
-              flex: 1, 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              paddingHorizontal: 20 
-            }}>
-              <Animated.View
+            <Animated.View
+              style={{
+                transform: [{ scale: contextMenuScale }],
+                borderRadius: 16,
+                overflow: "hidden",
+                minWidth: 240,
+                backgroundColor: "#FFFFFF",
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.25,
+                shadowRadius: 16,
+                elevation: 12,
+              }}
+            >
+              {/* Quick reactions row */}
+              <View
                 style={{
-                  transform: [{ scale: contextMenuScale }],
-                  backgroundColor: theme.surface,
-                  borderRadius: 16,
-                  padding: 8,
-                  minWidth: 240,
-                  shadowColor: theme.onSurface,
-                  shadowOffset: { width: 0, height: 8 },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 16,
-                  elevation: 12
+                  flexDirection: "row",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  paddingVertical: 12,
+                  paddingHorizontal: 8,
+                  borderBottomWidth: 1,
+                  borderBottomColor: "#F3F4F6",
                 }}
               >
-                {/* Quick Reactions */}
-                <ThemedView style={{
-                  flexDirection: 'row',
-                  justifyContent: 'center',
-                  paddingVertical: 12,
-                  borderBottomWidth: 1,
-                  borderBottomColor: colors.border,
-                  marginBottom: 8
-                }}>
-                  {reactionEmojis.slice(0, 6).map((emoji, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      onPress={() => handleReaction(emoji)}
-                      style={{
-                        padding: 8,
-                        borderRadius: 20,
-                        marginHorizontal: 4
-                      }}
-                    >
-                      <Text style={{ fontSize: 20 }}>{emoji}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ThemedView>
-
-                <TouchableOpacity
-                  onPress={handleReply}
-                  style={{ 
-                    flexDirection: 'row', 
-                    alignItems: 'center', 
-                    padding: 16, 
-                    borderRadius: 8 
-                  }}
-                >
-                  <Ionicons name="chatbubble-outline" size={20} color={colors.text} />
-                  <ThemedText style={{ 
-                    marginLeft: 12, 
-                    color: colors.text, 
-                    fontSize: 16,
-                    fontWeight: '500'
-                  }}>
-                    Répondre
-                  </ThemedText>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={handleCopy}
-                  style={{ 
-                    flexDirection: 'row', 
-                    alignItems: 'center', 
-                    padding: 16, 
-                    borderRadius: 8 
-                  }}
-                >
-                  <Ionicons name="copy-outline" size={20} color={colors.text} />
-                  <ThemedText style={{ 
-                    marginLeft: 12, 
-                    color: colors.text, 
-                    fontSize: 16,
-                    fontWeight: '500'
-                  }}>
-                    Copier le message
-                  </ThemedText>
-                </TouchableOpacity>
-
-                {isSent && message.messageType === "text" && (
+                {reactionEmojis.map((emoji, index) => (
                   <TouchableOpacity
-                    onPress={handleEdit}
-                    style={{ 
-                      flexDirection: 'row', 
-                      alignItems: 'center', 
-                      padding: 16, 
-                      borderRadius: 8 
+                    key={index}
+                    onPress={() => handleReaction(emoji)}
+                    style={{
+                      padding: 6,
+                      borderRadius: 20,
+                      marginHorizontal: 2,
                     }}
                   >
-                    <Ionicons name="create-outline" size={20} color={colors.text} />
-                    <ThemedText style={{ 
-                      marginLeft: 12, 
-                      color: colors.text, 
-                      fontSize: 16,
-                      fontWeight: '500'
-                    }}>
-                      Modifier
-                    </ThemedText>
+                    <Text style={{ fontSize: 24 }}>{emoji}</Text>
                   </TouchableOpacity>
-                )}
+                ))}
+              </View>
 
-                {isSent && (
-                  <TouchableOpacity
-                    onPress={handleDelete}
-                    style={{ 
-                      flexDirection: 'row', 
-                      alignItems: 'center', 
-                      padding: 16, 
-                      borderRadius: 8 
+              {/* Reply */}
+              <TouchableOpacity
+                onPress={handleReply}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingHorizontal: 16,
+                  paddingVertical: 13,
+                }}
+              >
+                <Ionicons name="arrow-undo-outline" size={20} color="#374151" />
+                <Text
+                  style={{
+                    marginLeft: 12,
+                    color: "#374151",
+                    fontSize: 15,
+                    fontWeight: "500",
+                  }}
+                >
+                  Répondre
+                </Text>
+              </TouchableOpacity>
+
+              {/* Copy */}
+              <TouchableOpacity
+                onPress={handleCopy}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingHorizontal: 16,
+                  paddingVertical: 13,
+                }}
+              >
+                <Ionicons name="copy-outline" size={20} color="#374151" />
+                <Text
+                  style={{
+                    marginLeft: 12,
+                    color: "#374151",
+                    fontSize: 15,
+                    fontWeight: "500",
+                  }}
+                >
+                  Copier
+                </Text>
+              </TouchableOpacity>
+
+              {/* Edit — only for own text messages */}
+              {isSent && message.messageType === "text" && (
+                <TouchableOpacity
+                  onPress={handleEdit}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingHorizontal: 16,
+                    paddingVertical: 13,
+                  }}
+                >
+                  <Ionicons name="create-outline" size={20} color="#374151" />
+                  <Text
+                    style={{
+                      marginLeft: 12,
+                      color: "#374151",
+                      fontSize: 15,
+                      fontWeight: "500",
                     }}
                   >
-                    <Ionicons name="trash-outline" size={20} color="#F91880" />
-                    <ThemedText style={{ 
-                      marginLeft: 12, 
-                      color: "#F91880", 
-                      fontSize: 16,
-                      fontWeight: '500'
-                    }}>
-                      Supprimer
-                    </ThemedText>
-                  </TouchableOpacity>
-                )}
-              </Animated.View>
-            </ThemedView>
+                    Modifier
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Delete — only for own messages */}
+              {isSent && (
+                <TouchableOpacity
+                  onPress={handleDelete}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingHorizontal: 16,
+                    paddingVertical: 13,
+                  }}
+                >
+                  <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                  <Text
+                    style={{
+                      marginLeft: 12,
+                      color: "#EF4444",
+                      fontSize: 15,
+                      fontWeight: "500",
+                    }}
+                  >
+                    Supprimer
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </Animated.View>
           </TouchableOpacity>
         </Animated.View>
       </Modal>
 
       {/* Edit Modal */}
       <Modal transparent visible={showEditModal} animationType="slide">
-        <ThemedView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <ThemedView style={{ flex: 1, justifyContent: 'flex-end' }}>
-            <ThemedView style={{
-              backgroundColor: theme.surface,
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              padding: 20,
-              paddingBottom: 40
-            }}>
-              <Text style={{
-                fontSize: 20,
-                fontWeight: '700',
-                color: colors.text,
-                marginBottom: 20,
-                textAlign: 'center'
-              }}>
+        <ThemedView style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <ThemedView style={{ flex: 1, justifyContent: "flex-end" }}>
+            <ThemedView
+              style={{
+                borderTopLeftRadius: 20,
+                borderTopRightRadius: 20,
+                padding: 20,
+                paddingBottom: 40,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 17,
+                  fontWeight: "600",
+                  color: "#111827",
+                  marginBottom: 16,
+                  textAlign: "center",
+                }}
+              >
                 Modifier le message
               </Text>
 
@@ -742,66 +823,71 @@ const MessageDisplay = ({
                 onChangeText={setEditText}
                 multiline
                 style={{
-                  backgroundColor: colors.backgroundHover,
+                  backgroundColor: "#F3F4F6",
                   borderRadius: 12,
                   padding: 14,
-                  color: colors.text,
-                  fontSize: 14,
-                  minHeight: 120,
-                  textAlignVertical: 'top',
-                  borderWidth: 1,
-                  borderColor: colors.primary + '20'
+                  color: "#111827",
+                  fontSize: 15,
+                  lineHeight: 22,
+                  minHeight: 100,
+                  textAlignVertical: "top",
                 }}
-                placeholder="Que se passe-t-il ?"
-                placeholderTextColor={colors.textMuted}
+                placeholder="Écrire un message..."
+                placeholderTextColor="#9CA3AF"
               />
 
-              <ThemedView style={{ 
-                flexDirection: 'row', 
-                justifyContent: 'flex-end', 
-                marginTop: 20, 
-                gap: 12 
-              }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "flex-end",
+                  marginTop: 16,
+                  gap: 12,
+                }}
+              >
                 <TouchableOpacity
                   onPress={() => setShowEditModal(false)}
                   style={{
                     paddingHorizontal: 24,
                     paddingVertical: 12,
-                    borderRadius: 25,
+                    borderRadius: 24,
                     borderWidth: 1,
-                    borderColor: colors.border
+                    borderColor: "#E5E7EB",
                   }}
                 >
-                  <Text style={{ 
-                    color: colors.text, 
-                    fontWeight: '700',
-                    fontSize: 15
-                  }}>
+                  <Text
+                    style={{
+                      color: "#374151",
+                      fontWeight: "600",
+                      fontSize: 15,
+                    }}
+                  >
                     Annuler
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => {
-                    onEdit?.(editText);
+                    onEdit?.(message.msgId, editText);
                     setShowEditModal(false);
                   }}
                   style={{
                     paddingHorizontal: 24,
                     paddingVertical: 12,
-                    borderRadius: 25,
-                    backgroundColor: colors.primary
+                    borderRadius: 24,
+                    backgroundColor: theme.primary,
                   }}
                 >
-                  <ThemedText style={{ 
-                    color: 'white', 
-                    fontWeight: '700',
-                    fontSize: 15
-                  }}>
-                    Sauvegarder
-                  </ThemedText>
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+                      fontWeight: "600",
+                      fontSize: 15,
+                    }}
+                  >
+                    Enregistrer
+                  </Text>
                 </TouchableOpacity>
-              </ThemedView>
+              </View>
             </ThemedView>
           </ThemedView>
         </ThemedView>

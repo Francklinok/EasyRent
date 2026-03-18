@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { View, TouchableOpacity, TextInput, ScrollView, StyleSheet, Alert, Share } from 'react-native';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { useTheme } from '@/components/contexts/theme/themehook';
+import { useTheme } from '@/hooks/themehook';
+import { useLanguage } from '@/components/contexts/language';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import {
@@ -32,6 +33,7 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
   formatAmount
 }) => {
   const { theme } = useTheme();
+  const { t } = useLanguage();
 
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -45,12 +47,12 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
 
   const generatePaymentCode = async () => {
     if (!amount || parseFloat(amount) <= 0) {
-      Alert.alert('Erreur', 'Veuillez entrer un montant valide');
+      Alert.alert(t('common.error'), t('walletComponents.enterValidAmount'));
       return;
     }
 
     if (!description) {
-      Alert.alert('Erreur', 'Veuillez entrer une description');
+      Alert.alert(t('common.error'), t('walletComponents.enterDescription'));
       return;
     }
 
@@ -74,11 +76,11 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
       setPaymentId(result.id);
 
       Alert.alert(
-        'Code créé avec succès !',
-        `Code de paiement : ${result.code}\n\nPartagez ce code avec votre locataire.`
+        t('walletComponents.codeCreatedSuccess'),
+        t('walletComponents.codeCreatedMsg', { code: result.code })
       );
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible de créer le code de paiement');
+      Alert.alert(t('common.error'), t('walletScreen.codeError'));
     } finally {
       setLoading(false);
     }
@@ -89,7 +91,7 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
       await Clipboard.setStringAsync(paymentCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      Alert.alert('Copié', 'Le code a été copié dans le presse-papiers');
+      Alert.alert(t('common.copied'), t('walletComponents.codeCopied'));
     }
   };
 
@@ -97,8 +99,8 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
     if (paymentCode && amount) {
       try {
         await Share.share({
-          message: `Paiement de loyer\n\nMontant: ${formatAmount(parseFloat(amount))}\nDescription: ${description}\n\nCode de paiement: ${paymentCode}\n\nUtilisez ce code pour payer via l'application.`,
-          title: 'Code de paiement'
+          message: t('walletComponents.rentPaymentShareMsg', { amount: formatAmount(parseFloat(amount)), description, code: paymentCode }),
+          title: t('walletComponents.paymentCode')
         });
       } catch (error) {
         console.error('Error sharing:', error);
@@ -126,7 +128,7 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
             <TouchableOpacity onPress={onBack} style={styles.backButton}>
               <ArrowLeft size={24} color={theme.onSurface} />
             </TouchableOpacity>
-            <ThemedText style={styles.headerTitle}>Code de paiement</ThemedText>
+            <ThemedText style={styles.headerTitle}>{t('walletComponents.paymentCode')}</ThemedText>
             <View style={{ width: 40 }} />
           </View>
 
@@ -149,7 +151,7 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
             transition={{ delay: 200 }}
             style={styles.codeSection}
           >
-            <ThemedText style={styles.codeLabel}>Code de paiement</ThemedText>
+            <ThemedText style={styles.codeLabel}>{t('walletComponents.paymentCode')}</ThemedText>
             <View style={[styles.codeContainer, { backgroundColor: theme.primary + '10', borderColor: theme.primary + '30' }]}>
               <ThemedText style={[styles.codeText, { color: theme.primary }]}>
                 {paymentCode}
@@ -183,7 +185,7 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
               />
             </View>
             <ThemedText style={styles.qrLabel}>
-              Scannez ce code pour payer
+              {t('walletComponents.scanToPay')}
             </ThemedText>
           </MotiView>
 
@@ -194,35 +196,35 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
             transition={{ delay: 400 }}
             style={[styles.detailsCard, { backgroundColor: theme.surfaceVariant }]}
           >
-            <ThemedText style={styles.detailsTitle}>Détails du paiement</ThemedText>
+            <ThemedText style={styles.detailsTitle}>{t('walletComponents.paymentDetails')}</ThemedText>
 
             <View style={styles.detailRow}>
-              <ThemedText style={styles.detailLabel}>Montant</ThemedText>
+              <ThemedText style={styles.detailLabel}>{t('walletComponents.amount')}</ThemedText>
               <ThemedText style={styles.detailValue}>{formatAmount(parseFloat(amount))}</ThemedText>
             </View>
 
             <View style={styles.detailRow}>
-              <ThemedText style={styles.detailLabel}>Description</ThemedText>
+              <ThemedText style={styles.detailLabel}>{t('walletComponents.description')}</ThemedText>
               <ThemedText style={styles.detailValue}>{description}</ThemedText>
             </View>
 
             {propertyRef && (
               <View style={styles.detailRow}>
-                <ThemedText style={styles.detailLabel}>Propriété</ThemedText>
+                <ThemedText style={styles.detailLabel}>{t('walletComponents.property')}</ThemedText>
                 <ThemedText style={styles.detailValue}>{propertyRef}</ThemedText>
               </View>
             )}
 
             {tenantEmail && (
               <View style={styles.detailRow}>
-                <ThemedText style={styles.detailLabel}>Locataire</ThemedText>
+                <ThemedText style={styles.detailLabel}>{t('walletComponents.tenant')}</ThemedText>
                 <ThemedText style={styles.detailValue}>{tenantEmail}</ThemedText>
               </View>
             )}
 
             {dueDate && (
               <View style={styles.detailRow}>
-                <ThemedText style={styles.detailLabel}>Date limite</ThemedText>
+                <ThemedText style={styles.detailLabel}>{t('walletComponents.deadline')}</ThemedText>
                 <ThemedText style={styles.detailValue}>{dueDate}</ThemedText>
               </View>
             )}
@@ -246,7 +248,7 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
                   <Copy size={20} color="white" />
                 )}
                 <ThemedText style={styles.actionButtonText}>
-                  {copied ? 'Copié !' : 'Copier'}
+                  {copied ? t('walletComponents.copied') : t('walletComponents.copy')}
                 </ThemedText>
               </TouchableOpacity>
 
@@ -255,7 +257,7 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
                 style={[styles.actionButton, { backgroundColor: theme.success }]}
               >
                 <Share2 size={20} color="white" />
-                <ThemedText style={styles.actionButtonText}>Partager</ThemedText>
+                <ThemedText style={styles.actionButtonText}>{t('walletComponents.share')}</ThemedText>
               </TouchableOpacity>
             </View>
 
@@ -264,7 +266,7 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
               style={[styles.newCodeButton, { borderColor: theme.primary }]}
             >
               <ThemedText style={[styles.newCodeButtonText, { color: theme.primary }]}>
-                Créer un nouveau code
+                {t('walletComponents.createNewCode')}
               </ThemedText>
             </TouchableOpacity>
           </MotiView>
@@ -284,7 +286,7 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
             <ArrowLeft size={24} color={theme.onSurface} />
           </TouchableOpacity>
-          <ThemedText style={styles.headerTitle}>Créer code de paiement</ThemedText>
+          <ThemedText style={styles.headerTitle}>{t('walletComponents.createPaymentCode')}</ThemedText>
           <View style={{ width: 40 }} />
         </View>
 
@@ -296,7 +298,7 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
         >
           <AlertCircle size={20} color={theme.primary} />
           <ThemedText style={styles.infoText}>
-            Générez un code unique que votre locataire pourra utiliser pour payer
+            {t('walletComponents.generateInfo')}
           </ThemedText>
         </MotiView>
 
@@ -307,7 +309,7 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
           transition={{ delay: 100 }}
           style={styles.inputSection}
         >
-          <ThemedText style={styles.inputLabel}>Montant du loyer</ThemedText>
+          <ThemedText style={styles.inputLabel}>{t('walletComponents.rentAmount')}</ThemedText>
           <View style={[styles.inputContainer, { borderColor: theme.outline + '30' }]}>
             <TextInput
               value={amount}
@@ -329,7 +331,7 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
           style={styles.inputSection}
         >
           <ThemedText style={styles.inputLabel}>
-            <FileText size={16} color={theme.onSurface} /> Description
+            <FileText size={16} color={theme.onSurface} /> {t('walletComponents.descriptionLabel')}
           </ThemedText>
           <View style={[styles.inputContainer, { borderColor: theme.outline + '30' }]}>
             <TextInput
@@ -350,7 +352,7 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
           style={styles.inputSection}
         >
           <ThemedText style={styles.inputLabel}>
-            <Home size={16} color={theme.onSurface} /> Référence propriété (optionnel)
+            <Home size={16} color={theme.onSurface} /> {t('walletComponents.propertyRefOptional')}
           </ThemedText>
           <View style={[styles.inputContainer, { borderColor: theme.outline + '30' }]}>
             <TextInput
@@ -370,7 +372,7 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
           transition={{ delay: 250 }}
           style={styles.inputSection}
         >
-          <ThemedText style={styles.inputLabel}>Email locataire (optionnel)</ThemedText>
+          <ThemedText style={styles.inputLabel}>{t('walletComponents.tenantEmail')}</ThemedText>
           <View style={[styles.inputContainer, { borderColor: theme.outline + '30' }]}>
             <TextInput
               value={tenantEmail}
@@ -392,7 +394,7 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
           style={styles.inputSection}
         >
           <ThemedText style={styles.inputLabel}>
-            <Calendar size={16} color={theme.onSurface} /> Date limite (optionnel)
+            <Calendar size={16} color={theme.onSurface} /> {t('walletComponents.dueDate')}
           </ThemedText>
           <View style={[styles.inputContainer, { borderColor: theme.outline + '30' }]}>
             <TextInput
@@ -427,7 +429,7 @@ export const CreatePaymentCode: React.FC<CreatePaymentCodeProps> = ({
             >
               <QrCodeIcon size={24} color="white" />
               <ThemedText style={styles.generateButtonText}>
-                {loading ? 'Génération...' : 'Générer le code de paiement'}
+                {loading ? t('walletComponents.generating') : t('walletComponents.generateCode')}
               </ThemedText>
             </LinearGradient>
           </TouchableOpacity>

@@ -24,6 +24,10 @@ export function useInAppNotifications() {
 
     const initializeSocket = async () => {
       try {
+        // Ne pas tenter de connexion sans token (utilisateur non connecté)
+        const token = await AsyncStorage.getItem('accessToken');
+        if (!token) return;
+
         await socketService.connect();
 
         if (!isMounted) return;

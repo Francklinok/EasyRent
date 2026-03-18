@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, Modal, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, Modal, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ThemedView } from '../ui/ThemedView';
 import { ThemedText } from '../ui/ThemedText';
-import { useTheme } from '../contexts/theme/themehook';
-import { MotiView, AnimatePresence } from 'moti';
+import { useTheme } from '../../hooks/themehook';
+import { getBookingService } from '@/services/api/bookingService';
 
 export interface Notification {
   id: string;
-  type: 'visit_request' | 'visit_accepted' | 'visit_rejected' | 'booking_confirmed' | 'general';
+  type: 'visit_request' | 'visit_accepted' | 'visit_rejected' | 'booking_confirmed' | 'general' | 'custom' | 'booking_request' | 'payment_received' | 'document_uploaded' | 'interest_request' | 'property_published';
   title: string;
   message: string;
   timestamp: string;
@@ -120,23 +120,97 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({
     }
   };
 
-  const handleAction = (notification: Notification, action: NotificationAction) => {
+  const handleAction = async (notification: Notification, action: NotificationAction) => {
+    const bookingService = getBookingService();
+
+    // Marquer comme lu
     markAsRead(notification.id);
-    action.onPress();
-    
+
     if (action.type === 'accept') {
-      Alert.alert('Visite acceptée', 'La visite a été confirmée. Le client recevra une notification.');
+      Alert.alert(
+        'Accepter la visite',
+        'Voulez-vous confirmer cette demande de visite ?',
+        [
+          {
+            text: 'Annuler',
+            style: 'cancel'
+          },
+          {
+            text: 'Accepter',
+            onPress: async () => {
+              try {
+                const visitId = notification.data?.visitId;
+                const ownerId = notification.data?.ownerId;
+
+                if (!visitId || !ownerId) {
+                  Alert.alert('Erreur', 'Informations manquantes pour accepter la visite');
+                  return;
+                }
+
+                await bookingService.respondToVisitRequest(visitId, ownerId, true);
+                Alert.alert('Succès', 'La visite a été acceptée. Le client recevra une notification.');
+
+                // Appeler l'action personnalisée si fournie
+                if (action.onPress) {
+                  action.onPress();
+                }
+              } catch (error: any) {
+                console.error('Error accepting visit:', error);
+                Alert.alert('Erreur', error.message || 'Impossible d\'accepter la visite');
+              }
+            }
+          }
+        ]
+      );
     } else if (action.type === 'reject') {
-      Alert.alert('Visite refusée', 'La demande de visite a été refusée.');
+      // Demander la raison du refus
+      Alert.prompt(
+        'Refuser la visite',
+        'Veuillez indiquer la raison du refus (optionnel)',
+        [
+          {
+            text: 'Annuler',
+            style: 'cancel'
+          },
+          {
+            text: 'Refuser',
+            style: 'destructive',
+            onPress: async (reason) => {
+              try {
+                const visitId = notification.data?.visitId;
+                const ownerId = notification.data?.ownerId;
+
+                if (!visitId || !ownerId) {
+                  Alert.alert('Erreur', 'Informations manquantes pour refuser la visite');
+                  return;
+                }
+
+                await bookingService.respondToVisitRequest(visitId, ownerId, false, reason);
+                Alert.alert('Refusée', 'La demande de visite a été refusée. Le client en sera informé.');
+
+                // Appeler l'action personnalisée si fournie
+                if (action.onPress) {
+                  action.onPress();
+                }
+              } catch (error: any) {
+                console.error('Error rejecting visit:', error);
+                Alert.alert('Erreur', error.message || 'Impossible de refuser la visite');
+              }
+            }
+          }
+        ],
+        'plain-text'
+      );
+    } else {
+      // Pour les autres types d'actions
+      if (action.onPress) {
+        action.onPress();
+      }
     }
   };
 
   const renderNotification = ({ item }: { item: Notification }) => (
-    <MotiView
-      from={{ opacity: 0, translateX: -50 }}
-      animate={{ opacity: 1, translateX: 0 }}
-      transition={{ type: 'timing', duration: 300 }}
-    >
+    <View>
       <TouchableOpacity
         onPress={() => markAsRead(item.id)}
         style={{
@@ -235,7 +309,7 @@ const NotificationSystem: React.FC<NotificationSystemProps> = ({
           </ThemedView>
         </ThemedView>
       </TouchableOpacity>
-    </MotiView>
+    </View>
   );
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
@@ -328,10 +402,7 @@ export const NotificationBadge: React.FC<{ count: number; onPress: () => void }>
     <TouchableOpacity onPress={onPress} style={{ position: 'relative' }}>
       <MaterialCommunityIcons name="bell" size={24} color={theme.onSurface} />
       {count > 0 && (
-        <MotiView
-          from={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: 'spring', damping: 15 }}
+        <View
           style={{
             position: 'absolute',
             top: -4,
@@ -349,11 +420,11 @@ export const NotificationBadge: React.FC<{ count: number; onPress: () => void }>
           <ThemedText style={{ 
             color: 'white', 
             fontSize: 10, 
-            fontWeight: '700' 
+            fontWeight: '700'
           }}>
             {count > 99 ? '99+' : count}
           </ThemedText>
-        </MotiView>
+        </View>
       )}
     </TouchableOpacity>
   );

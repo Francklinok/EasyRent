@@ -12,29 +12,30 @@ import Header from '@/components/ui/header';
 import RenHouseAcceuil from '@/components/acceuill/RenHouseAcceuil';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { useTheme } from '@/components/contexts/theme/themehook';
+import { useTheme } from '@/hooks/themehook';
+import { useLanguage } from '@/components/contexts/language';
 interface ComponentProps {
   itemId: string | string[];
 }
 
-// Définition des catégories avec icônes et descriptions
+// Définition des catégories avec icônes et clés de traduction
 const categories = [
   {
     key: "RentHouse",
-    label: "Louer",
-    description: "Propriétés à louer",
+    labelKey: "homeScreen.rent" as const,
+    descKey: "homeScreen.rentDesc" as const,
     icon: "home"
   },
   {
     key: "SelleHouse",
-    label: "Acheter",
-    description: "Maisons à vendre",
+    labelKey: "homeScreen.buy" as const,
+    descKey: "homeScreen.buyDesc" as const,
     icon: "business-outline"
   },
   {
     key: "SelleLand",
-    label: "Terrains",
-    description: "Parcelles disponibles",
+    labelKey: "homeScreen.lands" as const,
+    descKey: "homeScreen.landsDesc" as const,
     icon: "map-outline"
   }
 ];
@@ -55,8 +56,8 @@ const Home = () => {
   
   const ActiveComponent = componentMap[activeComponent];
   const {theme} = useTheme()
+  const { t } = useLanguage();
   useEffect(() => {
-    // Animation d'entrée
     setIsLoaded(true);
   }, []);
   
@@ -67,100 +68,30 @@ const Home = () => {
   };
 
   return (
-    <MotiView 
-      from={{ opacity: 0 }}
-      animate={{ opacity: isLoaded ? 1 : 0 }}
-      transition={{ type: 'timing', duration: 800 }}
-      className="flex bg-white "
-    >
-      <ThemedView>
-        <MotiView
-          from={{ translateY: -20, opacity: 0 }}
-          animate={{ translateY: 0, opacity: 1 }}
-          transition={{ delay: 200, type: 'spring', stiffness: 100 }}
-        >
-          <Header/>
-        </MotiView>
-        
-        {/* Section compacte combinée */}
-        <MotiView
-          from={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 300, type: 'spring', stiffness: 100 }}
-          className=" overflow-hidden shadow-md"
-        >
-         
-            
-            {/* Catégories à l'intérieur du dégradé */}
-            <ThemedView className=" bg-white  ">
-              {/* <ThemedView className="flex-row justify-between">
-                {categories.map((category) => (
-                  <TouchableOpacity
-                  key={category.key}
-                  onPress={() => handleSetActiveComponent(category.key)}
-                  style={{
-                    flex:1,
-                    justifyContent:"center",
-                    maxWidth:120,
-                    padding:3,
-                    marginLeft:20,
-                    borderRadius:15,
-                    marginRight:20,
-                    width: (width - 40) / categories.length - 2,
-                    backgroundColor: selectedCategory === category.key 
-                      ? theme.surface 
-                      : 'transparent'
-                  }}
-                  className="items-center"
-                >
-
-                    <ThemedText className={`text-xl ${
-                      selectedCategory === category.key
-                        ? 'text-indigo-400 font-medium'
-                        : 'text-blue-600'
-                    }`}
-                    style = {{fontSize:12}}>
-                      {category.label}
-                    </ThemedText> 
-                  </TouchableOpacity>
-                ))}
-              </ThemedView> */}
-            </ThemedView>
-            
-           
-        </MotiView>
-        
-        {/* Content Section with Animation */}
-        <MotiView
-          from={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 800, type: 'timing' }}
-          className=""
-        >
+   
+      <ThemedView>           
           {ActiveComponent ? (
             <ActiveComponent itemId={id} />
           ) : (
             <ThemedView className="p-12 items-center justify-center">
-              <ThemedView className="bg-indigo-100 p-4 rounded-full mb-3">
-                <Ionicons name="alert-circle-outline" size={36} color="#6366f1" />
+              <ThemedView className=" p-4 rounded-full mb-3">
+                <Ionicons name="alert-circle-outline" size={36} color="#0866f1" />
               </ThemedView>
-              <ThemedText className="text-gray-700 font-medium text-base mb-2 text-center">
-                Aucun résultat trouvé
+              <ThemedText className=" font-medium text-base mb-2 text-center">
+                {t('homeScreen.noResults')}
               </ThemedText>
-              <ThemedText className="text-gray-500 text-sm text-center">
-                Aucune donnée disponible pour cette catégorie
+              <ThemedText className="text-sm text-center">
+                {t('homeScreen.noDataForCategory')}
               </ThemedText>
-              <TouchableOpacity 
-                className="mt-4 bg-indigo-500 py-2 px-4 rounded-full"
+              <TouchableOpacity
+                className="mt-4  py-2 px-4 rounded-full"
                 onPress={() => handleSetActiveComponent("RentHouse")}
               >
-                <Text className="text-white text-sm font-medium">Retour</Text>
+                <Text className=" text-sm font-medium">{t('common.back')}</Text>
               </TouchableOpacity>
             </ThemedView>
           )}
-        </MotiView>
       </ThemedView>
-    </MotiView>
   );
 };
 

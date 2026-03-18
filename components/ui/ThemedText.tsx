@@ -1,12 +1,13 @@
-import React, { useRef, useEffect } from 'react';
-import { 
-  Text, 
-  Animated, 
-  TextProps, 
+import React, { useRef, useEffect, useContext } from 'react';
+import {
+  Text,
+  Animated,
+  TextProps,
   useWindowDimensions,
   Easing
 } from 'react-native';
-import { useTheme, useThemeTransition } from '../contexts/theme/themehook';
+import { useTheme, useThemeTransition } from '../../hooks/themehook';
+import { LanguageContext, TranslationKey } from '../contexts/language/LanguageContext';
 
 // Type pour les props de base des composants thématiques
 type ThemedComponentProps = {
@@ -16,11 +17,14 @@ type ThemedComponentProps = {
 
 // Type complet des props pour le texte thématique
 export type ThemedTextProps = TextProps & ThemedComponentProps & {
-  type?: 'heading' | 'body' | 'caption' | 'title' | 'subtitle' | 'link' | 'normal' | 'default';
+  type?: 'heading' | 'body' | 'caption' | 'title' | 'subtitle' | 'link' | 'normal' | 'default'|'normaltitle';
   fontFamily?: string;
   scaleFactor?: number;
   size?: number; // Taille de police personnalisée
   color?: string; // Couleur personnalisée qui ignore le variant si spécifiée
+  // i18n props
+  i18nKey?: TranslationKey; // Key for translation (e.g., 'common.loading')
+  i18nParams?: Record<string, string | number>; // Parameters for interpolation
 };
 
 export const ThemedText: React.FC<ThemedTextProps> = ({
@@ -33,10 +37,13 @@ export const ThemedText: React.FC<ThemedTextProps> = ({
   scaleFactor = 0.0002,
   size,
   color: customColor,
+  i18nKey,
+  i18nParams,
   ...props
 }) => {
   const { theme } = useTheme();
   const { isAnimatingTheme, animationDuration } = useThemeTransition();
+  const languageContext = useContext(LanguageContext);
   const { width } = useWindowDimensions();
   
   // Create an animated value for smooth color transitions
@@ -81,9 +88,9 @@ export const ThemedText: React.FC<ThemedTextProps> = ({
   
   // Déterminer le style de texte selon le type
   const getTextStyle = () => {
-    let baseSize = size || 16; // Valeur par défaut si aucune taille n'est définie
+    let baseSize = size || 16; 
     let lineHeight;
-    let fontWeightValue = '400'; // Valeur par défaut de poids de police
+    let fontWeightValue = '400';
     
     switch (type) {
       case 'heading':
@@ -108,6 +115,14 @@ export const ThemedText: React.FC<ThemedTextProps> = ({
       case 'normal':
         baseSize = size || 14;
         lineHeight = getAdaptiveSize(baseSize * 1.5);
+        fontWeightValue = '600';
+
+        break;
+         case 'normaltitle':
+        baseSize = size || 16;
+        lineHeight = getAdaptiveSize(baseSize * 1.5);
+        fontWeightValue = '600';
+
         break;
       case 'link':
         baseSize = size || 12;
@@ -115,6 +130,11 @@ export const ThemedText: React.FC<ThemedTextProps> = ({
         break;
       case 'default':
       case 'body':
+        baseSize = size || 13;
+        lineHeight = getAdaptiveSize(baseSize * 1.5);
+        fontWeightValue = '200';
+
+        break;
       default:
         baseSize = size || 14;
         lineHeight = getAdaptiveSize(baseSize * 1.5);
@@ -137,6 +157,22 @@ export const ThemedText: React.FC<ThemedTextProps> = ({
     }
   };
   
+  // Get translated content if i18nKey is provided
+  const getContent = () => {
+    if (i18nKey && languageContext?.t) {
+      return languageContext.t(i18nKey, i18nParams);
+    }
+    return children;
+  };
+
+  // Handle RTL text alignment
+  const getRTLStyle = () => {
+    if (languageContext?.isRTL) {
+      return { textAlign: 'right' as const, writingDirection: 'rtl' as const };
+    }
+    return {};
+  };
+
   return (
     <Animated.Text
       style={[
@@ -146,11 +182,12 @@ export const ThemedText: React.FC<ThemedTextProps> = ({
           fontFamily,
         },
         getIntensity(),
+        getRTLStyle(),
         style,
       ]}
       {...props}
     >
-      {children}
+      {getContent()}
     </Animated.Text>
   );
 };

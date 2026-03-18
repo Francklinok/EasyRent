@@ -1,18 +1,20 @@
-import React, { useCallback, memo } from "react";
-import { Image, TouchableOpacity, StyleSheet } from "react-native";
-import { FontAwesome5, MaterialIcons, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
-import { MotiView } from "moti";
+import React, { useCallback, memo, useState, useMemo } from "react";
+import { TouchableOpacity, StyleSheet, Platform } from "react-native";
+import { Image } from "expo-image";
+import { MaterialIcons, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { ThemedText } from "@/components/ui/ThemedText";
 import { ThemedView } from "@/components/ui/ThemedView";
 import { ExtendedItemTypes } from "@/types/ItemType";
-import renderEnergyScore from "./renderEnergieScore";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import toggleFavorite from "@/components/utils/homeUtils/toggleFavorite";
-import { useTheme } from "@/components/contexts/theme/themehook";
+import { useToggleFavorite } from "@/hooks/useToggleFavorite";
+import { useTheme } from "@/hooks/themehook";
+import PropertyStarRating from "@/components/ui/PropertyStarRating";
 
 import type { MutableRefObject } from "react";
+
+
 
 type Props = {
   item: ExtendedItemTypes;
@@ -22,6 +24,7 @@ type Props = {
   setAnimatingElement: (id: string | null) => void;
   favorites: string[];
   setFavorites: React.Dispatch<React.SetStateAction<string[]>>;
+  onStarRatingChange?: (itemId: string, rating: number) => void;
 };
 
 const RenderGridItem: React.FC<Props> = ({
@@ -30,9 +33,52 @@ const RenderGridItem: React.FC<Props> = ({
   width,
   setAnimatingElement,
   favorites,
+  onStarRatingChange,
 }) => {
   const { theme } = useTheme();
   const router = useRouter();
+
+  // Compute unit availability for per_unit/both rental strategy OR hotels
+  const unitAvailability = useMemo(() => {
+    const strategy = (item as any).rentalStrategy;
+
+    // Hotels always show per-unit availability
+    if (item.hotelRoomTypes && item.hotelRoomTypes.length > 0) {
+      let total = 0;
+      let available = 0;
+      for (const rt of item.hotelRoomTypes) {
+        if (rt.rooms && rt.rooms.length > 0) {
+          for (const room of rt.rooms) {
+            total++;
+            if (room.isAvailable) available++;
+          }
+        } else {
+          total += rt.available || 0;
+          available += rt.available || 0;
+        }
+      }
+      return total > 0 ? { total, available } : null;
+    }
+
+    // Non-hotel: only show for per_unit or both strategy
+    if (!strategy || strategy === 'global') return null;
+
+    if (item.propertyRooms && item.propertyRooms.length > 0) {
+      if ((item as any).roomAvailability) {
+        return (item as any).roomAvailability;
+      }
+      const total = item.propertyRooms.length;
+      const available = item.propertyRooms.filter((r: any) => r.isAvailable !== false).length || total;
+      return { total, available };
+    }
+
+    return null;
+  }, [item.propertyRooms, item.hotelRoomTypes, (item as any).rentalStrategy]);
+
+  const { isFavorite, handleToggleFavorite } = useToggleFavorite({
+    item,
+    setAnimatingElement,
+  });
 
   const navigateToInfo = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -44,139 +90,266 @@ const RenderGridItem: React.FC<Props> = ({
     }, 300);
   }, [item.id]);
 
-  const isFavorite = favorites.includes(item.id);
+  // Availability badge config
+  const availBadge = useMemo(() => {
+    if (unitAvailability && unitAvailability.total > 0) {
+      const { total, available } = unitAvailability;
+      if (available === 0) return { label: 'Complet', color: theme.error as string };
+      if (available === total) return { label: `${total} dispo.`, color: theme.success as string };
+      return { label: `${available}/${total} dispo.`, color: '#F59E0B' };
+    }
+    const rawStatus = (item as any).rawStatus;
+    let label: string;
+    if (item.availibility === "available") {
+      label = "Disponible";
+    } else if (rawStatus === 'RENTED') {
+      label = "Loué";
+    } else if (rawStatus === 'SOLD') {
+      label = "Vendu";
+    } else if (rawStatus === 'MAINTENANCE') {
+      label = "Maintenance";
+    } else if (rawStatus === 'ON_HOLD' || rawStatus === 'RESERVED' || rawStatus === 'RESERVER') {
+      label = "Réservé";
+    } else {
+      label = "Indisponible";
+    }
+    return {
+      label,
+      color: item.availibility === "available" ? theme.success as string : theme.error as string,
+    };
+  }, [unitAvailability, item.availibility, theme]);
+
+  // Image source
+  const imageUri = useMemo(() => {
+    if (item.images && item.images.length > 0) {
+      const uri = typeof item.images[0] === 'string' ? item.images[0] : null;
+      if (uri && !uri.includes('placeholder')) return uri;
+    }
+    return typeof item.avatar === 'string' ? item.avatar : 'https://via.placeholder.com/400x300';
+  }, [item.images, item.avatar]);
 
   return (
-    <MotiView
-      from={{ opacity: 0, translateY: 10 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ delay: index * 60, type: "timing" }}
-      style={[
-        styles.cardContainer,
-        {
-          width: width / 2 - 24,
-          marginLeft: index % 2 === 0 ? 16 : 8,
-          marginRight: index % 2 === 0 ? 8 : 16,
-        },
-      ]}
+    <TouchableOpacity
+      style={[styles.card, {
+        backgroundColor: theme.surface as string,
+        borderColor: theme.outline + '30',
+      }]}
+      onPress={navigateToInfo}
+      activeOpacity={0.85}
     >
-      <TouchableOpacity onPress={navigateToInfo} activeOpacity={0.9}>
-        <ThemedView elevated="medium"  style={styles.card}>
-          <BlurView intensity={70} tint="dark" style={styles.blurContainer}>
-            {/* Image */}
-            <ThemedView style={styles.imageContainer}>
-              <Image source={
-                  typeof item.avatar === "string"
-                    ? { uri: item.avatar }
-                    : item.avatar
-                } style={styles.image} resizeMode="cover" />
+      {/* Image section */}
+      <ThemedView style={styles.imageWrap}>
+        <Image
+          source={{ uri: imageUri }}
+          style={styles.image}
+          contentFit="cover"
+          transition={200}
+        />
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.55)']}
+          style={styles.imageOverlay}
+        />
 
-              {/* Favorite */}
-              <TouchableOpacity
-                style={styles.favoriteBtn}
-                onPress={() => toggleFavorite(item.id)}
-              >
-                <Ionicons
-                  name={isFavorite ? "heart" : "heart-outline"}
-                  size={16}
-                  color={isFavorite ? theme.error : theme.surface}
-                />
-              </TouchableOpacity>
-
-              {/* Price */}
-              <ThemedView style={styles.priceContainer}>
-                <ThemedView style={styles.priceBox}>
-                  <ThemedText style={styles.priceText}>{item.price}</ThemedText>
-                </ThemedView>
-              </ThemedView>
-
-              {/* Energy Score */}
-              <ThemedView style={styles.energyScore}>
-                {renderEnergyScore(item.energyScore)}
-              </ThemedView>
-            </ThemedView>
-
-            {/* Content */}
-            <ThemedView style={styles.content}>
-              {/* Location */}
-              <ThemedView style={styles.row}>
-                <MaterialIcons name="location-on" size={12} color={theme.subtext} />
-                <ThemedText numberOfLines={1} style={styles.location}>
-                  {item.location}
-                </ThemedText>
-              </ThemedView>
-
-              {/* Rating */}
-              <ThemedView style={styles.row}>
-                <FontAwesome5 name="star" size={10} color={theme.star} />
-                <ThemedText style={styles.rating}>{item.stars}</ThemedText>
-              </ThemedView>
-
-              {/* Features */}
-              <ThemedView style={styles.featuresRow}>
-                {item.features.slice(0, 3).map((feature, idx) => (
-                  <ThemedView key={idx} style={styles.featureBox}>
-                    <FontAwesome5 name={feature.icon} size={8} color={theme.subtext} />
-                  </ThemedView>
-                ))}
-              </ThemedView>
-
-              {/* Availability */}
-              <ThemedView style={styles.availabilityRow}>
-                <ThemedView style={styles.availability}>
-                  <ThemedView
-                    style={[
-                      styles.dot,
-                      { backgroundColor: item.availibility === "available" ? theme.success : theme.error },
-                    ]}
-                  />
-                  <ThemedText
-                    style={{
-                      color: item.availibility === "available" ? theme.success : theme.error,
-                      fontSize: 10,
-                      fontWeight: "500",
-                    }}
-                  >
-                    {item.availibility === "available" ? "Disponible" : "Indisponible"}
-                  </ThemedText>
-                </ThemedView>
-
-                {/* Virtual tour badge */}
-                {item.virtualTourAvailable && (
-                  <ThemedView style={styles.virtualTourBadge}>
-                    <MaterialCommunityIcons name="rotate-3d-variant" size={10} color={theme.blue200} />
-                  </ThemedView>
-                )}
-              </ThemedView>
-            </ThemedView>
-          </BlurView>
+        {/* Status chip - top left */}
+        <ThemedView style={[styles.statusChip, { backgroundColor: availBadge.color }]}>
+          <ThemedView style={styles.statusDot} />
+          <ThemedText style={styles.statusText}>{availBadge.label}</ThemedText>
         </ThemedView>
-      </TouchableOpacity>
-    </MotiView>
+
+        {/* Favorite - top right */}
+        <TouchableOpacity
+          style={styles.favoriteBtn}
+          onPress={handleToggleFavorite}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons
+            name={isFavorite ? "heart" : "heart-outline"}
+            size={18}
+            color={isFavorite ? '#EF4444' : 'rgba(255,255,255,0.9)'}
+          />
+        </TouchableOpacity>
+
+        {/* Price overlay - bottom right of image */}
+        <ThemedView style={styles.priceChip}>
+          <ThemedText style={styles.priceText}>{item.price}</ThemedText>
+          <ThemedText style={styles.currencyText}>{item.currency || 'XAF'}</ThemedText>
+        </ThemedView>
+
+        {/* Rent/Sell badge - bottom left of image */}
+        <ThemedView style={[styles.listTypeBadge, {
+          backgroundColor: item.listType === 'rent' ? '#3B82F6' : '#F59E0B',
+        }]}>
+          <ThemedText style={styles.listTypeText}>
+            {item.listType === 'rent' ? 'Location' : 'Vente'}
+          </ThemedText>
+        </ThemedView>
+      </ThemedView>
+
+      {/* Body */}
+      <ThemedView style={styles.body}>
+        {/* Title */}
+        <ThemedText type="normal" intensity="strong" numberOfLines={1} style={styles.title}>
+          {item.title || item.type}
+        </ThemedText>
+
+        {/* Location */}
+        <ThemedView style={styles.locationRow}>
+          <MaterialIcons name="location-on" size={13} color={theme.error as string} />
+          <ThemedText type="caption" numberOfLines={1} style={{ flex: 1, marginLeft: 2 }}>
+            {item.location}
+          </ThemedText>
+        </ThemedView>
+
+        {/* Footer: type + rating */}
+        <ThemedView style={styles.footer}>
+          <ThemedView style={styles.typeWrap}>
+            <MaterialCommunityIcons name="tag-outline" size={12} color={theme.onSurfaceVariant as string} />
+            <ThemedText type="caption" style={{ color: theme.onSurfaceVariant as string }}>
+              {item.type}
+            </ThemedText>
+          </ThemedView>
+          <PropertyStarRating
+            rating={item.stars}
+            reviewCount={item.reviewCount || 0}
+            size="small"
+            interactive={true}
+            onRatingChange={(newRating) => onStarRatingChange?.(item.id, newRating)}
+            showReviewCount={false}
+          />
+        </ThemedView>
+      </ThemedView>
+    </TouchableOpacity>
   );
 };
 
 export default memo(RenderGridItem);
 
 const styles = StyleSheet.create({
-  cardContainer: { marginBottom: 16 },
-  card: { borderRadius: 16, overflow: "hidden" },
-  blurContainer: { borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
-  imageContainer: { position: "relative" },
-  image: { width: "100%", height: 100 },
-  favoriteBtn: { position: "absolute", top: 2, right: 2, padding: 2, borderRadius: 50, backgroundColor: "rgba(0,0,0,0.3)" },
-  priceContainer: { position: "absolute", bottom: 2, right: 2 },
-  priceBox: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 8, backgroundColor: "rgba(0,0,0,0.6)" },
-  priceText: { color: "white", fontSize: 10, fontWeight: "bold" },
-  energyScore: { position: "absolute", bottom: 2, left: 2 },
-  content: { padding: 6 },
-  row: { flexDirection: "row", alignItems: "center", marginTop: 2 },
-  location: { fontSize: 10, marginLeft: 3, fontWeight: "500" },
-  rating: { fontSize: 10, marginLeft: 3, fontWeight: "bold" },
-  featuresRow: { flexDirection: "row", marginTop: 4, gap: 4 },
-  featureBox: { padding: 2, borderRadius: 4, backgroundColor: "rgba(55,65,81,0.3)" },
-  availabilityRow: { marginTop: 4, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  availability: { flexDirection: "row", alignItems: "center" },
-  dot: { width: 5, height: 5, borderRadius: 50, marginRight: 3 },
-  virtualTourBadge: { padding: 2, borderRadius: 4, backgroundColor: "rgba(59,130,246,0.2)" },
+  card: {
+    width: '100%',
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
+  },
+  imageWrap: {
+    position: 'relative',
+  },
+  image: {
+    width: '100%',
+    height: 120,
+  },
+  imageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
+  },
+  statusChip: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    gap: 4,
+  },
+  statusDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'white',
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  favoriteBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  priceChip: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 3,
+  },
+  priceText: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  currencyText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 9,
+    fontWeight: '600',
+  },
+  listTypeBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  listTypeText: {
+    color: 'white',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  body: {
+    padding: 8,
+    gap: 3,
+  },
+  title: {
+    letterSpacing: -0.2,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  typeWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
 });

@@ -2,12 +2,14 @@ import React, { useCallback, useMemo, useRef, useEffect, memo } from "react";
 import { FlashList, ListRenderItem } from "@shopify/flash-list";
 import { Dimensions, InteractionManager, Image as RNImage, StyleSheet } from "react-native";
 import RenderItem from "./renderItem";
+import RenderServiceListItem from "./RenderServiceListItem";
 import { MutableRefObject } from "react";
 import { ThemedView } from "@/components/ui/ThemedView";
 import { ThemedText } from "@/components/ui/ThemedText";
 import LottieView from "lottie-react-native";
 import { ExtendedItemTypes } from "@/types/ItemType";
 import { Image } from "expo-image";
+import { useLanguage } from '@/components/contexts/language';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
@@ -25,16 +27,19 @@ const PERFORMANCE_CONFIG = {
 } as const;
 
 // Component Empty mémorisé
-const ListEmptyComponent = memo(() => (
-  <ThemedView style={styles.emptyContainer}>
-    <ThemedText style={styles.emptyTitle}>
-      Aucun élément à afficher
-    </ThemedText>
-    <ThemedText style={styles.emptySubtitle}>
-      Vérifiez vos filtres ou réessayez plus tard
-    </ThemedText>
-  </ThemedView>
-));
+const ListEmptyComponent = memo(() => {
+  const { t } = useLanguage();
+  return (
+    <ThemedView style={styles.emptyContainer}>
+      <ThemedText style={styles.emptyTitle}>
+        {t('homeComponents.noItemsToDisplay')}
+      </ThemedText>
+      <ThemedText style={styles.emptySubtitle}>
+        {t('homeComponents.checkFiltersOrRetry')}
+      </ThemedText>
+    </ThemedView>
+  );
+});
 
 type OptimizedFlashListProps = {
   data: ExtendedItemTypes[];
@@ -48,6 +53,7 @@ type OptimizedFlashListProps = {
   onRefresh?: () => void;
   onEndReached?: () => void;
   onScroll?: any;
+  onVirtualTourPress?: (tour: any) => void;
   ListHeaderComponent?: React.ReactElement | null;
   ListFooterComponent?: React.ReactElement | null;
   contentContainerStyle?: any;
@@ -65,6 +71,7 @@ const OptimizedFlashList: React.FC<OptimizedFlashListProps> = ({
   onRefresh,
   onEndReached,
   onScroll,
+  onVirtualTourPress,
   ListHeaderComponent,
   ListFooterComponent,
   contentContainerStyle,
@@ -89,21 +96,32 @@ const OptimizedFlashList: React.FC<OptimizedFlashListProps> = ({
     });
   }, [data]);
 
-  // RenderItem optimisé
+  // RenderItem optimisé avec support des services
   const renderItem: ListRenderItem<ExtendedItemTypes> = useCallback(
-    ({ item, index }) => (
-      <RenderItem
-        item={item}
-        index={index}
-        lottieRef={lottieRef}
-        favorites={favorites}
-        setFavorites={setFavorites}
-        animatingElement={animatingElement}
-        setAnimatingElement={setAnimatingElement}
-        navigateToInfo={navigateToInfo}
-      />
-    ),
-    [lottieRef, favorites, setFavorites, animatingElement, setAnimatingElement, navigateToInfo]
+    ({ item, index }) => {
+      // Utiliser le composant approprié selon le type
+      if (item.itemType === 'service' || item.listType === 'service') {
+        return (
+          <RenderServiceListItem
+            item={item}
+            index={index}
+            setAnimatingElement={setAnimatingElement}
+            navigateToInfo={navigateToInfo}
+            favorites={favorites}
+          />
+        );
+      }
+
+      return (
+        <RenderItem
+          item={item}
+          setAnimatingElement={setAnimatingElement}
+          navigateToInfo={navigateToInfo}
+          onVirtualTourPress={onVirtualTourPress}
+        />
+      );
+    },
+    [lottieRef, favorites, setFavorites, animatingElement, setAnimatingElement, navigateToInfo, onVirtualTourPress]
   );
 
   const keyExtractor = useCallback(
@@ -139,9 +157,7 @@ const OptimizedFlashList: React.FC<OptimizedFlashListProps> = ({
         });
       });
 
-      if (__DEV__) {
-        console.log(`🖼️ Preloading ${imagesToPreload.length} images`);
-      }
+    
     });
 
     return () => task.cancel();
@@ -164,18 +180,6 @@ const OptimizedFlashList: React.FC<OptimizedFlashListProps> = ({
     }
   }, [onEndReached]);
 
-  if (__DEV__) {
-    console.log("🔍 OptimizedFlashList Debug:", {
-      dataLength: safeData.length,
-      hasData: safeData.length > 0,
-      firstItemId: safeData[0]?.id,
-      favoritesCount: favorites.length,
-      refreshing,
-      screenWidth,
-      screenHeight,
-    });
-  }
-
   return (
     <ThemedView style={styles.container}>
       <FlashList
@@ -186,10 +190,6 @@ const OptimizedFlashList: React.FC<OptimizedFlashListProps> = ({
         getItemType={getItemType}
         estimatedItemSize={PERFORMANCE_CONFIG.estimatedItemSize}
         removeClippedSubviews={PERFORMANCE_CONFIG.removeClippedSubviews}
-        // maxToRenderPerBatch={PERFORMANCE_CONFIG.maxToRenderPerBatch}
-        // windowSize={PERFORMANCE_CONFIG.windowSize}
-        // initialNumToRender={PERFORMANCE_CONFIG.initialNumToRender}
-        // updateCellsBatchingPeriod={PERFORMANCE_CONFIG.updateCellsBatchingPeriod}
         onRefresh={onRefresh}
         refreshing={refreshing}
         onEndReached={debouncedOnEndReached}
@@ -203,8 +203,9 @@ const OptimizedFlashList: React.FC<OptimizedFlashListProps> = ({
         showsVerticalScrollIndicator={false}
         directionalLockEnabled={true}
         bounces={true}
-        alwaysBounceVertical={false}
+        alwaysBounceVertical={true}
         disableAutoLayout={false}
+        nestedScrollEnabled={true}
       />
     </ThemedView>
   );
@@ -214,6 +215,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: screenWidth,
+    
 
   },
   emptyContainer: {

@@ -1,85 +1,111 @@
-// MessageFooter.tsx - Version corrigée
 import React, { useState, useRef, useEffect } from "react";
 import { View, TextInput, TouchableOpacity, Alert, Text } from "react-native";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import Entypo from "@expo/vector-icons/Entypo";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { Ionicons } from "@expo/vector-icons";
 import { FrontendMessage } from "@/types/MessageTypes";
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import { launchImageLibraryWithFallback } from '@/components/utils/imagePickerUtils';
+import { ThemedView } from "@/components/ui/ThemedView";
+import { ThemedText } from "@/components/ui/ThemedText";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from "@/hooks/themehook";
 
 interface MessageFooterProps {
-  onSend: (
+  onSendMessage: (
     messageType: FrontendMessage['messageType'],
     content: string,
     mediaData?: any,
     mentions?: string[],
     replyTo?: string
-  ) => void;
-  onTypingChange?: (isTyping: boolean) => void;
-  isLoading?: boolean;
+  ) => Promise<void>;
+  onTypingStatusChange: (isTyping: boolean) => void;
+  isLoading: boolean;
   replyTo?: FrontendMessage;
-  onCancelReply?: () => void;
+  onCancelReply: () => void;
 }
 
-const MessageFooter = ({ 
-  onSend, 
-  onTypingChange, 
+const MessageFooter = ({
+  onSendMessage,
+  onTypingStatusChange,
   isLoading = false,
   replyTo,
-  onCancelReply 
+  onCancelReply
 }: MessageFooterProps) => {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  
-  // Correction du useRef avec le bon type pour React Native
+  const  insets = useSafeAreaInsets();
+  const  {theme} = useTheme();
+
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Handle typing indicator
   useEffect(() => {
-    if (input.trim() && !isTyping) {
-      setIsTyping(true);
-      onTypingChange?.(true);
-    }
-
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
     }
 
     if (input.trim()) {
-      // Utiliser le type correct pour React Native
+      if (!isTyping) {
+        setIsTyping(true);
+        onTypingStatusChange(true);
+      }
+
       typingTimeoutRef.current = setTimeout(() => {
         setIsTyping(false);
-        onTypingChange?.(false);
-      }, 2000);
-    } else if (isTyping) {
-      setIsTyping(false);
-      onTypingChange?.(false);
+        onTypingStatusChange(false);
+        typingTimeoutRef.current = null;
+      }, 1500);
+    } else {
+      if (isTyping) {
+        setIsTyping(false);
+        onTypingStatusChange(false);
+      }
     }
 
     return () => {
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
       }
     };
-  }, [input, isTyping, onTypingChange]);
+  }, [input, isTyping, onTypingStatusChange]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (isTyping) {
+        onTypingStatusChange(false);
+      }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSendText = () => {
     if (input.trim() === "" || isLoading) return;
 
     const content = input.trim();
     const mentions = extractMentions(content);
-    
-    onSend(
+
+    onSendMessage(
       'text',
       content,
       undefined,
       mentions.length > 0 ? mentions : undefined,
       replyTo?.msgId
     );
-    
+
     setInput("");
-    onCancelReply?.();
-    
+    onCancelReply();
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
     setIsTyping(false);
-    onTypingChange?.(false);
+    onTypingStatusChange(false);
   };
 
   const extractMentions = (content: string): string[] => {
@@ -88,8 +114,6 @@ const MessageFooter = ({
     let match;
 
     while ((match = mentionPattern.exec(content)) !== null) {
-      // Ici, vous devriez convertir le username en ID utilisateur
-      // Pour l'exemple, on utilise directement le username
       mentions.push(match[1]);
     }
 
@@ -98,108 +122,215 @@ const MessageFooter = ({
 
   const handleAttachment = () => {
     Alert.alert(
-      'Pièce jointe',
-      'Choisir le type de média',
+      'Attachment',
+      'Choose media type',
       [
         { text: 'Photo', onPress: () => handleMediaSelection('image') },
-        { text: 'Vidéo', onPress: () => handleMediaSelection('video') },
+        { text: 'Video', onPress: () => handleMediaSelection('video') },
         { text: 'Document', onPress: () => handleMediaSelection('document') },
-        { text: 'Localisation', onPress: () => handleLocationShare() },
-        { text: 'Annuler', style: 'cancel' }
+        { text: 'Location', onPress: () => handleLocationShare() },
+        { text: 'Cancel', style: 'cancel' }
       ]
     );
   };
 
   const handleMediaSelection = async (type: 'image' | 'video' | 'document') => {
     try {
-      // TODO: Implémentation avec expo-image-picker ou expo-document-picker
-      const mediaUri = 'https://example.com/media.jpg';
-      const mediaData = {
-        filename: 'image.jpg',
-        originalName: 'photo.jpg',
-        size: 1024000,
-        mimetype: 'image/jpeg'
-      };
+      if (type === 'document') {
+        const result = await DocumentPicker.getDocumentAsync({
+          type: '*/*',
+          copyToCacheDirectory: true
+        });
 
-      onSend(type, mediaUri, mediaData);
+        if (result.canceled) return;
+
+        const file = result.assets[0];
+        const mediaData = {
+          filename: file.name,
+          originalName: file.name,
+          size: file.size || 0,
+          mimetype: file.mimeType || 'application/octet-stream',
+          uri: file.uri
+        };
+
+        onSendMessage('document', file.uri, mediaData);
+      } else {
+        const result = await launchImageLibraryWithFallback({
+          mediaTypes: type === 'image'
+            ? ImagePicker.MediaTypeOptions.Images
+            : ImagePicker.MediaTypeOptions.Videos,
+          allowsEditing: true,
+          quality: 0.8,
+          videoMaxDuration: type === 'video' ? 60 : undefined,
+        });
+
+        if (result.canceled || !result.assets) return;
+
+        const asset = result.assets[0];
+        const filename = asset.uri.split('/').pop() || 'media';
+        const mediaData = {
+          filename,
+          originalName: filename,
+          size: asset.fileSize || 0,
+          mimetype: type === 'image' ? 'image/jpeg' : 'video/mp4',
+          uri: asset.uri,
+          width: asset.width,
+          height: asset.height
+        };
+
+        onSendMessage(type, asset.uri, mediaData);
+      }
     } catch (error) {
-      console.error('Erreur sélection média:', error);
-      Alert.alert('Erreur', 'Impossible de sélectionner le média');
+      console.error('Media selection error:', error);
+      Alert.alert('Error', 'Unable to select media');
     }
   };
 
   const handleLocationShare = async () => {
     try {
-      // TODO: Implémentation avec expo-location
       const locationData = {
         latitude: 48.8566,
         longitude: 2.3522,
         address: 'Paris, France'
       };
 
-      onSend('location', JSON.stringify(locationData));
+      onSendMessage('location', JSON.stringify(locationData));
     } catch (error) {
-      console.error('Erreur géolocalisation:', error);
-      Alert.alert('Erreur', 'Impossible d\'obtenir la localisation');
+      console.error('Geolocation error:', error);
+      Alert.alert('Error', 'Unable to get location');
     }
   };
 
-  const handleEmojiPress = () => {
-    // TODO: Implémenter le sélecteur d'emoji
-    console.log('Ouvrir sélecteur emoji');
+  const handleVoiceRecord = () => {
+    Alert.alert('Voice recording', 'Coming soon');
   };
 
   return (
-    <View>
-      {/* Indicateur de réponse */}
+    <ThemedView style={{ paddingBottom: insets.bottom }}>
+      {/* Reply indicator */}
       {replyTo && (
-        <View className="flex-row items-center justify-between p-2 bg-gray-100 rounded-t-lg">
-          <View className="flex-1">
-            <Text className="text-xs text-gray-500">Réponse à {replyTo.senderId}</Text>
-            <Text className="text-sm text-gray-700" numberOfLines={1}>
+        <ThemedView style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 16,
+          paddingVertical: 8,
+          backgroundColor: '#F9FAFB',
+          borderLeftWidth: 3,
+          borderLeftColor: theme.success,
+          marginHorizontal: 12,
+          marginTop: 8,
+          borderRadius: 8,
+        }}>
+          <ThemedView style={{ flex: 1 }}>
+            <ThemedText type="caption" style={{ color: theme.success }}>
+              Replying to
+            </ThemedText>
+            <ThemedText type='normal' style={{ color: '#374151' }} numberOfLines={1}>
               {replyTo.content}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={onCancelReply}>
-            <Ionicons name="close" size={20} color="gray" />
+            </ThemedText>
+          </ThemedView>
+          <TouchableOpacity onPress={onCancelReply} style={{ padding: 4 }}>
+            <Ionicons name="close" size={20} color="#9CA3AF" />
           </TouchableOpacity>
-        </View>
+        </ThemedView>
       )}
 
-      {/* Barre de saisie */}
-      <View className="flex flex-row gap-3 items-center justify-between p-2 bg-white border-t border-gray-300 w-full ml-1 mr-1 rounded-[14px]">
-        <TouchableOpacity onPress={handleAttachment} disabled={isLoading}>
-          <MaterialIcons name="attach-file" size={24} color={isLoading ? "gray" : "black"} />
-        </TouchableOpacity>
-
-        <TextInput
-          value={input}
-          onChangeText={setInput}
-          placeholder="Écrire un message..."
-          multiline
-          className="flex-1 px-3 py-2 text-base bg-gray-100 rounded-lg mx-2"
-          style={{ minHeight: 40, maxHeight: 120 }}
-          editable={!isLoading}
-          onSubmitEditing={handleSendText}
-          blurOnSubmit={false}
-        />
-
-        <TouchableOpacity onPress={handleEmojiPress} disabled={isLoading}>
-          <Entypo name="emoji-happy" size={24} color={isLoading ? "gray" : "black"} />
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          disabled={input.trim().length === 0 || isLoading} 
-          onPress={handleSendText}
-        >
-          <Ionicons 
-            name="send-sharp" 
-            size={24} 
-            color={input.trim().length > 0 && !isLoading ? "blue" : "gray"} 
+      {/* Input bar */}
+      <ThemedView style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        gap: 8,
+      }}>
+        {/* Text input with attachment icon */}
+        <ThemedView style={{
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: '#F3F4F6',
+          borderRadius: 24,
+          paddingHorizontal: 16,
+          paddingVertical: 4,
+          minHeight: 48,
+          borderWidth: 1,
+          borderColor: theme.outline + "30"
+        }}>
+          <TextInput
+            value={input}
+            onChangeText={setInput}
+            placeholder="Message"
+            placeholderTextColor="#9CA3AF"
+            multiline
+            style={{
+              flex: 1,
+              fontSize: 16,
+              color: '#111827',
+              maxHeight: 100,
+              paddingVertical: 8,
+            }}
+            editable={!isLoading}
+            onSubmitEditing={handleSendText}
           />
-        </TouchableOpacity>
-      </View>
-    </View>
+
+          <TouchableOpacity
+            onPress={handleAttachment}
+            disabled={isLoading}
+            style={{ padding: 4, marginLeft: 8 }}
+          >
+            <Ionicons
+              name="attach"
+              size={24}
+              color={isLoading ? '#D1D5DB' : '#6B7280'}
+            />
+          </TouchableOpacity>
+        </ThemedView>
+
+        {/* Send or mic button */}
+        {input.trim().length > 0 ? (
+          <TouchableOpacity
+            disabled={isLoading}
+            onPress={handleSendText}
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: theme.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: theme.primary,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 3,
+            }}
+          >
+            <Ionicons name="send" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPress={handleVoiceRecord}
+            disabled={isLoading}
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: theme.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: theme.primary,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 3,
+            }}
+          >
+            <Ionicons name="mic" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        )}
+      </ThemedView>
+    </ThemedView>
   );
 };
 

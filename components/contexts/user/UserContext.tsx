@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { userService, UserData, UpdateUserData, ActivityLog } from '@/components/services/userService';
-
+import { userService, UserData, UpdateUserData, ActivityLog } from '@/services/restApiService/userService';
 export interface UserProfile {
   id: string;
   firstName: string;
@@ -15,6 +14,7 @@ export interface UserProfile {
   updatedAt: string;
   preferences?: Record<string, any>;
   isPremium?: boolean;
+  premiumPlan?: string;
   premiumExpiry?: string;
   isEmailVerified?:boolean,
   lastLogin?:Date
@@ -70,7 +70,9 @@ interface UserContextType {
   // Premium functions
   upgradeToPremium: () => Promise<boolean>;
   checkPremiumStatus: () => boolean;
-  
+  showAds: boolean;
+  updateUser: (userData: Partial<UserProfile>) => Promise<void>;
+
   // Helper functions
   getFullName: () => string;
   isUserActive: () => boolean;
@@ -463,14 +465,23 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const checkPremiumStatus = (): boolean => {
     if (!user || !user.isPremium) return false;
-    
+
     if (user.premiumExpiry && new Date(user.premiumExpiry) < new Date()) {
       updateProfile({ isPremium: false, premiumExpiry: undefined });
       return false;
     }
-    
+
     return true;
   };
+
+  const updateUser = async (userData: Partial<UserProfile>): Promise<void> => {
+    if (!user) return;
+    const updatedUser = { ...user, ...userData };
+    setUser(updatedUser);
+    await saveUserData(updatedUser);
+  };
+
+  const showAds = !user?.isPremium || (user?.premiumExpiry ? new Date(user.premiumExpiry) < new Date() : false);
 
   const value: UserContextType = {
     user,
@@ -497,6 +508,8 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isFavorite,
     upgradeToPremium,
     checkPremiumStatus,
+    showAds,
+    updateUser,
     getFullName,
     isUserActive,
     isAdmin

@@ -1,7 +1,7 @@
 import React from "react";
 import { ScrollView, ScrollViewProps } from "react-native";
-import { useTheme } from "../contexts/theme/themehook";
-import { useThemeTransition } from "../contexts/theme/themehook";
+import { useTheme } from "../../hooks/themehook";
+import { useThemeTransition } from "../../hooks/themehook";
 
 // Scrollview thématique
 type ThemedScrollViewProps = ScrollViewProps & {

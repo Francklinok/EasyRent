@@ -2,10 +2,12 @@
 import { ThemedView } from "@/components/ui/ThemedView";
 import { ThemedText } from "@/components/ui/ThemedText";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useLanguage } from '@/components/contexts/language';
 
 
-const RenderVirtualTourBadge = (available: boolean) => {
+const RenderVirtualTourBadge = ({available}: {available: boolean}) => {
     if (!available) return null;
+    const { t } = useLanguage();
     
     return (
       <ThemedView 
@@ -28,7 +30,7 @@ const RenderVirtualTourBadge = (available: boolean) => {
             fontSize: 10 
           }}
         >
-          VISITE 3D
+          {t('homeComponents.virtualTour3D')}
         </ThemedText>
       </ThemedView>
     );

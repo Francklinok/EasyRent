@@ -1,403 +1,510 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  KeyboardAvoidingView, 
-  Platform, 
-  Alert, 
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
   ActivityIndicator,
-  Animated,
-  Dimensions,
-  StyleSheet
+  ScrollView,
+  StyleSheet,
+  SafeAreaView,
+  StatusBar,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/components/contexts/authContext/AuthContext';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
+import { Ionicons, AntDesign, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
+import { clearAllAuthDataManually } from '@/components/utils/clearAuthManually';
+import { debugAllAuthData } from '@/components/utils/clearAuthManually';
+import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
+import * as Google from 'expo-auth-session/providers/google';
+import * as Facebook from 'expo-auth-session/providers/facebook';
+import { useThemeColors } from '@/hooks/themehook';
 
-const { width, height } = Dimensions.get('window');
+WebBrowser.maybeCompleteAuthSession();
+
+// ── OAuth config ─────────────────────────────────────────────────────────────
+const GOOGLE_CLIENT_ID_ANDROID = 'YOUR_GOOGLE_ANDROID_CLIENT_ID';
+const GOOGLE_CLIENT_ID_IOS     = 'YOUR_GOOGLE_IOS_CLIENT_ID';
+const GOOGLE_CLIENT_ID_WEB     = 'YOUR_GOOGLE_WEB_CLIENT_ID';
+const FACEBOOK_APP_ID          = 'YOUR_FACEBOOK_APP_ID';
 
 const LoginScreen = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const colors = useThemeColors();
+
+  const [email, setEmail]                 = useState('');
+  const [password, setPassword]           = useState('');
+  const [rememberMe, setRememberMe]       = useState(false);
+  const [showPassword, setShowPassword]   = useState(false);
+  const [loading, setLoading]             = useState(false);
+  const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | 'facebook' | null>(null);
   const [twoFactorCode, setTwoFactorCode] = useState('');
+
   const router = useRouter();
-  const { login, verifyTwoFactor, requiresTwoFactor, forgotPassword } = useAuth();
-  
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const { login, verifyTwoFactor, requiresTwoFactor } = useAuth();
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      })
-    ]).start();
-  }, []);
+  // ── Google OAuth ───────────────────────────────────────────────────────────
+  const [googleRequest, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
+    androidClientId: GOOGLE_CLIENT_ID_ANDROID,
+    iosClientId:     GOOGLE_CLIENT_ID_IOS,
+    webClientId:     GOOGLE_CLIENT_ID_WEB,
+  });
 
-  const handleLogin = async () => {
-  if (!email || !password) {
-    Alert.alert('Erreur', 'Veuillez remplir tous les champs');
-    return;
-  }
-
-  setLoading(true);
-  try {
-    const result = await login(email, password);
-    console.log('Login result:', result);
-
-    if (result.success) {
-      if (result.requireTwoFactor) {
-        // 2FA activé, on attend le code
-        Alert.alert('Vérification', 'Veuillez entrer votre code 2FA');
-      } else {
-        // Login complet
-        router.replace('/Auth/AuthHome');
-      }
+  React.useEffect(() => {
+    if (googleResponse?.type === 'success') {
+      const { authentication } = googleResponse;
+      handleSocialToken('google', authentication?.accessToken);
     }
-  } catch (error: any) {
-    console.error('Login error:', error);
-    Alert.alert('Erreur', error.message || 'Connexion échouée');
-  } finally {
-    setLoading(false);
-  }
-};
+  }, [googleResponse]);
 
-const handleTwoFactorVerify = async () => {
-  if (!twoFactorCode) {
-    Alert.alert('Erreur', 'Veuillez entrer le code 2FA');
-    return;
-  }
+  // ── Facebook OAuth ─────────────────────────────────────────────────────────
+  const [fbRequest, fbResponse, promptFacebookAsync] = Facebook.useAuthRequest({
+    clientId: FACEBOOK_APP_ID,
+  });
 
-  setLoading(true);
-  try {
-    const result = await verifyTwoFactor(twoFactorCode);
-    if (result.success) {
-      router.replace('/Auth/AuthHome');
+  React.useEffect(() => {
+    if (fbResponse?.type === 'success') {
+      const { authentication } = fbResponse;
+      handleSocialToken('facebook', authentication?.accessToken);
     }
-  } catch (error: any) {
-    console.error('2FA verification error:', error);
-    Alert.alert('Erreur', error.message || 'Vérification échouée');
-  } finally {
-    setLoading(false);
-  }
-};
+  }, [fbResponse]);
 
+  // ── Apple OAuth ────────────────────────────────────────────────────────────
+  const appleRedirectUri = AuthSession.makeRedirectUri({ scheme: 'myapp' });
+  const [appleRequest, appleResponse, promptAppleAsync] = AuthSession.useAuthRequest(
+    {
+      clientId:    'YOUR_APPLE_SERVICE_ID',
+      scopes:      ['name', 'email'],
+      redirectUri: appleRedirectUri,
+      responseType: AuthSession.ResponseType.Code,
+      extraParams: { response_mode: 'form_post' },
+    },
+    { authorizationEndpoint: 'https://appleid.apple.com/auth/authorize' }
+  );
 
-  const handleForgotPassword = () => {
-    router.push('/Auth/ForgotPassword');
+  React.useEffect(() => {
+    if (appleResponse?.type === 'success') {
+      const { code } = appleResponse.params;
+      handleSocialToken('apple', code);
+    }
+  }, [appleResponse]);
+
+  // ── Social token → backend ─────────────────────────────────────────────────
+  const handleSocialToken = async (provider: string, token?: string) => {
+    if (!token) {
+      Alert.alert('Erreur', `Connexion ${provider} annulée`);
+      return;
+    }
+    setSocialLoading(null);
+    // TODO: POST /api/v1/auth/social { provider, token }
+    Alert.alert(
+      `${provider} connecté`,
+      `Token reçu. Intégrez votre endpoint backend pour finaliser la connexion.`
+    );
   };
 
+  const handleGoogleLogin = async () => {
+    setSocialLoading('google');
+    try { await promptGoogleAsync(); }
+    catch { Alert.alert('Erreur', 'Connexion Google échouée'); }
+    finally { setSocialLoading(null); }
+  };
 
-  return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      <LinearGradient colors={['#667eea', '#764ba2', '#f093fb']} style={styles.gradient}>
-        {/* Floating Elements */}
-        <View style={styles.floatingElements}>
-          <Animated.View style={[styles.floatingCircle, { top: 100, left: 50, opacity: fadeAnim }]} />
-          <Animated.View style={[styles.floatingCircle, { top: 200, right: 30, opacity: fadeAnim }]} />
-          <Animated.View style={[styles.floatingCircle, { bottom: 150, left: 30, opacity: fadeAnim }]} />
+  const handleAppleLogin = async () => {
+    setSocialLoading('apple');
+    try { await promptAppleAsync(); }
+    catch { Alert.alert('Erreur', 'Connexion Apple échouée'); }
+    finally { setSocialLoading(null); }
+  };
+
+  const handleFacebookLogin = async () => {
+    setSocialLoading('facebook');
+    try { await promptFacebookAsync(); }
+    catch { Alert.alert('Erreur', 'Connexion Facebook échouée'); }
+    finally { setSocialLoading(null); }
+  };
+
+  // ── Email/password login ───────────────────────────────────────────────────
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      return;
+    }
+    setLoading(true);
+    try {
+      await debugAllAuthData();
+      const result = await login(email, password);
+      if (result.success) {
+        if (result.requireTwoFactor) {
+          Alert.alert('Vérification', 'Veuillez entrer votre code 2FA');
+        } else {
+          router.replace('/Auth/AuthHome');
+        }
+      }
+    } catch (error: any) {
+      if (error.message?.includes('Trop de requêtes')) {
+        Alert.alert('Trop de tentatives', 'Veuillez patienter avant de réessayer.', [
+          { text: 'Compris' },
+          { text: 'Mot de passe oublié ?', onPress: () => router.push('/Auth/ForgotPassword') },
+        ]);
+      } else {
+        Alert.alert('Erreur', error.message || 'Connexion échouée');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTwoFactorVerify = async () => {
+    if (!twoFactorCode) { Alert.alert('Erreur', 'Entrez le code 2FA'); return; }
+    setLoading(true);
+    try {
+      const result = await verifyTwoFactor(twoFactorCode);
+      if (result.success) router.replace('/Auth/AuthHome');
+    } catch (error: any) {
+      Alert.alert('Erreur', error.message || 'Vérification échouée');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearCache = () => {
+    Alert.alert('Nettoyer le cache', 'Supprimer toutes les données d\'authentification ?', [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Nettoyer', style: 'destructive',
+        onPress: async () => {
+          try { await clearAllAuthDataManually(); Alert.alert('Succès', 'Cache nettoyé.'); }
+          catch { Alert.alert('Erreur', 'Impossible de nettoyer le cache'); }
+        },
+      },
+    ]);
+  };
+
+  // Couleurs dérivées du thème
+  const BG         = colors.primary + "15";
+  const BTN        = colors.primary + "80";
+  const TEXT       = colors.text;
+  const GRAY       = colors.input.placeholder;
+  const INPUT_BG   = colors.surfaceVariant;
+  const BORDER     = colors.input.border;
+  const LINK_COLOR = colors.primary;
+
+  // ── 2FA screen ─────────────────────────────────────────────────────────────
+  if (requiresTwoFactor) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: BG }]}>
+        <View style={styles.twoFaWrap}>
+          <Ionicons name="shield-checkmark" size={60} color={BTN} style={{ marginBottom: 16 }} />
+          <Text style={[styles.title, { color: TEXT }]}>Authentification 2FA</Text>
+          <Text style={[styles.subtitle, { color: GRAY }]}>Entrez le code de vérification</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: INPUT_BG, borderColor: BORDER, color: TEXT, textAlign: 'center', letterSpacing: 8, fontSize: 22 }]}
+            placeholder="000000"
+            placeholderTextColor={GRAY}
+            value={twoFactorCode}
+            onChangeText={setTwoFactorCode}
+            keyboardType="numeric"
+            maxLength={6}
+          />
+          <TouchableOpacity style={[styles.loginBtn, { backgroundColor: BTN }, loading && { opacity: 0.7 }]} onPress={handleTwoFactorVerify} disabled={loading}>
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Vérifier</Text>}
+          </TouchableOpacity>
         </View>
+      </SafeAreaView>
+    );
+  }
 
-        <Animated.View style={[
-          styles.formContainer,
-          {
-            opacity: fadeAnim,
-            transform: [
-              { translateY: slideAnim },
-              { scale: scaleAnim }
-            ]
-          }
-        ]}>
-          <BlurView intensity={20} style={styles.blurContainer}>
-            <View style={styles.headerContainer}>
-              <Ionicons name="lock-closed" size={40} color="#667eea" />
-              <Text style={styles.title}>Connexion</Text>
-              <Text style={styles.subtitle}>Bienvenue ! Connectez-vous à votre compte</Text>
-            </View>
-            
-            {requiresTwoFactor ? (
-              <View style={styles.twoFactorContainer}>
-                <Ionicons name="shield-checkmark" size={60} color="#667eea" style={styles.twoFactorIcon} />
-                <Text style={styles.twoFactorTitle}>Authentification à deux facteurs</Text>
-                <Text style={styles.twoFactorText}>Entrez le code de vérification</Text>
-                
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    placeholder="000000"
-                    value={twoFactorCode}
-                    onChangeText={setTwoFactorCode}
-                    keyboardType="numeric"
-                    style={styles.twoFactorInput}
-                    maxLength={6}
-                    placeholderTextColor="#999"
-                  />
-                </View>
-                
-                <TouchableOpacity 
-                  onPress={handleTwoFactorVerify} 
-                  style={[styles.button, loading && styles.buttonDisabled]}
-                  disabled={loading}
-                >
-                  <LinearGradient colors={['#667eea', '#764ba2']} style={styles.buttonGradient}>
-                    {loading ? (
-                      <ActivityIndicator color="white" size="small" />
-                    ) : (
-                      <Text style={styles.buttonText}>Vérifier</Text>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
+  // ── Main screen ────────────────────────────────────────────────────────────
+  return (
+    <SafeAreaView style={[styles.safe, { backgroundColor: BG }]}>
+      <StatusBar barStyle="dark-content" backgroundColor={BG} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Title */}
+          <Text style={[styles.title, { color: TEXT }]}>Login</Text>
+          <Text style={[styles.subtitle, { color: GRAY }]}>Hey, Enter your details to get log in{'\n'}to your account</Text>
+
+          {/* Email */}
+          <View style={[styles.inputWrap, { backgroundColor: INPUT_BG, borderColor: BORDER }]}>
+            <TextInput
+              style={[styles.inputField, { color: TEXT }]}
+              placeholder="demo@gmail.com"
+              placeholderTextColor={GRAY}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+
+          {/* Password */}
+          <View style={[styles.inputWrap, { backgroundColor: INPUT_BG, borderColor: BORDER }]}>
+            <Ionicons name="key-outline" size={18} color={GRAY} style={{ marginRight: 8 }} />
+            <TextInput
+              style={[styles.inputField, { color: TEXT }]}
+              placeholder="Password"
+              placeholderTextColor={GRAY}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(v => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={GRAY} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Remember me + Forget Password */}
+          <View style={styles.rememberRow}>
+            <TouchableOpacity style={styles.checkboxRow} onPress={() => setRememberMe(v => !v)}>
+              <View style={[styles.checkbox, { borderColor: GRAY }, rememberMe && { backgroundColor: BTN, borderColor: BTN }]}>
+                {rememberMe && <Ionicons name="checkmark" size={12} color="#fff" />}
               </View>
-            ) : (
-              <View style={styles.formContent}>
-                <View style={styles.inputContainer}>
-                  <Ionicons name="mail" size={20} color="#667eea" style={styles.inputIcon} />
-                  <TextInput
-                    placeholder="Adresse email"
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    style={styles.input}
-                    placeholderTextColor="#999"
-                  />
-                </View>
-                
-                <View style={styles.inputContainer}>
-                  <Ionicons name="lock-closed" size={20} color="#667eea" style={styles.inputIcon} />
-                  <TextInput
-                    placeholder="Mot de passe"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={!showPassword}
-                    style={styles.input}
-                    placeholderTextColor="#999"
-                  />
-                  <TouchableOpacity 
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.eyeIcon}
-                  >
-                    <Ionicons 
-                      name={showPassword ? 'eye-off' : 'eye'} 
-                      size={20} 
-                      color="#667eea" 
-                    />
-                  </TouchableOpacity>
-                </View>
-                
-                <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotPassword}>
-                  <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  onPress={handleLogin} 
-                  style={[styles.button, loading && styles.buttonDisabled]}
-                  disabled={loading}
-                >
-                  <LinearGradient colors={['#667eea', '#764ba2']} style={styles.buttonGradient}>
-                    {loading ? (
-                      <ActivityIndicator color="white" size="small" />
-                    ) : (
-                      <>
-                        <Text style={styles.buttonText}>Se connecter</Text>
-                        <Ionicons name="arrow-forward" size={20} color="white" style={styles.buttonIcon} />
-                      </>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
+              <Text style={[styles.rememberText, { color: TEXT }]}>Remember me</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/Auth/ForgotPassword')}>
+              <Text style={[styles.forgotText, { color: TEXT }]}>Forget Password</Text>
+            </TouchableOpacity>
+          </View>
 
-                <View style={styles.divider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>ou</Text>
-                  <View style={styles.dividerLine} />
-                </View>
+          {/* Log in button */}
+          <TouchableOpacity
+            style={[styles.loginBtn, { backgroundColor: BTN  }, loading && { opacity: 0.7 }]}
+            onPress={handleLogin}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Log in</Text>}
+          </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => router.push('/Auth/Register')} style={styles.registerButton}>
-                  <Text style={styles.registerText}>Pas de compte ? </Text>
-                  <Text style={styles.registerLink}>Inscrivez-vous</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </BlurView>
-        </Animated.View>
-      </LinearGradient>
-    </KeyboardAvoidingView>
+          {/* Or continue with */}
+          <View style={styles.dividerRow}>
+            <View style={[styles.dividerLine, { backgroundColor: BORDER }]} />
+            <Text style={[styles.dividerText, { color: GRAY }]}>Or continue with</Text>
+            <View style={[styles.dividerLine, { backgroundColor: BORDER }]} />
+          </View>
+
+          {/* Social icons row */}
+          <View style={styles.socialRow}>
+            <TouchableOpacity
+              style={[styles.socialCircle, { backgroundColor: INPUT_BG, borderColor: BORDER }]}
+              onPress={handleGoogleLogin}
+              disabled={!!socialLoading}
+              activeOpacity={0.8}
+            >
+              {socialLoading === 'google'
+                ? <ActivityIndicator size="small" color={GRAY} />
+                : <AntDesign name="google" size={22} color="#EA4335" />}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.socialCircle, { backgroundColor: INPUT_BG, borderColor: BORDER }]}
+              onPress={handleAppleLogin}
+              disabled={!!socialLoading}
+              activeOpacity={0.8}
+            >
+              {socialLoading === 'apple'
+                ? <ActivityIndicator size="small" color={GRAY} />
+                : <MaterialCommunityIcons name="apple" size={24} color={TEXT} />}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.socialCircle, { backgroundColor: INPUT_BG, borderColor: BORDER }]}
+              onPress={handleFacebookLogin}
+              disabled={!!socialLoading}
+              activeOpacity={0.8}
+            >
+              {socialLoading === 'facebook'
+                ? <ActivityIndicator size="small" color={GRAY} />
+                : <FontAwesome name="facebook" size={22} color="#1877F2" />}
+            </TouchableOpacity>
+          </View>
+
+          {/* Sign up link */}
+          <View style={styles.signupRow}>
+            <Text style={[styles.signupText, { color: GRAY }]}>Don't Have an account? </Text>
+            <TouchableOpacity onPress={() => router.push('/Auth/Register')}>
+              <Text style={[styles.signupLink, { color: LINK_COLOR }]}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Cache (discret) */}
+          <TouchableOpacity onPress={handleClearCache} style={styles.cacheBtn}>
+            <Text style={[styles.cacheBtnText, { color: GRAY }]}>🧹 Nettoyer le cache</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
   },
-  gradient: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+  scroll: {
+    paddingHorizontal: 28,
+    paddingTop: 52,
+    paddingBottom: 40,
   },
-  floatingElements: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-  },
-  floatingCircle: {
-    position: 'absolute',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  formContainer: {
-    width: '100%',
-    maxWidth: 400,
-  },
-  blurContainer: {
-    borderRadius: 25,
-    padding: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
+
+  // ── Typography ─────────────────────────────────────────────────────────────
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: 'white',
-    marginTop: 10,
-    marginBottom: 5,
+    fontSize: 30,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 10,
   },
   subtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
     textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 32,
   },
-  formContent: {
-    gap: 20,
-  },
-  inputContainer: {
+
+  // ── Inputs ─────────────────────────────────────────────────────────────────
+  inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 15,
-    paddingHorizontal: 15,
-    height: 55,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 54,
+    marginBottom: 14,
+    borderWidth: 1,
   },
-  inputIcon: {
-    marginRight: 10,
+  inputField: {
+    flex: 1,
+    fontSize: 15,
   },
   input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#333',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 54,
+    fontSize: 15,
+    borderWidth: 1,
+    width: '100%',
+    marginBottom: 16,
   },
-  eyeIcon: {
-    padding: 5,
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-  },
-  forgotPasswordText: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 14,
-  },
-  button: {
-    borderRadius: 15,
-    overflow: 'hidden',
-    marginTop: 10,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonGradient: {
+
+  // ── Remember / Forgot ──────────────────────────────────────────────────────
+  rememberRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    marginRight: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
   },
-  buttonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+  rememberText: {
+    fontSize: 13,
   },
-  buttonIcon: {
-    marginLeft: 10,
+  forgotText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
-  divider: {
+
+  // ── Login button ───────────────────────────────────────────────────────────
+  loginBtn: {
+    borderRadius: 30,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 28,
+  },
+  loginBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+
+  // ── Divider ────────────────────────────────────────────────────────────────
+  dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 20,
+    marginBottom: 24,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   dividerText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginHorizontal: 15,
-    fontSize: 14,
+    marginHorizontal: 12,
+    fontSize: 13,
   },
-  registerButton: {
+
+  // ── Social ─────────────────────────────────────────────────────────────────
+  socialRow: {
     flexDirection: 'row',
     justifyContent: 'center',
+    gap: 20,
+    marginBottom: 32,
+  },
+  socialCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  registerText: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 16,
+
+  // ── Sign up ────────────────────────────────────────────────────────────────
+  signupRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 20,
   },
-  registerLink: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+  signupText: {
+    fontSize: 14,
   },
-  twoFactorContainer: {
+  signupLink: {
+    fontSize: 14,
+    fontWeight: '800',
+    marginLeft:10
+  },
+
+  // ── Cache ──────────────────────────────────────────────────────────────────
+  cacheBtn: {
+    alignSelf: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  cacheBtnText: {
+    fontSize: 12,
+  },
+
+  // ── 2FA ───────────────────────────────────────────────────────────────────
+  twoFaWrap: {
+    flex: 1,
+    paddingHorizontal: 28,
     alignItems: 'center',
-    gap: 15,
-  },
-  twoFactorIcon: {
-    marginBottom: 10,
-  },
-  twoFactorTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
-  },
-  twoFactorText: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  twoFactorInput: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    letterSpacing: 8,
-    color: '#333',
+    justifyContent: 'center',
   },
 });
 

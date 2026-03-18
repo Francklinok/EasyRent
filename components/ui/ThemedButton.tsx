@@ -259,7 +259,7 @@ import {
 } from 'react-native';
 // Assure-toi que LinearGradient et LinearGradientPoint sont correctement importés depuis expo
 import { LinearGradient, LinearGradientPoint } from 'expo-linear-gradient';
-import { useTheme /*, useThemeTransition */ } from '../contexts/theme/themehook'; // getTransitionStyle non utilisé pour l'instant
+import { useTheme /*, useThemeTransition */ } from '../../hooks/themehook'; // getTransitionStyle non utilisé pour l'instant
 import { ThemedText } from './ThemedText';
 
 type ThemedComponentProps = {

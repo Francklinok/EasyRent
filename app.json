@@ -34,7 +34,14 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Autoriser l'accès à la galerie pour choisir une photo de profil.",
+          "cameraPermission": "Autoriser l'accès à la caméra pour prendre une photo de profil."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

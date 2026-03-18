@@ -80,6 +80,19 @@ export interface PropertyTypeConfig {
     intendedUse?: PropertyFieldConfig; // For land plots
     constructionPlan?: PropertyFieldConfig;
     specialRequirements?: PropertyFieldConfig;
+    profession?: PropertyFieldConfig;
+    country?: PropertyFieldConfig;
+    address?: PropertyFieldConfig;
+    // Personal information fields for sale properties
+    fullName?: PropertyFieldConfig;
+    age?: PropertyFieldConfig;
+    dateOfBirth?: PropertyFieldConfig;
+    placeOfBirth?: PropertyFieldConfig;
+    maritalStatus?: PropertyFieldConfig;
+    phone?: PropertyFieldConfig;
+    countryOfOrigin?: PropertyFieldConfig;
+    countryOfResidence?: PropertyFieldConfig;
+    idNumber?: PropertyFieldConfig;
   };
   validation: {
     minBudget?: number;
@@ -185,6 +198,74 @@ const hotelSaleConfig: PropertyTypeConfig = {
     freeCancellationDays: 0
   },
   fields: {
+    // Personal information
+    fullName: {
+      show: true,
+      label: 'Nom complet *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
+    age: {
+      show: true,
+      label: 'Âge *',
+      placeholder: 'Votre âge',
+      required: true
+    },
+    dateOfBirth: {
+      show: true,
+      label: 'Date de naissance *',
+      placeholder: 'Sélectionnez votre date de naissance',
+      required: true
+    },
+    placeOfBirth: {
+      show: true,
+      label: 'Lieu de naissance *',
+      placeholder: 'Ville/Pays de naissance',
+      required: true
+    },
+    maritalStatus: {
+      show: true,
+      label: 'Situation civile *',
+      placeholder: 'Célibataire, Marié, Divorcé...',
+      required: true
+    },
+    phone: {
+      show: true,
+      label: 'Téléphone *',
+      placeholder: '+228 XX XX XX XX',
+      required: true
+    },
+    countryOfOrigin: {
+      show: true,
+      label: 'Pays d\'origine *',
+      placeholder: 'Votre pays d\'origine',
+      required: true
+    },
+    countryOfResidence: {
+      show: true,
+      label: 'Pays de résidence *',
+      placeholder: 'Votre pays de résidence',
+      required: true
+    },
+    profession: {
+      show: true,
+      label: 'Profession *',
+      placeholder: 'Votre profession',
+      required: true
+    },
+    address: {
+      show: true,
+      label: 'Adresse complète *',
+      placeholder: 'Votre adresse complète',
+      required: true
+    },
+    idNumber: {
+      show: true,
+      label: 'Numéro de pièce d\'identité *',
+      placeholder: 'Numéro de passeport ou ID',
+      required: true
+    },
+    // Investment information
     budget: {
       show: true,
       label: 'Budget d\'investissement (€)',
@@ -239,6 +320,12 @@ const apartmentRentConfig: PropertyTypeConfig = {
     freeCancellationDays: 7
   },
   fields: {
+    fullName: {
+      show: true,
+      label: 'Nom *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
     startDate: {
       show: true,
       label: 'Date de début du bail',
@@ -289,6 +376,7 @@ const apartmentSaleConfig: PropertyTypeConfig = {
   icon: 'home-city',
   category: 'residential',
   visitRequired: true,
+  visitOptionalMessage: 'Nous vous recommandons de visiter l\'appartement avant de faire une offre.',
   bookingFlow: {
     flowType: 'visit_required',
     skipVisitForRent: false,
@@ -303,24 +391,105 @@ const apartmentSaleConfig: PropertyTypeConfig = {
     freeCancellationDays: 0
   },
   fields: {
+    // Section: Informations personnelles
+    fullName: {
+      show: true,
+      label: 'Nom complet *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
+    age: {
+      show: true,
+      label: 'Âge *',
+      placeholder: 'Votre âge',
+      required: true
+    },
+    dateOfBirth: {
+      show: true,
+      label: 'Date de naissance *',
+      placeholder: 'Sélectionnez votre date de naissance',
+      required: true
+    },
+    placeOfBirth: {
+      show: true,
+      label: 'Lieu de naissance *',
+      placeholder: 'Ville/Pays de naissance',
+      required: true
+    },
+    maritalStatus: {
+      show: true,
+      label: 'Situation civile *',
+      placeholder: 'Célibataire, Marié, Divorcé...',
+      required: true
+    },
+    phone: {
+      show: true,
+      label: 'Téléphone *',
+      placeholder: '+228 XX XX XX XX',
+      required: true
+    },
+    countryOfOrigin: {
+      show: true,
+      label: 'Pays d\'origine *',
+      placeholder: 'Votre pays d\'origine',
+      required: true
+    },
+    countryOfResidence: {
+      show: true,
+      label: 'Pays de résidence *',
+      placeholder: 'Votre pays de résidence',
+      required: true
+    },
+    profession: {
+      show: true,
+      label: 'Profession *',
+      placeholder: 'Ex: Médecin, Ingénieur, Commerçant...',
+      required: true,
+      helpText: 'Votre profession actuelle'
+    },
+    address: {
+      show: true,
+      label: 'Adresse complète *',
+      placeholder: 'Votre adresse complète',
+      required: true
+    },
+    idNumber: {
+      show: true,
+      label: 'Numéro de pièce d\'identité *',
+      placeholder: 'Numéro de passeport ou ID',
+      required: true
+    },
+    // Section: Informations financières
     budget: {
       show: true,
-      label: 'Budget maximum (€)',
-      placeholder: 'Votre budget d\'achat',
-      required: true
+      label: 'Budget d\'acquisition (FCFA)',
+      placeholder: 'Montant maximum que vous pouvez investir',
+      required: true,
+      helpText: 'Indiquez votre budget maximum pour cet achat'
     },
     financingType: {
       show: true,
-      label: 'Type de financement',
-      placeholder: 'Crédit, Comptant, Mixte',
-      required: true
+      label: 'Mode de financement',
+      placeholder: 'Sélectionnez votre mode de financement',
+      required: true,
+      helpText: 'Comment comptez-vous financer cet achat ?'
+    },
+    // Section: Projet
+    intendedUse: {
+      show: true,
+      label: 'Utilisation prévue',
+      placeholder: 'Résidence principale, Résidence secondaire, Investissement locatif...',
+      required: true,
+      helpText: 'Comment comptez-vous utiliser ce bien ?'
     }
   },
-  validation: {},
+  validation: {
+    minBudget: 500000
+  },
   bookingText: {
-    title: 'Acheter cet appartement',
-    submitButton: 'Envoyer mon offre',
-    successMessage: 'Votre offre d\'achat a été transmise !'
+    title: 'Formulaire d\'offre d\'achat',
+    submitButton: 'Soumettre mon offre',
+    successMessage: 'Votre offre d\'achat a été transmise au vendeur. Vous recevrez une réponse sous 48h.'
   }
 };
 
@@ -344,6 +513,12 @@ const villaRentConfig: PropertyTypeConfig = {
     freeCancellationDays: 7
   },
   fields: {
+    fullName: {
+      show: true,
+      label: 'Nom *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
     startDate: {
       show: true,
       label: 'Date de début',
@@ -399,6 +574,7 @@ const villaSaleConfig: PropertyTypeConfig = {
   icon: 'home-variant',
   category: 'residential',
   visitRequired: true,
+  visitOptionalMessage: 'Nous vous recommandons de visiter la villa avant de faire une offre.',
   bookingFlow: {
     flowType: 'visit_required',
     skipVisitForRent: false,
@@ -413,30 +589,112 @@ const villaSaleConfig: PropertyTypeConfig = {
     freeCancellationDays: 0
   },
   fields: {
+    // Section: Informations personnelles
+    fullName: {
+      show: true,
+      label: 'Nom complet *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
+    age: {
+      show: true,
+      label: 'Âge *',
+      placeholder: 'Votre âge',
+      required: true
+    },
+    dateOfBirth: {
+      show: true,
+      label: 'Date de naissance *',
+      placeholder: 'Sélectionnez votre date de naissance',
+      required: true
+    },
+    placeOfBirth: {
+      show: true,
+      label: 'Lieu de naissance *',
+      placeholder: 'Ville/Pays de naissance',
+      required: true
+    },
+    maritalStatus: {
+      show: true,
+      label: 'Situation civile *',
+      placeholder: 'Célibataire, Marié, Divorcé...',
+      required: true
+    },
+    phone: {
+      show: true,
+      label: 'Téléphone *',
+      placeholder: '+228 XX XX XX XX',
+      required: true
+    },
+    countryOfOrigin: {
+      show: true,
+      label: 'Pays d\'origine *',
+      placeholder: 'Votre pays d\'origine',
+      required: true
+    },
+    countryOfResidence: {
+      show: true,
+      label: 'Pays de résidence *',
+      placeholder: 'Votre pays de résidence',
+      required: true
+    },
+    profession: {
+      show: true,
+      label: 'Profession *',
+      placeholder: 'Ex: Médecin, Ingénieur, Commerçant...',
+      required: true,
+      helpText: 'Votre profession actuelle'
+    },
+    address: {
+      show: true,
+      label: 'Adresse complète *',
+      placeholder: 'Votre adresse complète',
+      required: true
+    },
+    idNumber: {
+      show: true,
+      label: 'Numéro de pièce d\'identité *',
+      placeholder: 'Numéro de passeport ou ID',
+      required: true
+    },
+    // Section: Informations financières
     budget: {
       show: true,
-      label: 'Budget maximum (€)',
-      placeholder: 'Votre budget d\'achat',
-      required: true
+      label: 'Budget d\'acquisition (FCFA)',
+      placeholder: 'Montant maximum que vous pouvez investir',
+      required: true,
+      helpText: 'Indiquez votre budget maximum pour cet achat'
     },
     financingType: {
       show: true,
-      label: 'Type de financement',
-      placeholder: 'Crédit, Comptant, Mixte',
-      required: true
+      label: 'Mode de financement',
+      placeholder: 'Sélectionnez votre mode de financement',
+      required: true,
+      helpText: 'Comment comptez-vous financer cet achat ?'
+    },
+    // Section: Projet
+    intendedUse: {
+      show: true,
+      label: 'Utilisation prévue',
+      placeholder: 'Résidence principale, Résidence secondaire, Investissement locatif...',
+      required: true,
+      helpText: 'Comment comptez-vous utiliser ce bien ?'
     },
     specialRequirements: {
       show: true,
-      label: 'Critères recherchés',
-      placeholder: 'Piscine, vue mer, terrain...',
-      required: false
+      label: 'Critères et exigences particulières',
+      placeholder: 'Piscine, jardin, vue mer, garage, sécurité...',
+      required: false,
+      helpText: 'Décrivez vos critères spécifiques pour cette villa'
     }
   },
-  validation: {},
+  validation: {
+    minBudget: 1000000
+  },
   bookingText: {
-    title: 'Acheter cette villa',
-    submitButton: 'Envoyer mon offre',
-    successMessage: 'Votre offre d\'achat a été transmise !'
+    title: 'Formulaire d\'offre d\'achat',
+    submitButton: 'Soumettre mon offre',
+    successMessage: 'Votre offre d\'achat a été transmise au vendeur. Vous recevrez une réponse sous 48h.'
   }
 };
 
@@ -460,6 +718,12 @@ const houseRentConfig: PropertyTypeConfig = {
     freeCancellationDays: 7
   },
   fields: {
+    fullName: {
+      show: true,
+      label: 'Nom *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
     startDate: {
       show: true,
       label: 'Date de début du bail',
@@ -509,6 +773,7 @@ const houseSaleConfig: PropertyTypeConfig = {
   icon: 'home',
   category: 'residential',
   visitRequired: true,
+  visitOptionalMessage: 'Nous vous recommandons de visiter la maison avant de faire une offre.',
   bookingFlow: {
     flowType: 'visit_required',
     skipVisitForRent: false,
@@ -523,29 +788,241 @@ const houseSaleConfig: PropertyTypeConfig = {
     freeCancellationDays: 0
   },
   fields: {
+    // Section: Informations personnelles
+    fullName: {
+      show: true,
+      label: 'Nom complet *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
+    age: {
+      show: true,
+      label: 'Âge *',
+      placeholder: 'Votre âge',
+      required: true
+    },
+    dateOfBirth: {
+      show: true,
+      label: 'Date de naissance *',
+      placeholder: 'Sélectionnez votre date de naissance',
+      required: true
+    },
+    placeOfBirth: {
+      show: true,
+      label: 'Lieu de naissance *',
+      placeholder: 'Ville/Pays de naissance',
+      required: true
+    },
+    maritalStatus: {
+      show: true,
+      label: 'Situation civile *',
+      placeholder: 'Célibataire, Marié, Divorcé...',
+      required: true
+    },
+    phone: {
+      show: true,
+      label: 'Téléphone *',
+      placeholder: '+228 XX XX XX XX',
+      required: true
+    },
+    countryOfOrigin: {
+      show: true,
+      label: 'Pays d\'origine *',
+      placeholder: 'Votre pays d\'origine',
+      required: true
+    },
+    countryOfResidence: {
+      show: true,
+      label: 'Pays de résidence *',
+      placeholder: 'Votre pays de résidence',
+      required: true
+    },
+    profession: {
+      show: true,
+      label: 'Profession *',
+      placeholder: 'Ex: Médecin, Ingénieur, Commerçant...',
+      required: true,
+      helpText: 'Votre profession actuelle'
+    },
+    address: {
+      show: true,
+      label: 'Adresse complète *',
+      placeholder: 'Votre adresse complète',
+      required: true
+    },
+    idNumber: {
+      show: true,
+      label: 'Numéro de pièce d\'identité *',
+      placeholder: 'Numéro de passeport ou ID',
+      required: true
+    },
+    // Section: Informations financières
     budget: {
       show: true,
-      label: 'Budget maximum (€)',
-      placeholder: 'Votre budget d\'achat',
-      required: true
+      label: 'Budget d\'acquisition (FCFA)',
+      placeholder: 'Montant maximum que vous pouvez investir',
+      required: true,
+      helpText: 'Indiquez votre budget maximum pour cet achat'
     },
     financingType: {
       show: true,
-      label: 'Type de financement',
-      placeholder: 'Crédit, Comptant, Mixte',
-      required: true
+      label: 'Mode de financement',
+      placeholder: 'Sélectionnez votre mode de financement',
+      required: true,
+      helpText: 'Comment comptez-vous financer cet achat ?'
+    },
+    // Section: Projet
+    intendedUse: {
+      show: true,
+      label: 'Utilisation prévue',
+      placeholder: 'Résidence principale, Résidence secondaire, Investissement locatif...',
+      required: true,
+      helpText: 'Comment comptez-vous utiliser ce bien ?'
     }
   },
-  validation: {},
+  validation: {
+    minBudget: 500000
+  },
   bookingText: {
-    title: 'Acheter cette maison',
-    submitButton: 'Envoyer mon offre',
-    successMessage: 'Votre offre d\'achat a été transmise !'
+    title: 'Formulaire d\'offre d\'achat',
+    submitButton: 'Soumettre mon offre',
+    successMessage: 'Votre offre d\'achat a été transmise au vendeur. Vous recevrez une réponse sous 48h.'
   }
 };
 
 // Configuration for LAND for SALE
 const landSaleConfig: PropertyTypeConfig = {
+  displayName: 'Terrain',
+  icon: 'image-filter-hdr',
+  category: 'land',
+  visitRequired: true,
+  visitOptionalMessage: 'Nous vous recommandons fortement de visiter le terrain avant de soumettre votre offre.',
+  bookingFlow: {
+    flowType: 'visit_required',
+    skipVisitForRent: false,
+    skipVisitForSale: false,
+    instantBookingAllowed: false,
+    directBookingRoute: '/booking/Bookingscreen',
+    visitRoute: '/booking/VisitScreen',
+    paymentTiming: 'negotiable',
+    depositRequired: true,
+    depositPercentage: 10,
+    cancellationPolicy: 'strict',
+    freeCancellationDays: 0
+  },
+  fields: {
+    // Section: Informations personnelles
+    fullName: {
+      show: true,
+      label: 'Nom complet *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
+    age: {
+      show: true,
+      label: 'Âge *',
+      placeholder: 'Votre âge',
+      required: true
+    },
+    dateOfBirth: {
+      show: true,
+      label: 'Date de naissance *',
+      placeholder: 'Sélectionnez votre date de naissance',
+      required: true
+    },
+    placeOfBirth: {
+      show: true,
+      label: 'Lieu de naissance *',
+      placeholder: 'Ville/Pays de naissance',
+      required: true
+    },
+    maritalStatus: {
+      show: true,
+      label: 'Situation civile *',
+      placeholder: 'Célibataire, Marié, Divorcé...',
+      required: true
+    },
+    phone: {
+      show: true,
+      label: 'Téléphone *',
+      placeholder: '+228 XX XX XX XX',
+      required: true
+    },
+    countryOfOrigin: {
+      show: true,
+      label: 'Pays d\'origine *',
+      placeholder: 'Votre pays d\'origine',
+      required: true
+    },
+    countryOfResidence: {
+      show: true,
+      label: 'Pays de résidence *',
+      placeholder: 'Votre pays de résidence',
+      required: true
+    },
+    profession: {
+      show: true,
+      label: 'Profession *',
+      placeholder: 'Ex: Médecin, Ingénieur, Commerçant...',
+      required: true,
+      helpText: 'Votre profession actuelle'
+    },
+    address: {
+      show: true,
+      label: 'Adresse complète *',
+      placeholder: 'Quartier, Ville, Code postal',
+      required: true,
+      helpText: 'Votre adresse de résidence actuelle'
+    },
+    idNumber: {
+      show: true,
+      label: 'Numéro de pièce d\'identité *',
+      placeholder: 'Numéro de passeport ou ID',
+      required: true
+    },
+    // Section: Informations financières
+    budget: {
+      show: true,
+      label: 'Budget d\'acquisition (FCFA)',
+      placeholder: 'Montant maximum que vous pouvez investir',
+      required: true,
+      helpText: 'Indiquez votre budget maximum pour cet achat'
+    },
+    financingType: {
+      show: true,
+      label: 'Mode de financement',
+      placeholder: 'Sélectionnez votre mode de financement',
+      required: true,
+      helpText: 'Comment comptez-vous financer cet achat ?'
+    },
+    // Section: Projet d'utilisation
+    intendedUse: {
+      show: true,
+      label: 'Projet d\'utilisation du terrain',
+      placeholder: 'Décrivez votre projet : Construction résidentielle, Agriculture, Commerce, Investissement à long terme...',
+      required: true,
+      helpText: 'Expliquez en détail ce que vous comptez faire de ce terrain'
+    },
+    constructionPlan: {
+      show: true,
+      label: 'Plan de construction (si applicable)',
+      placeholder: 'Décrivez votre projet de construction : type de bâtiment, superficie prévue, délai de réalisation...',
+      required: false,
+      helpText: 'Si vous prévoyez de construire, détaillez votre projet'
+    }
+  },
+  validation: {
+    minBudget: 100000
+  },
+  bookingText: {
+    title: 'Formulaire d\'offre d\'achat',
+    submitButton: 'Soumettre mon offre',
+    successMessage: 'Votre offre d\'achat a été transmise au vendeur. Vous recevrez une réponse sous 48h.'
+  }
+};
+
+// Configuration for LAND for RENT
+const landRentConfig: PropertyTypeConfig = {
   displayName: 'Terrain',
   icon: 'image-filter-hdr',
   category: 'land',
@@ -557,54 +1034,19 @@ const landSaleConfig: PropertyTypeConfig = {
     instantBookingAllowed: false,
     directBookingRoute: '/booking/Bookingscreen',
     visitRoute: '/booking/VisitScreen',
-    paymentTiming: 'negotiable',
+    paymentTiming: 'monthly',
     depositRequired: true,
-    depositPercentage: 10,
-    cancellationPolicy: 'strict',
-    freeCancellationDays: 0
+    depositPercentage: 100,
+    cancellationPolicy: 'moderate',
+    freeCancellationDays: 14
   },
   fields: {
-    budget: {
+    fullName: {
       show: true,
-      label: 'Budget maximum (€)',
-      placeholder: 'Votre budget d\'achat',
+      label: 'Nom *',
+      placeholder: 'Votre nom complet',
       required: true
     },
-    financingType: {
-      show: true,
-      label: 'Type de financement',
-      placeholder: 'Crédit, Comptant, Mixte',
-      required: true
-    },
-    intendedUse: {
-      show: true,
-      label: 'Usage prévu du terrain',
-      placeholder: 'Construction, Agriculture, Investissement...',
-      required: true,
-      helpText: 'Comment comptez-vous utiliser ce terrain ?'
-    },
-    constructionPlan: {
-      show: true,
-      label: 'Projet de construction',
-      placeholder: 'Villa, Immeuble, Usage commercial...',
-      required: false,
-      helpText: 'Si vous prévoyez de construire'
-    }
-  },
-  validation: {},
-  bookingText: {
-    title: 'Acheter ce terrain',
-    submitButton: 'Envoyer mon offre',
-    successMessage: 'Votre offre d\'achat a été transmise !'
-  }
-};
-
-// Configuration for LAND for RENT
-const landRentConfig: PropertyTypeConfig = {
-  displayName: 'Terrain',
-  icon: 'image-filter-hdr',
-  visitRequired: true,
-  fields: {
     startDate: {
       show: true,
       label: 'Date de début de location',
@@ -645,8 +1087,28 @@ const landRentConfig: PropertyTypeConfig = {
 const penthouseRentConfig: PropertyTypeConfig = {
   displayName: 'Penthouse',
   icon: 'office-building-marker',
+  category: 'residential',
   visitRequired: true,
+  bookingFlow: {
+    flowType: 'visit_required',
+    skipVisitForRent: false,
+    skipVisitForSale: false,
+    instantBookingAllowed: false,
+    directBookingRoute: '/booking/Bookingscreen',
+    visitRoute: '/booking/VisitScreen',
+    paymentTiming: 'monthly',
+    depositRequired: true,
+    depositPercentage: 300, // 3 months deposit for premium properties
+    cancellationPolicy: 'strict',
+    freeCancellationDays: 7
+  },
   fields: {
+    fullName: {
+      show: true,
+      label: 'Nom *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
     startDate: {
       show: true,
       label: 'Date de début du bail',
@@ -695,8 +1157,90 @@ const penthouseRentConfig: PropertyTypeConfig = {
 const penthouseSaleConfig: PropertyTypeConfig = {
   displayName: 'Penthouse',
   icon: 'office-building-marker',
+  category: 'residential',
   visitRequired: true,
+  bookingFlow: {
+    flowType: 'visit_required',
+    skipVisitForRent: false,
+    skipVisitForSale: false,
+    instantBookingAllowed: false,
+    directBookingRoute: '/booking/Bookingscreen',
+    visitRoute: '/booking/VisitScreen',
+    paymentTiming: 'negotiable',
+    depositRequired: true,
+    depositPercentage: 10,
+    cancellationPolicy: 'strict',
+    freeCancellationDays: 0
+  },
   fields: {
+    // Section: Informations personnelles
+    fullName: {
+      show: true,
+      label: 'Nom complet *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
+    age: {
+      show: true,
+      label: 'Âge *',
+      placeholder: 'Votre âge',
+      required: true
+    },
+    dateOfBirth: {
+      show: true,
+      label: 'Date de naissance *',
+      placeholder: 'Sélectionnez votre date de naissance',
+      required: true
+    },
+    placeOfBirth: {
+      show: true,
+      label: 'Lieu de naissance *',
+      placeholder: 'Ville/Pays de naissance',
+      required: true
+    },
+    maritalStatus: {
+      show: true,
+      label: 'Situation civile *',
+      placeholder: 'Célibataire, Marié, Divorcé...',
+      required: true
+    },
+    phone: {
+      show: true,
+      label: 'Téléphone *',
+      placeholder: '+228 XX XX XX XX',
+      required: true
+    },
+    countryOfOrigin: {
+      show: true,
+      label: 'Pays d\'origine *',
+      placeholder: 'Votre pays d\'origine',
+      required: true
+    },
+    countryOfResidence: {
+      show: true,
+      label: 'Pays de résidence *',
+      placeholder: 'Votre pays de résidence',
+      required: true
+    },
+    profession: {
+      show: true,
+      label: 'Profession *',
+      placeholder: 'Votre profession',
+      required: true
+    },
+    address: {
+      show: true,
+      label: 'Adresse complète *',
+      placeholder: 'Votre adresse complète',
+      required: true
+    },
+    idNumber: {
+      show: true,
+      label: 'Numéro de pièce d\'identité *',
+      placeholder: 'Numéro de passeport ou ID',
+      required: true
+    },
+    // Section: Informations financières
     budget: {
       show: true,
       label: 'Budget maximum (€)',
@@ -728,8 +1272,29 @@ const penthouseSaleConfig: PropertyTypeConfig = {
 const studioRentConfig: PropertyTypeConfig = {
   displayName: 'Studio',
   icon: 'door',
+  category: 'residential',
   visitRequired: true,
+  bookingFlow: {
+    flowType: 'visit_optional',
+    skipVisitForRent: false,
+    skipVisitForSale: false,
+    instantBookingAllowed: false,
+    directBookingRoute: '/booking/Bookingscreen',
+    visitRoute: '/booking/VisitScreen',
+    paymentTiming: 'monthly',
+    depositRequired: true,
+    depositPercentage: 100,
+    cancellationPolicy: 'flexible',
+    freeCancellationDays: 7,
+    visitOptionalMessage: 'Pour un studio, la visite est recommandée mais vous pouvez aussi réserver directement.'
+  },
   fields: {
+    fullName: {
+      show: true,
+      label: 'Nom *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
     startDate: {
       show: true,
       label: 'Date de début du bail',
@@ -777,8 +1342,90 @@ const studioRentConfig: PropertyTypeConfig = {
 const studioSaleConfig: PropertyTypeConfig = {
   displayName: 'Studio',
   icon: 'door',
+  category: 'residential',
   visitRequired: true,
+  bookingFlow: {
+    flowType: 'visit_required',
+    skipVisitForRent: false,
+    skipVisitForSale: false,
+    instantBookingAllowed: false,
+    directBookingRoute: '/booking/Bookingscreen',
+    visitRoute: '/booking/VisitScreen',
+    paymentTiming: 'negotiable',
+    depositRequired: true,
+    depositPercentage: 10,
+    cancellationPolicy: 'strict',
+    freeCancellationDays: 0
+  },
   fields: {
+    // Section: Informations personnelles
+    fullName: {
+      show: true,
+      label: 'Nom complet *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
+    age: {
+      show: true,
+      label: 'Âge *',
+      placeholder: 'Votre âge',
+      required: true
+    },
+    dateOfBirth: {
+      show: true,
+      label: 'Date de naissance *',
+      placeholder: 'Sélectionnez votre date de naissance',
+      required: true
+    },
+    placeOfBirth: {
+      show: true,
+      label: 'Lieu de naissance *',
+      placeholder: 'Ville/Pays de naissance',
+      required: true
+    },
+    maritalStatus: {
+      show: true,
+      label: 'Situation civile *',
+      placeholder: 'Célibataire, Marié, Divorcé...',
+      required: true
+    },
+    phone: {
+      show: true,
+      label: 'Téléphone *',
+      placeholder: '+228 XX XX XX XX',
+      required: true
+    },
+    countryOfOrigin: {
+      show: true,
+      label: 'Pays d\'origine *',
+      placeholder: 'Votre pays d\'origine',
+      required: true
+    },
+    countryOfResidence: {
+      show: true,
+      label: 'Pays de résidence *',
+      placeholder: 'Votre pays de résidence',
+      required: true
+    },
+    profession: {
+      show: true,
+      label: 'Profession *',
+      placeholder: 'Votre profession',
+      required: true
+    },
+    address: {
+      show: true,
+      label: 'Adresse complète *',
+      placeholder: 'Votre adresse complète',
+      required: true
+    },
+    idNumber: {
+      show: true,
+      label: 'Numéro de pièce d\'identité *',
+      placeholder: 'Numéro de passeport ou ID',
+      required: true
+    },
+    // Section: Informations financières
     budget: {
       show: true,
       label: 'Budget maximum (€)',
@@ -804,8 +1451,28 @@ const studioSaleConfig: PropertyTypeConfig = {
 const loftRentConfig: PropertyTypeConfig = {
   displayName: 'Loft',
   icon: 'warehouse',
+  category: 'residential',
   visitRequired: true,
+  bookingFlow: {
+    flowType: 'visit_required',
+    skipVisitForRent: false,
+    skipVisitForSale: false,
+    instantBookingAllowed: false,
+    directBookingRoute: '/booking/Bookingscreen',
+    visitRoute: '/booking/VisitScreen',
+    paymentTiming: 'monthly',
+    depositRequired: true,
+    depositPercentage: 200,
+    cancellationPolicy: 'moderate',
+    freeCancellationDays: 7
+  },
   fields: {
+    fullName: {
+      show: true,
+      label: 'Nom *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
     startDate: {
       show: true,
       label: 'Date de début du bail',
@@ -859,8 +1526,90 @@ const loftRentConfig: PropertyTypeConfig = {
 const loftSaleConfig: PropertyTypeConfig = {
   displayName: 'Loft',
   icon: 'warehouse',
+  category: 'residential',
   visitRequired: true,
+  bookingFlow: {
+    flowType: 'visit_required',
+    skipVisitForRent: false,
+    skipVisitForSale: false,
+    instantBookingAllowed: false,
+    directBookingRoute: '/booking/Bookingscreen',
+    visitRoute: '/booking/VisitScreen',
+    paymentTiming: 'negotiable',
+    depositRequired: true,
+    depositPercentage: 10,
+    cancellationPolicy: 'strict',
+    freeCancellationDays: 0
+  },
   fields: {
+    // Section: Informations personnelles
+    fullName: {
+      show: true,
+      label: 'Nom complet *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
+    age: {
+      show: true,
+      label: 'Âge *',
+      placeholder: 'Votre âge',
+      required: true
+    },
+    dateOfBirth: {
+      show: true,
+      label: 'Date de naissance *',
+      placeholder: 'Sélectionnez votre date de naissance',
+      required: true
+    },
+    placeOfBirth: {
+      show: true,
+      label: 'Lieu de naissance *',
+      placeholder: 'Ville/Pays de naissance',
+      required: true
+    },
+    maritalStatus: {
+      show: true,
+      label: 'Situation civile *',
+      placeholder: 'Célibataire, Marié, Divorcé...',
+      required: true
+    },
+    phone: {
+      show: true,
+      label: 'Téléphone *',
+      placeholder: '+228 XX XX XX XX',
+      required: true
+    },
+    countryOfOrigin: {
+      show: true,
+      label: 'Pays d\'origine *',
+      placeholder: 'Votre pays d\'origine',
+      required: true
+    },
+    countryOfResidence: {
+      show: true,
+      label: 'Pays de résidence *',
+      placeholder: 'Votre pays de résidence',
+      required: true
+    },
+    profession: {
+      show: true,
+      label: 'Profession *',
+      placeholder: 'Votre profession',
+      required: true
+    },
+    address: {
+      show: true,
+      label: 'Adresse complète *',
+      placeholder: 'Votre adresse complète',
+      required: true
+    },
+    idNumber: {
+      show: true,
+      label: 'Numéro de pièce d\'identité *',
+      placeholder: 'Numéro de passeport ou ID',
+      required: true
+    },
+    // Section: Informations financières
     budget: {
       show: true,
       label: 'Budget maximum (€)',
@@ -892,8 +1641,28 @@ const loftSaleConfig: PropertyTypeConfig = {
 const officeRentConfig: PropertyTypeConfig = {
   displayName: 'Bureau',
   icon: 'briefcase',
+  category: 'professional',
   visitRequired: true,
+  bookingFlow: {
+    flowType: 'visit_required',
+    skipVisitForRent: false,
+    skipVisitForSale: false,
+    instantBookingAllowed: false,
+    directBookingRoute: '/booking/Bookingscreen',
+    visitRoute: '/booking/VisitScreen',
+    paymentTiming: 'monthly',
+    depositRequired: true,
+    depositPercentage: 300, // 3 months for professional
+    cancellationPolicy: 'strict',
+    freeCancellationDays: 30
+  },
   fields: {
+    fullName: {
+      show: true,
+      label: 'Nom *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
     startDate: {
       show: true,
       label: 'Date de début du bail',
@@ -940,32 +1709,129 @@ const officeRentConfig: PropertyTypeConfig = {
 const officeSaleConfig: PropertyTypeConfig = {
   displayName: 'Bureau',
   icon: 'briefcase',
+  category: 'professional',
   visitRequired: true,
+  visitOptionalMessage: 'Une visite est recommandée pour évaluer l\'espace professionnel.',
+  bookingFlow: {
+    flowType: 'visit_required',
+    skipVisitForRent: false,
+    skipVisitForSale: false,
+    instantBookingAllowed: false,
+    directBookingRoute: '/booking/Bookingscreen',
+    visitRoute: '/booking/VisitScreen',
+    paymentTiming: 'negotiable',
+    depositRequired: true,
+    depositPercentage: 10,
+    cancellationPolicy: 'strict',
+    freeCancellationDays: 0
+  },
   fields: {
+    // Section: Informations personnelles
+    fullName: {
+      show: true,
+      label: 'Nom complet *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
+    age: {
+      show: true,
+      label: 'Âge *',
+      placeholder: 'Votre âge',
+      required: true
+    },
+    dateOfBirth: {
+      show: true,
+      label: 'Date de naissance *',
+      placeholder: 'Sélectionnez votre date de naissance',
+      required: true
+    },
+    placeOfBirth: {
+      show: true,
+      label: 'Lieu de naissance *',
+      placeholder: 'Ville/Pays de naissance',
+      required: true
+    },
+    maritalStatus: {
+      show: true,
+      label: 'Situation civile *',
+      placeholder: 'Célibataire, Marié, Divorcé...',
+      required: true
+    },
+    phone: {
+      show: true,
+      label: 'Téléphone *',
+      placeholder: '+228 XX XX XX XX',
+      required: true
+    },
+    countryOfOrigin: {
+      show: true,
+      label: 'Pays d\'origine *',
+      placeholder: 'Votre pays d\'origine',
+      required: true
+    },
+    countryOfResidence: {
+      show: true,
+      label: 'Pays de résidence *',
+      placeholder: 'Votre pays de résidence',
+      required: true
+    },
+    profession: {
+      show: true,
+      label: 'Profession / Activité *',
+      placeholder: 'Ex: Cabinet d\'avocats, Agence immobilière...',
+      required: true,
+      helpText: 'Nom de votre entreprise ou type d\'activité'
+    },
+    address: {
+      show: true,
+      label: 'Adresse complète *',
+      placeholder: 'Adresse de votre siège social',
+      required: true
+    },
+    idNumber: {
+      show: true,
+      label: 'Numéro de pièce d\'identité *',
+      placeholder: 'Numéro de passeport ou ID',
+      required: true
+    },
+    // Section: Informations financières
     budget: {
       show: true,
-      label: 'Budget maximum (€)',
-      placeholder: 'Votre budget d\'achat',
-      required: true
+      label: 'Budget d\'acquisition (FCFA)',
+      placeholder: 'Montant maximum pour cet investissement',
+      required: true,
+      helpText: 'Budget total incluant les frais annexes'
     },
     financingType: {
       show: true,
-      label: 'Type de financement',
-      placeholder: 'Crédit professionnel, Comptant...',
-      required: true
+      label: 'Mode de financement',
+      placeholder: 'Crédit professionnel, Fonds propres, Leasing...',
+      required: true,
+      helpText: 'Comment comptez-vous financer cet achat ?'
     },
+    // Section: Projet
     intendedUse: {
       show: true,
-      label: 'Usage prévu',
-      placeholder: 'Siège social, bureaux, coworking...',
-      required: true
+      label: 'Utilisation prévue des locaux',
+      placeholder: 'Siège social, bureaux opérationnels, centre d\'appels, coworking...',
+      required: true,
+      helpText: 'Décrivez l\'usage professionnel prévu'
+    },
+    specialRequirements: {
+      show: true,
+      label: 'Besoins spécifiques',
+      placeholder: 'Aménagements requis, équipements, accès PMR, parking...',
+      required: false,
+      helpText: 'Décrivez vos exigences techniques'
     }
   },
-  validation: {},
+  validation: {
+    minBudget: 500000
+  },
   bookingText: {
-    title: 'Acheter ce bureau',
-    submitButton: 'Envoyer mon offre',
-    successMessage: 'Votre offre d\'achat a été transmise !'
+    title: 'Formulaire d\'offre d\'achat - Bureau',
+    submitButton: 'Soumettre mon offre',
+    successMessage: 'Votre offre d\'achat a été transmise au vendeur. Vous recevrez une réponse sous 48h.'
   }
 };
 
@@ -973,9 +1839,31 @@ const officeSaleConfig: PropertyTypeConfig = {
 const chaletRentConfig: PropertyTypeConfig = {
   displayName: 'Chalet',
   icon: 'pine-tree',
+  category: 'vacation',
   visitRequired: false,
   visitOptionalMessage: 'Pour un chalet de vacances, la visite n\'est pas obligatoire. Vous pouvez réserver directement.',
+  bookingFlow: {
+    flowType: 'direct',
+    skipVisitForRent: true,
+    skipVisitForSale: false,
+    instantBookingAllowed: true,
+    directBookingRoute: '/booking/Bookingscreen',
+    visitRoute: '/booking/VisitScreen',
+    paymentTiming: 'upfront',
+    depositRequired: true,
+    depositPercentage: 50,
+    cancellationPolicy: 'moderate',
+    freeCancellationDays: 7,
+    directBookingMessage: 'Réservez directement votre chalet de vacances.',
+    instantBookingMessage: 'Confirmation instantanée disponible.'
+  },
   fields: {
+    fullName: {
+      show: true,
+      label: 'Nom *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
     checkInDate: {
       show: true,
       label: 'Date d\'arrivée',
@@ -1015,8 +1903,90 @@ const chaletRentConfig: PropertyTypeConfig = {
 const chaletSaleConfig: PropertyTypeConfig = {
   displayName: 'Chalet',
   icon: 'pine-tree',
+  category: 'vacation',
   visitRequired: true,
+  bookingFlow: {
+    flowType: 'visit_required',
+    skipVisitForRent: true,
+    skipVisitForSale: false,
+    instantBookingAllowed: false,
+    directBookingRoute: '/booking/Bookingscreen',
+    visitRoute: '/booking/VisitScreen',
+    paymentTiming: 'negotiable',
+    depositRequired: true,
+    depositPercentage: 10,
+    cancellationPolicy: 'strict',
+    freeCancellationDays: 0
+  },
   fields: {
+    // Section: Informations personnelles
+    fullName: {
+      show: true,
+      label: 'Nom complet *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
+    age: {
+      show: true,
+      label: 'Âge *',
+      placeholder: 'Votre âge',
+      required: true
+    },
+    dateOfBirth: {
+      show: true,
+      label: 'Date de naissance *',
+      placeholder: 'Sélectionnez votre date de naissance',
+      required: true
+    },
+    placeOfBirth: {
+      show: true,
+      label: 'Lieu de naissance *',
+      placeholder: 'Ville/Pays de naissance',
+      required: true
+    },
+    maritalStatus: {
+      show: true,
+      label: 'Situation civile *',
+      placeholder: 'Célibataire, Marié, Divorcé...',
+      required: true
+    },
+    phone: {
+      show: true,
+      label: 'Téléphone *',
+      placeholder: '+228 XX XX XX XX',
+      required: true
+    },
+    countryOfOrigin: {
+      show: true,
+      label: 'Pays d\'origine *',
+      placeholder: 'Votre pays d\'origine',
+      required: true
+    },
+    countryOfResidence: {
+      show: true,
+      label: 'Pays de résidence *',
+      placeholder: 'Votre pays de résidence',
+      required: true
+    },
+    profession: {
+      show: true,
+      label: 'Profession *',
+      placeholder: 'Votre profession',
+      required: true
+    },
+    address: {
+      show: true,
+      label: 'Adresse complète *',
+      placeholder: 'Votre adresse complète',
+      required: true
+    },
+    idNumber: {
+      show: true,
+      label: 'Numéro de pièce d\'identité *',
+      placeholder: 'Numéro de passeport ou ID',
+      required: true
+    },
+    // Section: Informations financières
     budget: {
       show: true,
       label: 'Budget maximum (€)',
@@ -1048,8 +2018,28 @@ const chaletSaleConfig: PropertyTypeConfig = {
 const commercialRentConfig: PropertyTypeConfig = {
   displayName: 'Local Commercial',
   icon: 'store',
+  category: 'professional',
   visitRequired: true,
+  bookingFlow: {
+    flowType: 'visit_required',
+    skipVisitForRent: false,
+    skipVisitForSale: false,
+    instantBookingAllowed: false,
+    directBookingRoute: '/booking/Bookingscreen',
+    visitRoute: '/booking/VisitScreen',
+    paymentTiming: 'monthly',
+    depositRequired: true,
+    depositPercentage: 600, // 6 months for commercial
+    cancellationPolicy: 'strict',
+    freeCancellationDays: 30
+  },
   fields: {
+    fullName: {
+      show: true,
+      label: 'Nom *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
     startDate: {
       show: true,
       label: 'Date de début du bail',
@@ -1088,32 +2078,129 @@ const commercialRentConfig: PropertyTypeConfig = {
 const commercialSaleConfig: PropertyTypeConfig = {
   displayName: 'Local Commercial',
   icon: 'store',
+  category: 'professional',
   visitRequired: true,
+  visitOptionalMessage: 'Une visite est recommandée pour évaluer l\'emplacement commercial.',
+  bookingFlow: {
+    flowType: 'visit_required',
+    skipVisitForRent: false,
+    skipVisitForSale: false,
+    instantBookingAllowed: false,
+    directBookingRoute: '/booking/Bookingscreen',
+    visitRoute: '/booking/VisitScreen',
+    paymentTiming: 'negotiable',
+    depositRequired: true,
+    depositPercentage: 10,
+    cancellationPolicy: 'strict',
+    freeCancellationDays: 0
+  },
   fields: {
+    // Section: Informations personnelles
+    fullName: {
+      show: true,
+      label: 'Nom complet *',
+      placeholder: 'Votre nom complet',
+      required: true
+    },
+    age: {
+      show: true,
+      label: 'Âge *',
+      placeholder: 'Votre âge',
+      required: true
+    },
+    dateOfBirth: {
+      show: true,
+      label: 'Date de naissance *',
+      placeholder: 'Sélectionnez votre date de naissance',
+      required: true
+    },
+    placeOfBirth: {
+      show: true,
+      label: 'Lieu de naissance *',
+      placeholder: 'Ville/Pays de naissance',
+      required: true
+    },
+    maritalStatus: {
+      show: true,
+      label: 'Situation civile *',
+      placeholder: 'Célibataire, Marié, Divorcé...',
+      required: true
+    },
+    phone: {
+      show: true,
+      label: 'Téléphone *',
+      placeholder: '+228 XX XX XX XX',
+      required: true
+    },
+    countryOfOrigin: {
+      show: true,
+      label: 'Pays d\'origine *',
+      placeholder: 'Votre pays d\'origine',
+      required: true
+    },
+    countryOfResidence: {
+      show: true,
+      label: 'Pays de résidence *',
+      placeholder: 'Votre pays de résidence',
+      required: true
+    },
+    profession: {
+      show: true,
+      label: 'Type de commerce / Activité *',
+      placeholder: 'Ex: Supermarché, Boutique, Restaurant...',
+      required: true,
+      helpText: 'Nature de votre activité commerciale'
+    },
+    address: {
+      show: true,
+      label: 'Adresse complète *',
+      placeholder: 'Adresse actuelle de votre commerce',
+      required: true
+    },
+    idNumber: {
+      show: true,
+      label: 'Numéro de pièce d\'identité *',
+      placeholder: 'Numéro de passeport ou ID',
+      required: true
+    },
+    // Section: Informations financières
     budget: {
       show: true,
-      label: 'Budget maximum (€)',
-      placeholder: 'Votre budget d\'achat',
-      required: true
+      label: 'Budget d\'acquisition (FCFA)',
+      placeholder: 'Montant maximum pour cet investissement',
+      required: true,
+      helpText: 'Budget total incluant les frais annexes'
     },
     financingType: {
       show: true,
-      label: 'Type de financement',
-      placeholder: 'Crédit professionnel, Comptant...',
-      required: true
+      label: 'Mode de financement',
+      placeholder: 'Crédit commercial, Fonds propres, Investisseurs...',
+      required: true,
+      helpText: 'Comment comptez-vous financer cet achat ?'
     },
+    // Section: Projet commercial
     intendedUse: {
       show: true,
-      label: 'Usage prévu',
-      placeholder: 'Commerce, investissement locatif...',
-      required: true
+      label: 'Projet commercial prévu',
+      placeholder: 'Ouverture d\'un commerce, investissement locatif, extension d\'activité...',
+      required: true,
+      helpText: 'Décrivez votre projet commercial pour ce local'
+    },
+    specialRequirements: {
+      show: true,
+      label: 'Besoins spécifiques',
+      placeholder: 'Vitrine, stockage, cuisine professionnelle, parking client...',
+      required: false,
+      helpText: 'Décrivez vos besoins techniques et commerciaux'
     }
   },
-  validation: {},
+  validation: {
+    minBudget: 500000
+  },
   bookingText: {
-    title: 'Acheter ce local commercial',
-    submitButton: 'Envoyer mon offre',
-    successMessage: 'Votre offre d\'achat a été transmise !'
+    title: 'Formulaire d\'offre d\'achat - Local Commercial',
+    submitButton: 'Soumettre mon offre',
+    successMessage: 'Votre offre d\'achat a été transmise au vendeur. Vous recevrez une réponse sous 48h.'
   }
 };
 
@@ -1169,7 +2256,359 @@ export const isVisitRequired = (
   return config.visitRequired;
 };
 
+/**
+ * Gets the booking flow configuration for a property type and action
+ */
+export const getBookingFlow = (
+  propertyType: PropertyType,
+  actionType: ActionType
+): BookingFlowConfig => {
+  const config = getPropertyConfig(propertyType, actionType);
+  return config.bookingFlow;
+};
+
+/**
+ * Determines if direct booking (skip visit) is allowed for this property
+ */
+export const canSkipVisit = (
+  propertyType: PropertyType,
+  actionType: ActionType
+): boolean => {
+  const flow = getBookingFlow(propertyType, actionType);
+  if (actionType === 'rent') {
+    return flow.skipVisitForRent;
+  }
+  return flow.skipVisitForSale;
+};
+
+/**
+ * Determines if instant booking is available
+ */
+export const isInstantBookingAllowed = (
+  propertyType: PropertyType,
+  actionType: ActionType
+): boolean => {
+  const flow = getBookingFlow(propertyType, actionType);
+  return flow.instantBookingAllowed;
+};
+
+/**
+ * Gets the appropriate booking route based on property type and action
+ */
+export const getBookingRoute = (
+  propertyType: PropertyType,
+  actionType: ActionType,
+  forceVisit: boolean = false
+): '/booking/Bookingscreen' | '/booking/HotelBookingScreen' | '/booking/VisitScreen' => {
+  const flow = getBookingFlow(propertyType, actionType);
+
+  // If visit is forced or required, return visit route
+  if (forceVisit || !canSkipVisit(propertyType, actionType)) {
+    return flow.visitRoute;
+  }
+
+  // Otherwise return direct booking route
+  return flow.directBookingRoute;
+};
+
+/**
+ * Gets the payment configuration for a property type
+ */
+export const getPaymentConfig = (
+  propertyType: PropertyType,
+  actionType: ActionType
+): {
+  timing: PaymentTiming;
+  depositRequired: boolean;
+  depositPercentage?: number;
+} => {
+  const flow = getBookingFlow(propertyType, actionType);
+  return {
+    timing: flow.paymentTiming,
+    depositRequired: flow.depositRequired,
+    depositPercentage: flow.depositPercentage
+  };
+};
+
+
+/**
+ * Gets the cancellation policy for a property type
+ */
+export const getCancellationPolicy = (
+  propertyType: PropertyType,
+  actionType: ActionType
+): {
+  policy: CancellationPolicy;
+  freeCancellationDays?: number;
+} => {
+  const flow = getBookingFlow(propertyType, actionType);
+  return {
+    policy: flow.cancellationPolicy,
+    freeCancellationDays: flow.freeCancellationDays
+  };
+};
+
+/**
+ * Gets the property category
+ */
+export const getPropertyCategory = (
+  propertyType: PropertyType,
+  actionType: ActionType
+): PropertyCategory => {
+  const config = getPropertyConfig(propertyType, actionType);
+  return config.category;
+};
+
+/**
+ * Checks if property is a vacation type (hotel, chalet for rent)
+ */
+export const isVacationProperty = (
+  propertyType: PropertyType,
+  actionType: ActionType
+): boolean => {
+  const config = getPropertyConfig(propertyType, actionType);
+  return config.category === 'vacation' && actionType === 'rent';
+};
+
+/**
+ * Gets user-friendly message for booking flow
+ */
+export const getBookingFlowMessage = (
+  propertyType: PropertyType,
+  actionType: ActionType
+): string | undefined => {
+  const flow = getBookingFlow(propertyType, actionType);
+
+  if (flow.flowType === 'direct') {
+    return flow.directBookingMessage;
+  }
+
+  if (flow.flowType === 'visit_optional') {
+    return flow.visitOptionalMessage;
+  }
+
+  return undefined;
+};
+
+/**
+ * Determines the navigation route based on property type, action, and activity status
+ * This is the main function to use in info/index.tsx for intelligent navigation
+ */
+export const determineBookingNavigation = (
+  propertyType: PropertyType,
+  actionType: ActionType,
+  existingActivity?: {
+    reservationStatus?: string;
+    visiteStatus?: string;
+    id?: string;
+    isPayment?: boolean;
+  }
+): {
+  route: '/booking/Bookingscreen' | '/booking/HotelBookingScreen' | '/booking/VisitScreen' | '/bookingReview/bookingReview' | '/wallet/Wallet' | '/contrat/ContratScreen';
+  params?: Record<string, string>;
+  message?: string;
+} => {
+  const config = getPropertyConfig(propertyType, actionType);
+  const flow = config.bookingFlow;
+
+
+  // Handle existing activity status
+  if (existingActivity) {
+    const { reservationStatus, visiteStatus, id, isPayment } = existingActivity;
+
+    // Payment already done -> show contract download screen
+    if (isPayment === true) {
+      return {
+        route: '/contrat/ContratScreen',
+        params: { activityId: id || '', paymentStatus: 'completed' },
+        message: 'Votre paiement a été validé. Téléchargez votre contrat.'
+      };
+    }
+
+    // Reservation accepted -> go to payment
+
+    if (reservationStatus === 'ACCEPTED') {
+      if(propertyType !== 'hotel' && propertyType !== 'chalet') {
+        return {
+          route: '/bookingReview/bookingReview',
+          params: { reservationId: id || '' },
+          message: 'Votre réservation a été acceptée. Procédez au paiement.'
+        };
+      } else {
+        return {
+          route: '/wallet/Wallet',
+          message: 'Votre réservation a été acceptée. Vous pouvez maintenant réserver votre séjour.'
+        };
+      }
+    }
+
+    // Reservation pending/draft/refused -> go to booking screen
+    if (reservationStatus === 'PENDING' || reservationStatus === 'DRAFT' || reservationStatus === 'REFUSED') {
+      return {
+        route: flow.directBookingRoute,
+        message: reservationStatus === 'REFUSED'
+          ? 'Votre précédente demande a été refusée. Vous pouvez soumettre une nouvelle demande.'
+          : 'Votre demande de réservation est en cours de traitement.'
+      };
+    }
+
+    // Visit accepted -> go to booking
+    if (visiteStatus === 'ACCEPTED') {
+      return {
+        route: flow.directBookingRoute,
+        message: 'Votre visite a été effectuée. Vous pouvez maintenant réserver.'
+      };
+    }
+
+    // Visit pending/draft -> go to visit screen
+    if (visiteStatus === 'PENDING' || visiteStatus === 'DRAFT') {
+      return {
+        route: flow.visitRoute,
+        message: 'Votre demande de visite est en cours de traitement.'
+      };
+    }
+  }
+
+  // No existing activity - determine based on property type config
+  if (canSkipVisit(propertyType, actionType)) {
+    return {
+      route: flow.directBookingRoute,
+      message: flow.directBookingMessage || config.visitOptionalMessage
+    };
+  }
+
+  // Visit required
+  return {
+    route: flow.visitRoute,
+    message: 'Une visite est requise avant de pouvoir réserver ce bien.'
+  };
+};
+
+/**
+ * List of property types that allow direct booking (no visit required)
+ */
+export const DIRECT_BOOKING_TYPES: PropertyType[] = ['hotel', 'chalet'];
+
+/**
+ * List of hotel-like property types for backward compatibility
+ */
+export const HOTEL_TYPES = ['Hôtel', 'Hotel', 'Auberge', 'Motel', 'Resort', 'Chambre d\'hôte', 'Guesthouse'];
+
+/**
+ * Normalize property type string to PropertyType enum
+ */
+export const normalizePropertyType = (type: string): PropertyType => {
+  if (!type) {
+    console.log('[normalizePropertyType] Empty type, defaulting to apartment');
+    return 'apartment';
+  }
+
+  const normalized = type.toLowerCase().trim();
+  console.log('[normalizePropertyType] Input:', type, '-> Normalized:', normalized);
+
+  // Check if it's a hotel type
+  if (HOTEL_TYPES.some(h => normalized.includes(h.toLowerCase()))) {
+    console.log('[normalizePropertyType] Matched hotel type');
+    return 'hotel';
+  }
+
+  // Map common variations (French to English)
+  const typeMap: Record<string, PropertyType> = {
+    // French variations
+    'appartement': 'apartment',
+    'maison': 'house',
+    'terrain': 'land',
+    'bureau': 'office',
+    'local commercial': 'commercial',
+    'local': 'commercial',
+    'parcelle': 'land',
+    'lotissement': 'land',
+    'plot': 'land',
+    // English variations (already correct but ensure lowercase)
+    'apartment': 'apartment',
+    'house': 'house',
+    'land': 'land',
+    'villa': 'villa',
+    'studio': 'studio',
+    'loft': 'loft',
+    'penthouse': 'penthouse',
+    'office': 'office',
+    'commercial': 'commercial',
+    'hotel': 'hotel',
+    'chalet': 'chalet',
+    // Sell/Sale action types that might be passed as propertyType by mistake
+    'sell': 'apartment', // Fallback - this shouldn't happen
+    'sale': 'apartment', // Fallback - this shouldn't happen
+    'rent': 'apartment'  // Fallback - this shouldn't happen
+  };
+
+  const result = typeMap[normalized];
+  if (result) {
+    console.log('[normalizePropertyType] Mapped:', normalized, '->', result);
+    return result;
+  }
+
+  // Check if it's already a valid PropertyType
+  const validTypes: PropertyType[] = ['villa', 'apartment', 'house', 'penthouse', 'studio', 'loft', 'office', 'chalet', 'hotel', 'land', 'commercial'];
+  if (validTypes.includes(normalized as PropertyType)) {
+    console.log('[normalizePropertyType] Already valid type:', normalized);
+    return normalized as PropertyType;
+  }
+
+  console.log('[normalizePropertyType] Unknown type, defaulting to apartment:', normalized);
+  return 'apartment';
+};
+
+/**
+ * Normalize action type string to ActionType enum
+ * Handles variations like 'sell' -> 'sale', 'location' -> 'rent'
+ */
+export const normalizeActionType = (action: string): ActionType => {
+  if (!action) {
+    console.log('[normalizeActionType] Empty action, defaulting to rent');
+    return 'rent';
+  }
+
+  const normalized = action.toLowerCase().trim();
+  console.log('[normalizeActionType] Input:', action, '-> Normalized:', normalized);
+
+  // Map variations to standard types
+  const actionMap: Record<string, ActionType> = {
+    // Sale variations
+    'sell': 'sale',
+    'sale': 'sale',
+    'vente': 'sale',
+    'achat': 'sale',
+    'buy': 'sale',
+    'purchase': 'sale',
+    // Rent variations
+    'rent': 'rent',
+    'location': 'rent',
+    'louer': 'rent',
+    'rental': 'rent',
+    'lease': 'rent'
+  };
+
+  const result = actionMap[normalized] || 'rent';
+  console.log('[normalizeActionType] Result:', result);
+  return result;
+};
+
 export default {
   getPropertyConfig,
-  isVisitRequired
+  isVisitRequired,
+  getBookingFlow,
+  canSkipVisit,
+  isInstantBookingAllowed,
+  getBookingRoute,
+  getPaymentConfig,
+  getCancellationPolicy,
+  getPropertyCategory,
+  isVacationProperty,
+  getBookingFlowMessage,
+  determineBookingNavigation,
+  normalizePropertyType,
+  normalizeActionType,
+  DIRECT_BOOKING_TYPES,
+  HOTEL_TYPES
 };

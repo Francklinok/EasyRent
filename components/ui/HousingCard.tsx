@@ -2,7 +2,7 @@
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
 import { ThemedView } from './ThemedView';
-import { useTheme } from '../contexts/theme/themehook';
+import { useTheme } from '../../hooks/themehook';
 interface HousingCardProps {
   children?: React.ReactNode;
   onPress?: () => void;

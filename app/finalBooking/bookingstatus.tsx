@@ -1,240 +1,204 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { FlatList, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { useBooking, BookingReservation } from '@/components/contexts/booking/BookingContext';
-import { useNotifications } from '@/components/contexts/notifications/NotificationContext';
 import { BackButton } from '@/components/ui/BackButton';
-import { useTheme } from '@/components/contexts/theme/themehook';
+import { useTheme } from '@/hooks/themehook';
+import { useAuth } from '@/components/contexts/authContext/AuthContext';
+import { getBookingService } from '@/services/api/bookingService';
 
-const statusMap = {
-  pending: { text: 'En attente', color: 'bg-yellow-100 text-yellow-800' },
-  documents_submitted: { text: 'Documents soumis', color: 'bg-blue-100 text-blue-800' },
-  approved: { text: 'Approuvé', color: 'bg-green-100 text-green-800' },
-  rejected: { text: 'Rejeté', color: 'bg-red-100 text-red-800' },
-  payment_pending: { text: 'Paiement en attente', color: 'bg-purple-100 text-purple-800' },
-  payment_completed: { text: 'Paiement effectué', color: 'bg-green-100 text-green-800' },
-  contract_generated: { text: 'Contrat généré', color: 'bg-teal-100 text-teal-800' },
-  completed: { text: 'Terminé', color: 'bg-gray-100 text-gray-800' },
+interface ActivityItem {
+  id: string;
+  propertyId: string;
+  propertyTitle: string;
+  reservationStatus: string;
+  visitStatus: string;
+  paymentStatus: string;
+  amount: number;
+  currency: string;
+  reservationDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+  pending:    { label: 'En attente',     color: '#F59E0B' },
+  accepted:   { label: 'Acceptée',       color: '#10B981' },
+  rejected:   { label: 'Refusée',        color: '#EF4444' },
+  none:       { label: 'Non démarrée',   color: '#6B7280' },
 };
 
-const ReservationStatusScreen = () => {
-  const { reservations, getUserReservations, getOwnerReservations, approveReservation, rejectReservation } = useBooking();
-  const { addNotification } = useNotifications();
-  const [loading, setLoading] = useState(true);
+export default function ReservationStatusScreen() {
   const router = useRouter();
-  const {theme} = useTheme()
-  
-  const userType = 'tenant'; // Ou 'landlord' pour tester l'autre rôle
-  const currentUserId = 'user123'; // Mock user ID
-  
-  const [userReservations, setUserReservations] = useState<BookingReservation[]>([]);
+  const { theme } = useTheme();
+  const { user } = useAuth();
+
+  const [reservations, setReservations] = useState<ActivityItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchReservations = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      setLoading(true);
+      setError(null);
+      const bookingService = getBookingService();
+      const activities: ActivityItem[] = await bookingService.getUserActivities(user.id);
+      const filtered = activities.filter(a => a.reservationStatus && a.reservationStatus !== 'none');
+      console.log('Fetched filter  activities:', filtered);
+      setReservations(filtered);
+    } catch (err) {
+      console.error('Error fetching reservations:', err);
+      setError('Impossible de charger vos réservations.');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
-    // Get user's reservations from context and remove duplicates
-    setTimeout(() => {
-      const userBookings = getUserReservations(currentUserId);
-      
-      // Remove duplicates based on propertyId - keep only the latest reservation per property
-      const uniqueReservations = userBookings.reduce((acc, current) => {
-        const existingIndex = acc.findIndex(item => item.propertyId === current.propertyId);
-        
-        if (existingIndex === -1) {
-          // No existing reservation for this property, add it
-          acc.push(current);
-        } else {
-          // Compare dates and keep the most recent one
-          const existing = acc[existingIndex];
-          if (new Date(current.createdAt) > new Date(existing.createdAt)) {
-            acc[existingIndex] = current;
-          }
-        }
-        
-        return acc;
-      }, [] as BookingReservation[]);
-      
-      // Sort by creation date (most recent first)
-      const sortedReservations = uniqueReservations.sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      
-      setUserReservations(sortedReservations);
-      setLoading(false);
-    }, 500);
-  }, [reservations, getUserReservations]);
+    fetchReservations();
+  }, [fetchReservations]);
 
-  const handleOwnerApproval = (reservation: BookingReservation, approve: boolean) => {
-    if (approve) {
-      approveReservation(reservation.id, reservation.landlordId);
-      // Send notification to client
-      addNotification({
-        type: 'booking_confirmed',
-        title: 'Réservation approuvée',
-        message: `Votre réservation pour ${reservation.propertyTitle} a été approuvée. Vous pouvez maintenant procéder au paiement.`,
-        data: {
-          reservationId: reservation.id,
-          propertyId: reservation.propertyId,
-          status: 'approved'
+  const handlePress = (item: ActivityItem) => {
+    // If payment is completed, go directly to contract screen
+    if (item.paymentStatus === 'completed') {
+      router.push({
+        pathname: '/contrat/ContratScreen',
+        params: {
+          activityId: item.id,
+          paymentStatus: 'completed',
         }
-      });
-      Alert.alert('Approuvé', 'La réservation a été approuvée. Le client a été notifié.');
-    } else {
-      rejectReservation(reservation.id, reservation.landlordId);
-      Alert.alert('Rejeté', 'La réservation a été rejetée.');
-    }
-  };
-
-  const handleReservationPress = (reservation: BookingReservation) => {
-    if (userType === 'landlord') {
-      // Show owner approval options
-      if (reservation.status === 'pending' || reservation.status === 'documents_submitted') {
-        Alert.alert(
-          'Examiner la demande',
-          `Demande de réservation pour ${reservation.propertyTitle}\n\nOccupants: ${reservation.numberOfOccupants}\nRevenu: ${reservation.monthlyIncome}€\nGarant: ${reservation.hasGuarantor ? 'Oui' : 'Non'}`,
-          [
-            { text: 'Rejeter', style: 'destructive', onPress: () => handleOwnerApproval(reservation, false) },
-            { text: 'Annuler', style: 'cancel' },
-            { text: 'Approuver', onPress: () => handleOwnerApproval(reservation, true) }
-          ]
-        );
-      }
+      } as any);
       return;
     }
-
-    switch (reservation.status) {
-      case 'pending':
-      case 'documents_submitted':
-        Alert.alert(
-          'Demande en cours',
-          'Votre demande est en cours d\'examen par le propriétaire. Vous serez notifié lorsqu\'une décision sera prise.'
-        );
-        break;
-      case 'approved':
-        router.push({
-          pathname: "/payement/PayementScreen",
-          params: { reservationId: reservation.id }
-        });
-        break;
-      case 'payment_completed':
-      case 'contract_generated':
-        router.push({
-          pathname: '/contrat/ContratScreen',
-          params: { reservationId: reservation.id }
-        });
-        break;
-      case 'rejected':
-        Alert.alert(
-          'Demande refusée',
-          'Votre demande a été refusée par le propriétaire.'
-        );
-        break;
-      default:
-        break;
-    }
-  };
-
-  const getNextAction = (status: string) => {
-    if (userType === 'landlord') {
-      switch (status) {
-        case 'pending':
-        case 'documents_submitted':
-          return 'Examiner la demande';
-        case 'approved':
-          return 'Approuvé - En attente de paiement';
-        case 'rejected':
-          return 'Demande rejetée';
-        default:
-          return 'Voir les détails';
+    router.push({
+      pathname: '/bookingReview/bookingReview',
+      params: {
+        reservationId: item.id,
+        propertyId: item.propertyId,
       }
-    }
-    
-    switch (status) {
-      case 'pending':
-      case 'documents_submitted':
-        return 'En attente d\'approbation';
-      case 'approved':
-        return 'Procéder au paiement';
-      case 'payment_completed':
-      case 'contract_generated':
-        return 'Voir le contrat';
-      case 'rejected':
-        return 'Demande refusée';
-      default:
-        return 'Voir les détails';
-    }
+    } as any);
   };
 
-  const formatDate = (date: string) => {
-    if (!date) return 'Non définie';
-    
-    try {
-      const dateObj = new Date(date);
-      return format(dateObj, 'dd MMMM yyyy', { locale: fr });
-    } catch (error) {
-      console.error('Date formatting error:', error);
-      return 'Date invalide';
-    }
-  };
+  const renderItem = ({ item }: { item: ActivityItem }) => {
+    const isPaid = item.paymentStatus === 'completed';
+    const status = STATUS_CONFIG[item.reservationStatus] || STATUS_CONFIG['pending'];
+    const rawDate = item.reservationDate || item.createdAt || item.updatedAt;
+    const date = rawDate
+      ? new Date(rawDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+      : '—';
 
-  const renderItem = ({ item }: { item: BookingReservation }) => {
-    const statusInfo = statusMap[item.status] || statusMap.pending;
-    
-    return (
-      <TouchableOpacity
-        className=" rounded-lg shadow-sm mb-4 overflow-hidden"
-        onPress={() => handleReservationPress(item)}
-      >
-        <ThemedView className="p-4">
-          <ThemedView className="flex-row justify-between items-center mb-2">
-            <ThemedText className="text-lg font-semibold">{item.propertyTitle}</ThemedText>
-            {item.documentsSubmitted && (
-              <ThemedView className="flex-row items-center mt-1">
-                <Ionicons name="document-text" size={14} color={theme.success} />
-                <ThemedText className="text-xs text-green-600 ml-1">Documents soumis</ThemedText>
-              </ThemedView>
-            )}
-            <ThemedView className={`px-2 py-1 rounded-full ${statusInfo.color}`}>
-              <ThemedText className="text-xs font-medium">{statusInfo.text}</ThemedText>
+    if (isPaid) {
+      return (
+        <TouchableOpacity
+          style={[styles.card, {
+            backgroundColor: '#F1F8E9',
+            borderColor: '#A5D6A7',
+            borderWidth: 1.5,
+          }]}
+          onPress={() => handlePress(item)}
+          activeOpacity={0.75}
+        >
+          <ThemedView style={{
+            backgroundColor: '#1B5E20',
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}>
+            <Ionicons name="checkmark-circle" size={16} color="white" />
+            <ThemedText type="caption" style={{ color: 'white', fontWeight: '700', flex: 1 }}>
+              Paiement effectué avec succès
+            </ThemedText>
+            <ThemedText type="caption" style={{ color: '#A5D6A7', fontWeight: '600' }}>
+              {item.amount > 0 ? `${item.amount.toLocaleString('fr-FR')} ${item.currency || 'XOF'}` : ''}
+            </ThemedText>
+          </ThemedView>
+
+          <ThemedView style={styles.cardHeader}>
+            <ThemedText type="normal" style={{ fontWeight: '700', flex: 1, color: '#1B5E20' }} numberOfLines={1}>
+              {item.propertyTitle || 'Propriété'}
+            </ThemedText>
+            <ThemedView style={[styles.statusBadge, { backgroundColor: '#E8F5E9' }]}>
+              <ThemedText type="caption" style={{ color: '#1B5E20', fontWeight: '600' }}>
+                Confirmée
+              </ThemedText>
             </ThemedView>
           </ThemedView>
-          
-          <ThemedView className="mb-3">
-            <ThemedText className="text-gray-600">
-              Demande créée le {formatDate(item.createdAt)}
+
+          <ThemedView style={styles.cardBody}>
+            <ThemedView style={styles.row}>
+              <Ionicons name="calendar-outline" size={14} color="#388E3C" />
+              <ThemedText type="caption" style={{ color: '#388E3C', marginLeft: 6 }}>
+                Réservation du {item.reservationDate ? new Date(Number(item.reservationDate)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}
+              </ThemedText>
+            </ThemedView>
+          </ThemedView>
+
+          <ThemedView style={[styles.cardFooter, { borderTopColor: '#C8E6C9', backgroundColor: '#E8F5E9' }]}>
+            <ThemedText type="caption" style={{ color: '#1B5E20', fontWeight: '700' }}>
+              📄 Voir / Générer le contrat
             </ThemedText>
-            <ThemedText className="text-gray-600">
-              Période: {formatDate(item.startDate)} - {formatDate(item.endDate)}
-            </ThemedText>
-            <ThemedText className="text-gray-600">
-              Loyer mensuel: {item.monthlyRent} €
-            </ThemedText>
-            <ThemedText className="text-gray-600">
-              Occupants: {item.numberOfOccupants} | Garant: {item.hasGuarantor ? 'Oui' : 'Non'}
+            <Ionicons name="chevron-forward" size={16} color="#1B5E20" />
+          </ThemedView>
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.outline }]}
+        onPress={() => handlePress(item)}
+        activeOpacity={0.75}
+      >
+        <ThemedView style={styles.cardHeader}>
+          <ThemedText type="normal" style={{ fontWeight: '700', flex: 1 }} numberOfLines={1}>
+            {item.propertyTitle || 'Propriété'}
+          </ThemedText>
+          <ThemedView style={[styles.statusBadge, { backgroundColor: status.color + '20' }]}>
+            <ThemedText type="caption" style={{ color: status.color, fontWeight: '600' }}>
+              {status.label}
             </ThemedText>
           </ThemedView>
-          
-          <ThemedView className="flex-row justify-between items-center border-t border-gray-200 pt-3">
-            <ThemedText className={`font-medium ${
-              item.status === 'approved' ? theme.success : 
-              item.status === 'rejected' ?theme.error: theme.primary
-            }`}>
-              {getNextAction(item.status)}
+        </ThemedView>
+
+        <ThemedView style={styles.cardBody}>
+          <ThemedView style={styles.row}>
+            <Ionicons name="calendar-outline" size={14} color={theme.text + '80'} />
+            <ThemedText type="caption" style={{ color: theme.text + '80', marginLeft: 6 }}>
+              Demande du {item.reservationDate ? new Date(Number(item.reservationDate)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}
             </ThemedText>
-            {item.status === 'approved' && userType === 'tenant' && (
-              <Ionicons name="card" size={20} color={theme.success} />
-            )}
-            {(item.status === 'pending' || item.status === 'documents_submitted') && (
-              <Ionicons name="time" size={20} color={theme.star} />
-            )}
-            {item.status !== 'approved' && item.status !== 'pending' && item.status !== 'documents_submitted' && (
-              <Ionicons name="chevron-forward" size={20} color="#4B5563" />
-            )}
           </ThemedView>
+
+          {item.amount > 0 && (
+            <ThemedView style={styles.row}>
+              <Ionicons name="cash-outline" size={14} color={theme.text + '80'} />
+              <ThemedText type="caption" style={{ color: theme.text + '80', marginLeft: 6 }}>
+                Montant : {item.amount.toLocaleString('fr-FR')}  {item.currency ? ` ${item.currency}` : 'XOF'}
+              </ThemedText>
+            </ThemedView>
+          )}
+
+          <ThemedView style={styles.row}>
+            <Ionicons name="wallet-outline" size={14} color={theme.text + '80'} />
+            <ThemedText type="caption" style={{ color: theme.text + '80', marginLeft: 6 }}>
+              Paiement : {item.paymentStatus === 'failed' ? '✗ Échoué' : 'En attente'}
+            </ThemedText>
+          </ThemedView>
+        </ThemedView>
+
+        <ThemedView style={[styles.cardFooter, { borderTopColor: theme.outline + '40' }]}>
+          <ThemedText type="caption" style={{ color: theme.secondary, fontWeight: '600' }}>
+            {item.reservationStatus === 'accepted' ? 'Procéder au paiement →' :
+             item.reservationStatus === 'pending'  ? "En attente d'approbation" :
+             item.reservationStatus === 'rejected' ? 'Demande refusée' :
+             'Voir les détails →'}
+          </ThemedText>
+          <Ionicons name="chevron-forward" size={16} color={theme.secondary} />
         </ThemedView>
       </TouchableOpacity>
     );
@@ -242,55 +206,119 @@ const ReservationStatusScreen = () => {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-white justify-center items-center">
-        <ActivityIndicator size="large" color={theme.primary} />
+      <SafeAreaView style={[styles.centered, { backgroundColor: theme.surface }]}>
+        <ActivityIndicator size="large" color={theme.secondary} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1"
-    style = {{backgroundColor: theme.surface}}>
-      <ThemedView className="p-4">
-        <ThemedView className = "flex-row gap-6">
-          <BackButton/>
-          <ThemedText type = "title" intensity = "strong" className=" mb-4">Mes réservations</ThemedText>
-        </ThemedView>
-        
-        {userReservations.length === 0 ? (
-          <ThemedView className=" rounded-lg shadow-sm p-6 items-center justify-center">
-            <Ionicons name="calendar-outline" size={48} color={theme.accent} />
-            <ThemedText type = "normal" className=" mt-4 mb-2">
-              Aucune réservation trouvée
-            </ThemedText>
-            <ThemedText className="text-gray-500 text-center mb-4">
-              {userType === 'tenant' 
-                ? 'Vous n\'avez pas encore effectué de demande de réservation.'
-                : 'Vous n\'avez pas encore reçu de demande de réservation.'}
-            </ThemedText>
-
-            {/* modify the route after  */}
-
-            {userType === 'tenant' && (
-              <TouchableOpacity
-                className="bg-blue-600 py-3 px-4 rounded-lg"
-                onPress={() => router.push("/home/home")}
-              >
-                <ThemedText >Chercher un logement</ThemedText>
-              </TouchableOpacity>
-            )}
-          </ThemedView>
-        ) : (
-          <FlatList
-            data={userReservations}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 20 }}
-          />
-        )}
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.surface }}>
+      <ThemedView style={styles.header}>
+        <BackButton />
+        <ThemedText type="normaltitle" intensity="strong" style={{ marginLeft: 12 }}>
+          Mes réservations
+        </ThemedText>
       </ThemedView>
+
+      {error ? (
+        <ThemedView style={styles.centered}>
+          <Ionicons name="alert-circle-outline" size={48} color={theme.error} />
+          <ThemedText style={{ color: theme.error, marginTop: 12, textAlign: 'center' }}>{error}</ThemedText>
+          <TouchableOpacity onPress={fetchReservations} style={[styles.retryBtn, { borderColor: theme.secondary }]}>
+            <ThemedText style={{ color: theme.secondary, fontWeight: '600' }}>Réessayer</ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+      ) : reservations.length === 0 ? (
+        <ThemedView style={styles.centered}>
+          <Ionicons name="calendar-outline" size={56} color={theme.text + '40'} />
+          <ThemedText type="normal" style={{ color: theme.text + '80', marginTop: 16, textAlign: 'center' }}>
+            Aucune réservation en cours
+          </ThemedText>
+          <ThemedText type="caption" style={{ color: theme.text + '50', marginTop: 6, textAlign: 'center', paddingHorizontal: 32 }}>
+            Vos réservations apparaîtront ici une fois effectuées.
+          </ThemedText>
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)' as any)}
+            style={[styles.retryBtn, { backgroundColor: theme.secondary, borderColor: theme.secondary }]}
+          >
+            <ThemedText style={{ color: 'white', fontWeight: '600' }}>Chercher un logement</ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+      ) : (
+        <FlatList
+          data={reservations}
+          renderItem={renderItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          onRefresh={fetchReservations}
+          refreshing={loading}
+        />
+      )}
     </SafeAreaView>
   );
 }
-export default  ReservationStatusScreen;
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  list: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  card: {
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 8,
+    gap: 10,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 20,
+  },
+  cardBody: {
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    gap: 5,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+  },
+  retryBtn: {
+    marginTop: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+});

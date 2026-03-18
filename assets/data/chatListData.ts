@@ -4,6 +4,21 @@ const chatListData: ChatListItem[] = [
   {
     id: '1',
     sender: {
+      name: 'Propriétaire Villa',
+      avatar: 'https://ui-avatars.com/api/?name=Proprietaire+Villa',
+    },
+    content: '📋 Nouvelle demande de visite reçue pour votre villa. Visite physique prévue demain à 14:00.',
+    timestamp: 'Maintenant',
+    count: 1,
+    isArchived: false,
+    status: 'online',
+    isBot: false,
+    isSentByCurrentUser: false,
+    statusIcon: 'sent'
+  },
+  {
+    id: '2',
+    sender: {
       name: 'EasyBot',
       avatar: 'https://ui-avatars.com/api/?name=Easy+Bot&background=random',
     },
@@ -17,7 +32,7 @@ const chatListData: ChatListItem[] = [
     statusIcon: 'read'
   },
   {
-    id: '2',
+    id: '3',
     sender: {
       name: 'Aline Dossou',
       avatar: 'https://ui-avatars.com/api/?name=Aline+Dossou',
@@ -32,7 +47,7 @@ const chatListData: ChatListItem[] = [
     statusIcon: 'delivered'
   },
   {
-    id: '3',
+    id: '4',
     sender: {
       name: 'Agent Immo',
       avatar: 'https://ui-avatars.com/api/?name=Agent+Immo',
@@ -47,7 +62,7 @@ const chatListData: ChatListItem[] = [
     statusIcon: 'sent'
   },
   {
-    id: '4',
+    id: '5',
     sender: {
       name: 'Marie Dupont',
       avatar: 'https://ui-avatars.com/api/?name=Marie+Dupont',
@@ -62,7 +77,7 @@ const chatListData: ChatListItem[] = [
     statusIcon: 'read'
   },
   {
-    id: '5',
+    id: '6',
     sender: {
       name: 'Support Client',
       avatar: 'https://ui-avatars.com/api/?name=Support+Client',

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Alert, View, Text, TouchableOpacity } from 'react-native';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import MessageDisplay from '@/components/messages/chat/MessageBody';
 import MessageFooter from '@/components/messages/chat/MessageFooter';
-import TypingIndicator from '@/components/chat/TypingIndicator';
+import TypingIndicator from '@/components/messages/TypingIndicator';
 import { FrontendMessage } from '@/types/MessageTypes';
 import { RootStackParamList } from '@/components/navigator/RouteType';
 import { StatusBar } from 'expo-status-bar';
@@ -13,11 +13,16 @@ import VisitRequestActions from '@/components/visit/VisitRequestActions';
 import offlineFirstChatService from '@/services/sync/offlineFirstChatService';
 import NetInfo from '@react-native-community/netinfo';
 import { chatEvents, CHAT_EVENTS } from '@/services/events/chatEvents';
-import { authService } from '@/components/services/authService';
+import { unifiedAuthService } from '@/services/auth/unifiedAuthService';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
+import { useLanguage } from '@/components/contexts/language';
 
-const mapGqlMessageToFrontend = (gqlMessage: Message): FrontendMessage => {
+const mapGqlMessageToFrontend = (
+  gqlMessage: Message,
+  defaultUserName: string = 'Utilisateur',
+  currentUserId: string = ''
+): FrontendMessage => {
   if (gqlMessage.messageType.toUpperCase().includes('VISIT')) {
     console.log('🏠 Visit message detected:', {
       id: gqlMessage.id,
@@ -27,9 +32,12 @@ const mapGqlMessageToFrontend = (gqlMessage: Message): FrontendMessage => {
     });
   }
 
+  const senderId = gqlMessage.sender.id;
+
   return {
     msgId: gqlMessage.id,
-    senderId: gqlMessage.sender.id,
+    senderId,
+    isSent: currentUserId ? String(senderId) === String(currentUserId) : undefined,
     sender: gqlMessage.sender
       ? {
         name: gqlMessage.sender.username || `${gqlMessage.sender.firstName} ${gqlMessage.sender.lastName}`,
@@ -60,7 +68,7 @@ const mapGqlMessageToFrontend = (gqlMessage: Message): FrontendMessage => {
         id: gqlMessage.replyTo.id,
         content: gqlMessage.replyTo.content || '',
         sender: {
-          name: gqlMessage.replyTo.sender?.username || 'Utilisateur',
+          name: gqlMessage.replyTo.sender?.username || defaultUserName,
           avatar: gqlMessage.replyTo.sender?.avatar || '',
         },
       }
@@ -91,8 +99,11 @@ const mapGqlMessageToFrontend = (gqlMessage: Message): FrontendMessage => {
 export default function ChatComponentOffline() {
   const route = useRoute<RouteProp<RootStackParamList, 'Chat'>>();
   const { chatId } = route.params;
+  const { t } = useLanguage();
+  const defaultUserName = t('chat.defaultUser' as any);
 
   const [userId, setUserId] = useState<string>('');
+  const userIdRef = useRef<string>(''); // always up-to-date, avoids stale closure in loadMessages
   const [userLoaded, setUserLoaded] = useState(false);
   const [messages, setMessages] = useState<FrontendMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -106,28 +117,17 @@ export default function ChatComponentOffline() {
   useEffect(() => {
     const fetchUserId = async () => {
       try {
-        const user = await authService.getUser();
-        console.log('🔍 User data from authService:', user);
-
+        // GraphQL priority (via unifiedAuthService.getProfile)
+        const user = await unifiedAuthService.getProfile();
         if (user?.id) {
+          userIdRef.current = user.id;
           setUserId(user.id);
-          console.log('✅ User ID récupéré:', user.id);
-        } else {
-          // Fallback
-          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-          const userStr = await AsyncStorage.getItem('user');
-          if (userStr) {
-            const userData = JSON.parse(userStr);
-            if (userData?.id) {
-              setUserId(userData.id);
-              console.log('✅ User ID récupéré depuis AsyncStorage:', userData.id);
-            }
-          }
+          console.log('✅ User ID retrieved via GraphQL:', user.id);
         }
       } catch (error) {
-        console.error('❌ Erreur récupération user ID:', error);
+        console.error('❌ Error retrieving user ID:', error);
       } finally {
-        setUserLoaded(true); 
+        setUserLoaded(true);
       }
     };
     fetchUserId();
@@ -179,13 +179,13 @@ export default function ChatComponentOffline() {
         if (cachedData) {
           const cachedMessages = JSON.parse(cachedData);
           setMessages(cachedMessages);
-          console.log(`✅ [loadMessages] Chargé ${cachedMessages.length} messages depuis le cache local`);
+          console.log(`✅ [loadMessages] Loaded ${cachedMessages.length} messages from local cache`);
         } else {
-          console.log('📭 [loadMessages] Pas de cache local trouvé');
+          console.log('📭 [loadMessages] No local cache found');
         }
       } else {
         console.log('🔄 [loadMessages] Force refresh - ignoring cache');
-        // Vider le cache local pour cette conversation
+        // Clear local cache for this conversation
         await AsyncStorage.removeItem(`messages_${chatId}`);
       }
 
@@ -197,13 +197,13 @@ export default function ChatComponentOffline() {
           offset: 0,
         }, forceRefresh); // Pass forceRefresh to bypass offline cache
 
-        console.log('📥 [loadMessages] Réponse serveur:', {
+        console.log('📥 [loadMessages] Server response:', {
           edgesCount: response.edges?.length || 0,
           hasNextPage: response.pageInfo?.hasNextPage
         });
 
         const gqlMessages = response.edges.map((edge) => edge.node);
-        console.log('🔄 [loadMessages] Messages GQL extraits:', gqlMessages.length);
+        console.log('🔄 [loadMessages] GQL messages extracted:', gqlMessages.length);
 
         if (gqlMessages.length > 0) {
           console.log('📊 [loadMessages] Premier message:', {
@@ -211,21 +211,21 @@ export default function ChatComponentOffline() {
             content: gqlMessages[0].content?.substring(0, 30),
             createdAt: gqlMessages[0].createdAt
           });
-          console.log('📊 [loadMessages] Dernier message:', {
+          console.log('📊 [loadMessages] Last message:', {
             id: gqlMessages[gqlMessages.length - 1].id,
             content: gqlMessages[gqlMessages.length - 1].content?.substring(0, 30),
             createdAt: gqlMessages[gqlMessages.length - 1].createdAt
           });
         }
 
-        const frontendMessages = gqlMessages.map(mapGqlMessageToFrontend);
+        const frontendMessages = gqlMessages.map(msg => mapGqlMessageToFrontend(msg, defaultUserName, userIdRef.current));
         const reversedMessages = frontendMessages.reverse();
 
-        console.log('✅ [loadMessages] Messages finaux à afficher:', reversedMessages.length);
+        console.log('✅ [loadMessages] Final messages to display:', reversedMessages.length);
         setMessages(reversedMessages);
 
         await AsyncStorage.setItem(`messages_${chatId}`, JSON.stringify(reversedMessages));
-        console.log(`✅ [loadMessages] Cache mis à jour avec ${reversedMessages.length} messages`);
+        console.log(`✅ [loadMessages] Cache updated with ${reversedMessages.length} messages`);
       } catch (serverError: any) {
         console.warn('⚠️ [loadMessages] Server error:', serverError?.message || serverError);
         // Keep cached messages if server fails
@@ -273,7 +273,7 @@ export default function ChatComponentOffline() {
     // Subscribe to new messages
     const messageUnsubscribe = offlineFirstChatService.subscribeToMessages(chatId, (newMessage) => {
       console.log('📩 New message received:', newMessage.id);
-      const frontendMessage = mapGqlMessageToFrontend(newMessage);
+      const frontendMessage = mapGqlMessageToFrontend(newMessage, defaultUserName, userIdRef.current);
 
       setMessages((prev) => {
         // Prevent duplicates
@@ -313,8 +313,8 @@ export default function ChatComponentOffline() {
     const isVisitCommand = ['ACCEPTER', 'REFUSER', 'ACCEPT', 'REFUSE'].includes(normalizedContent);
 
     if (isVisitCommand) {
-      // Rechercher le dernier message de demande de visite dans la conversation
-      console.log('🔍 Recherche de demande de visite...');
+      // Search for the last visit request message in the conversation
+      console.log('🔍 Search for visit request...');
       console.log('📊 Nombre total de messages:', messages.length);
       console.log('📋 Types de messages:', messages.map(m => ({ id: m.msgId, type: m.messageType, hasVisitData: !!m.visitData })));
 
@@ -323,7 +323,7 @@ export default function ChatComponentOffline() {
         .reverse()
         .find(msg => msg.messageType === 'visit_request' && msg.visitData);
 
-      console.log('✅ Demande de visite trouvée:', lastVisitRequest ? 'OUI' : 'NON');
+      console.log('✅ Visit request found:', lastVisitRequest ? 'YES' : 'NO');
       if (lastVisitRequest) {
         console.log('📍 Détails visite:', lastVisitRequest.visitData);
       }
@@ -332,22 +332,22 @@ export default function ChatComponentOffline() {
         const isAccept = ['ACCEPTER', 'ACCEPT'].includes(normalizedContent);
 
         Alert.alert(
-          isAccept ? 'Accepter la visite ?' : 'Refuser la visite ?',
-          `Confirmer votre réponse pour la visite du ${new Date(lastVisitRequest.visitData.date).toLocaleDateString('fr-FR')} à ${lastVisitRequest.visitData.time} ?`,
+          isAccept ? t('chat.acceptVisitTitle' as any) : t('chat.refuseVisitTitle' as any),
+          t('chat.confirmVisitResponse' as any, { date: new Date(lastVisitRequest.visitData.date).toLocaleDateString(), time: lastVisitRequest.visitData.time }),
           [
             {
-              text: 'Annuler',
+              text: t('common.cancel'),
               style: 'cancel'
             },
             {
-              text: 'Confirmer',
+              text: t('common.confirm'),
               onPress: async () => {
                 try {
-                  // Importer le service de booking
+                  // Import booking service
                   const { getBookingService } = require('@/services/api/bookingService');
                   const bookingService = getBookingService();
 
-                  // Appeler la fonction de réponse
+                  // Call response function
                   await bookingService.respondToVisitRequest(
                     lastVisitRequest.visitData!.id,
                     userId,
@@ -364,14 +364,14 @@ export default function ChatComponentOffline() {
                   await sendNormalMessage(messageType, confirmationMessage, mediaData, mentions, replyToId);
 
                   Alert.alert(
-                    'Succès',
+                    t('common.success'),
                     isAccept
-                      ? 'Visite acceptée avec succès'
-                      : 'Visite refusée'
+                      ? t('chat.visitAccepted' as any)
+                      : t('chat.visitRefused' as any)
                   );
                 } catch (error) {
-                  console.error('Erreur lors de la réponse à la visite:', error);
-                  Alert.alert('Erreur', 'Impossible de traiter votre réponse');
+                  console.error('Error responding to visit:', error);
+                  Alert.alert(t('common.error'), t('chat.visitResponseError' as any));
                 }
               }
             }
@@ -380,8 +380,8 @@ export default function ChatComponentOffline() {
         return; // Ne pas envoyer le message "ACCEPTER"/"REFUSER" brut
       } else {
         Alert.alert(
-          'Aucune demande de visite',
-          'Aucune demande de visite récente trouvée dans cette conversation.'
+          t('chat.noVisitRequest' as any),
+          t('chat.noVisitRequestDescription' as any)
         );
         return;
       }
@@ -403,6 +403,7 @@ export default function ChatComponentOffline() {
     const tempMessage: FrontendMessage = {
       msgId: tempId,
       senderId: userId,
+      isSent: true, // always sent by current user
       conversationId: chatId,
       messageType,
       content,
@@ -439,7 +440,7 @@ export default function ChatComponentOffline() {
       // Replace temporary message with real message
       setMessages((prevMessages) =>
         prevMessages.map((msg) =>
-          msg.msgId === tempId ? mapGqlMessageToFrontend(sentMessage) : msg
+          msg.msgId === tempId ? mapGqlMessageToFrontend(sentMessage, defaultUserName, userIdRef.current) : msg
         )
       );
 
@@ -453,10 +454,10 @@ export default function ChatComponentOffline() {
     } catch (error) {
       console.error('❌ Error sending message:', error);
       Alert.alert(
-        'Error',
+        t('common.error'),
         isOnline
-          ? 'Unable to send message'
-          : 'Message saved, will be sent on reconnection'
+          ? t('chat.sendError' as any)
+          : t('chat.savedOffline' as any)
       );
     }
   };
@@ -493,12 +494,12 @@ export default function ChatComponentOffline() {
 
   const handleDeleteMessage = async (messageId: string) => {
     Alert.alert(
-      'Delete message',
-      'Are you sure you want to delete this message?',
+      t('chat.deleteMessage' as any),
+      t('chat.deleteMessageConfirm' as any),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete for me',
+          text: t('chat.deleteForMe' as any),
           onPress: async () => {
             try {
               await offlineFirstChatService.deleteMessage(messageId, chatId, 'soft', 'me');
@@ -512,12 +513,12 @@ export default function ChatComponentOffline() {
               console.log('✅ Message deleted for me');
             } catch (error) {
               console.error('❌ Error deleting message:', error);
-              Alert.alert('Error', 'Unable to delete message');
+              Alert.alert(t('common.error'), t('chat.deleteError' as any));
             }
           },
         },
         {
-          text: 'Delete for everyone',
+          text: t('chat.deleteForEveryone' as any),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -528,7 +529,7 @@ export default function ChatComponentOffline() {
               console.log('✅ Message deleted for everyone');
             } catch (error) {
               console.error('❌ Error deleting message:', error);
-              Alert.alert('Error', 'Unable to delete message');
+              Alert.alert(t('common.error'), t('chat.deleteError' as any));
             }
           },
         },
@@ -573,13 +574,13 @@ export default function ChatComponentOffline() {
             : msg
         )
       );
-      Alert.alert('Error', 'Unable to add reaction');
+      Alert.alert(t('common.error'), t('chat.reactionError' as any));
     }
   };
 
   const handleSync = async () => {
     if (!isOnline) {
-      Alert.alert('Offline', 'You must be connected to sync');
+      Alert.alert(t('chat.offline'), t('chat.mustBeConnectedToSync' as any));
       return;
     }
 
@@ -587,10 +588,10 @@ export default function ChatComponentOffline() {
     try {
       await offlineFirstChatService.syncAll();
       await loadMessages();
-      Alert.alert('Success', 'Synchronization complete');
+      Alert.alert(t('common.success'), t('chat.syncComplete' as any));
     } catch (error) {
       console.error('Sync error:', error);
-      Alert.alert('Error', 'Synchronization failed');
+      Alert.alert(t('common.error'), t('chat.syncFailed' as any));
     } finally {
       setIsSyncing(false);
     }
@@ -624,7 +625,7 @@ export default function ChatComponentOffline() {
           <>
             <Feather name="wifi-off" size={12} color="#92400E" />
             <ThemedText style={{ color: '#92400E', fontSize: 11, marginLeft: 4, fontWeight: '500' }}>
-              Offline
+              {t('chat.offline')}
             </ThemedText>
           </>
         )}
@@ -633,7 +634,7 @@ export default function ChatComponentOffline() {
           <>
             {!isOnline && <ThemedText style={{ color: '#92400E', fontSize: 11, marginHorizontal: 4 }}>•</ThemedText>}
             <ThemedText style={{ color: isOnline ? '#6B7280' : '#92400E', fontSize: 11 }}>
-              {syncStatus.pendingItems} pending
+              {syncStatus.pendingItems} {t('chat.pending' as any)}
             </ThemedText>
             {isOnline && (
               <TouchableOpacity
@@ -651,38 +652,38 @@ export default function ChatComponentOffline() {
   };
 
   return (
-    <ThemedView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <ThemedView style={{ flex: 1 }}>
       <StatusBar style="dark" />
       {renderConnectionStatus()}
 
       {/* Main content */}
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        style={{ flex: 1,  }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 55}
       >
         {(isLoading || !userLoaded) ? (
           <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ThemedText style={{ color: '#6B7280', fontSize: 14 }}>Loading...</ThemedText>
+            <ThemedText style={{ color: '#6B7280', fontSize: 14 }}>{t('common.loading')}</ThemedText>
           </ThemedView>
         ) : (
           <FlatList
             data={messages}
             keyExtractor={(item) => item.msgId}
-            onLayout={() => console.log('📐 [FlatList] Messages to render:', messages.length, messages.map(m => ({ id: m.msgId, type: m.messageType })))}
             renderItem={({ item }) =>
               item.messageType === 'visit_request' ? (
                 <ThemedView>
                   <MessageDisplay
                     message={item}
                     currentUserId={userId}
+                    isSent={item.isSent ?? (userId ? String(item.senderId) === String(userId) : false)}
                     onReply={() => handleReply(item)}
-                    onDelete={() => handleDeleteMessage(item.msgId)}
-                    onReact={(emoji: string) => handleReactToMessage(item.msgId, emoji)}
-                    onMarkAsRead={() => handleMarkAsRead(item.msgId)}
+                    onDelete={(msgId) => handleDeleteMessage(msgId ?? item.msgId)}
+                    onReact={(msgId, emoji) => handleReactToMessage(msgId, emoji)}
+                    onMarkAsRead={(msgId) => handleMarkAsRead(msgId ?? item.msgId)}
                   />
 
-                  {item.visitData && item.propertyData?.ownerId && !hiddenVisitActionsIds.has(item.msgId) && (
+                  {item.visitData && item.visitData.status === 'pending' && item.propertyData?.ownerId === userId && !hiddenVisitActionsIds.has(item.msgId) && (
                     <VisitRequestActions
                       visitId={item.visitData.id}
                       propertyId={item.propertyData?.id || ''}
@@ -718,12 +719,13 @@ export default function ChatComponentOffline() {
                   <MessageDisplay
                     message={item}
                     currentUserId={userId}
+                    isSent={item.isSent ?? (userId ? String(item.senderId) === String(userId) : false)}
                     onReply={() => handleReply(item)}
-                    onDelete={() => handleDeleteMessage(item.msgId)}
-                    onReact={(emoji: string) => handleReactToMessage(item.msgId, emoji)}
-                    onMarkAsRead={() => handleMarkAsRead(item.msgId)}
+                    onDelete={(msgId) => handleDeleteMessage(msgId ?? item.msgId)}
+                    onReact={(msgId, emoji) => handleReactToMessage(msgId, emoji)}
+                    onMarkAsRead={(msgId) => handleMarkAsRead(msgId ?? item.msgId)}
                   />
-                  {item.metadata?.activityId && item.propertyData?.ownerId && !hiddenVisitActionsIds.has(item.msgId) && (
+                  {item.metadata?.activityId && item.propertyData?.ownerId === userId && !hiddenVisitActionsIds.has(item.msgId) && item.metadata?.accepted == null && (
                     <VisitRequestActions
                       visitId={item.metadata.activityId}
                       propertyId={item.metadata?.propertyId || item.propertyData?.id || ''}
@@ -747,10 +749,11 @@ export default function ChatComponentOffline() {
                 <MessageDisplay
                   message={item}
                   currentUserId={userId}
+                  isSent={item.isSent ?? (userId ? String(item.senderId) === String(userId) : false)}
                   onReply={() => handleReply(item)}
-                  onDelete={() => handleDeleteMessage(item.msgId)}
-                  onReact={(emoji: string) => handleReactToMessage(item.msgId, emoji)}
-                  onMarkAsRead={() => handleMarkAsRead(item.msgId)}
+                  onDelete={(msgId) => handleDeleteMessage(msgId ?? item.msgId)}
+                  onReact={(msgId, emoji) => handleReactToMessage(msgId, emoji)}
+                  onMarkAsRead={(msgId) => handleMarkAsRead(msgId ?? item.msgId)}
                 />
               )
             }
@@ -761,7 +764,7 @@ export default function ChatComponentOffline() {
               paddingBottom: 8,
               flexGrow: 1,
             }}
-            style={{ flex: 1, backgroundColor: '#FFFFFF' }}
+            style={{ flex: 1}}
             keyboardShouldPersistTaps="handled"
             contentInsetAdjustmentBehavior="automatic"
           />

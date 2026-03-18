@@ -64,31 +64,14 @@ export interface UpdateProfileInput {
 }
 
 export interface ProfileStats {
-  userId: string;
-  period: 'week' | 'month' | 'year';
-  transactions: {
-    total: number;
-    completed: number;
-    pending: number;
-    cancelled: number;
-  };
-  earnings: {
-    total: number;
-    thisMonth: number;
-    lastMonth: number;
-    growth: number;
-  };
-  properties: {
-    active: number;
-    sold: number;
-    rented: number;
-    views: number;
-  };
-  activities: {
-    total: number;
-    recentCount: number;
-    pendingCount: number;
-  };
+  propertiesCount: number;
+  reservationsCount: number;
+  reviewsCount: number;
+  averageRating: number;
+  totalEarnings: number;
+  totalSpent: number;
+  memberSince: string;
+  verificationLevel: string;
 }
 
 export class ProfileService {
@@ -104,7 +87,6 @@ export class ProfileService {
           email
           phone
           photo
-          location
           role
           isPremium
           premiumPlan
@@ -121,30 +103,22 @@ export class ProfileService {
               sms
               marketing
             }
-            privacy {
-              profileVisible
-              activityTracking
-              dataCollection
-            }
-            app {
-              language
-              currency
-              theme
-            }
+            language
+            currency
+            theme
           }
           stats {
+            totalProperties
+            totalReservations
             totalTransactions
-            totalEarnings
-            propertiesListed
-            favoriteProperties
-            walletBalance
-            cryptoValue
+            memberSince
           }
           verification {
+            email
+            phone
             identity
             address
-            income
-            documents
+            level
           }
           createdAt
           updatedAt
@@ -153,44 +127,53 @@ export class ProfileService {
     `;
 
     const response = await this.graphqlService.query(query, { userId });
-    return response.user;
+    const user = response.user;
+    
+    return {
+      ...user,
+      location: user.address?.city || '',
+      stats: {
+        totalTransactions: user.stats?.totalTransactions || 0,
+        totalEarnings: user.stats?.totalEarnings || 0,
+        propertiesListed: user.stats?.totalProperties || 0,
+        favoriteProperties: 0,
+        walletBalance: 0,
+        cryptoValue: 0
+      },
+      preferences: {
+        notifications: user.preferences?.notifications || { push: true, email: true, sms: false, marketing: false },
+        privacy: { profileVisible: true, activityTracking: true, dataCollection: true },
+        app: {
+          language: user.preferences?.language || 'fr',
+          currency: user.preferences?.currency || 'EUR',
+          theme: user.preferences?.theme || 'system'
+        }
+      },
+      verification: {
+        identity: user.verification?.identity || false,
+        address: user.verification?.address || false,
+        income: false,
+        documents: []
+      }
+    };
   }
 
   async updateProfile(userId: string, input: UpdateProfileInput): Promise<UserProfile> {
     const mutation = `
-      mutation UpdateProfile($userId: ID!, $input: UpdateProfileInput!) {
-        updateProfile(userId: $userId, input: $input) {
+      mutation UpdateProfile($input: UpdateProfileInput!) {
+        updateProfile(input: $input) {
           id
           firstName
           lastName
           email
           phone
           photo
-          location
-          preferences {
-            notifications {
-              push
-              email
-              sms
-              marketing
-            }
-            privacy {
-              profileVisible
-              activityTracking
-              dataCollection
-            }
-            app {
-              language
-              currency
-              theme
-            }
-          }
           updatedAt
         }
       }
     `;
 
-    const response = await this.graphqlService.mutate(mutation, { userId, input });
+    const response = await this.graphqlService.mutate(mutation, { input });
     return response.updateProfile;
   }
 
@@ -209,40 +192,23 @@ export class ProfileService {
     return response.upgradeToPremium.success;
   }
 
-  async getProfileStats(userId: string, period: string = 'month'): Promise<ProfileStats> {
+  async getProfileStats(): Promise<ProfileStats> {
     const query = `
-      query GetProfileStats($userId: ID!, $period: String!) {
-        profileStats(userId: $userId, period: $period) {
-          userId
-          period
-          transactions {
-            total
-            completed
-            pending
-            cancelled
-          }
-          earnings {
-            total
-            thisMonth
-            lastMonth
-            growth
-          }
-          properties {
-            active
-            sold
-            rented
-            views
-          }
-          activities {
-            total
-            recentCount
-            pendingCount
-          }
+      query GetProfileStats {
+        profileStats {
+          propertiesCount
+          reservationsCount
+          reviewsCount
+          averageRating
+          totalEarnings
+          totalSpent
+          memberSince
+          verificationLevel
         }
       }
     `;
 
-    const response = await this.graphqlService.query(query, { userId, period });
+    const response = await this.graphqlService.query(query, {});
     return response.profileStats;
   }
 
@@ -321,23 +287,14 @@ export class ProfileService {
     factors: Array<{ name: string; value: number; weight: number }>;
     nextLevelRequirements: string[];
   }> {
-    const query = `
-      query GetTrustScore($userId: ID!) {
-        trustScore(userId: $userId) {
-          score
-          level
-          factors {
-            name
-            value
-            weight
-          }
-          nextLevelRequirements
-        }
-      }
-    `;
-
-    const response = await this.graphqlService.query(query, { userId });
-    return response.trustScore;
+    // trustScore query not yet implemented on backend
+    // Return default values to avoid GraphQL errors
+    return {
+      score: 0,
+      level: 'unverified',
+      factors: [],
+      nextLevelRequirements: [],
+    };
   }
 
   async uploadProfilePhoto(userId: string, photoFile: File): Promise<string> {

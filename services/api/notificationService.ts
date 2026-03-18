@@ -1,7 +1,15 @@
 import { getGraphQLService } from './graphqlService';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+
+// Conditional import to avoid Expo Go SDK 53+ error
+let Notifications: any;
+try {
+  Notifications = require('expo-notifications');
+} catch (error) {
+  console.warn('⚠️ expo-notifications not available in this environment');
+  Notifications = null;
+}
 
 // ========== TYPES ==========
 export enum NotificationType {
@@ -22,6 +30,9 @@ export enum NotificationType {
   BOOKING_CONFIRMED = 'booking_confirmed',
   VISIT_SCHEDULED = 'visit_scheduled',
   VISIT_REMINDER = 'visit_reminder',
+
+  //contrat generat
+  CONTRACT_GENERATED = 'contract_generated',
 
   // Payment/Financial
   PAYMENT_RECEIVED = 'payment_received',
@@ -61,40 +72,49 @@ export class NotificationService {
    * Configure les notifications Expo
    */
   async initialize(): Promise<void> {
-    // Configurer le comportement par défaut des notifications
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-        shouldShowBanner: true,
-        shouldShowList: true,
-      }),
-    });
-
-    // Demander les permissions
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') {
-      console.warn('❌ Permission de notification refusée');
+    if (!Notifications) {
+      console.warn('⚠️ Notifications not available - skipping initialization');
       return;
     }
 
-    // Obtenir le token push
     try {
-      const token = await this.getExpoPushToken();
-      if (token) {
-        this.pushToken = token;
-        console.log('✅ Push token obtenu:', token);
+      // Configurer le comportement par défaut des notifications
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: false,
+          shouldSetBadge: true,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        }),
+      });
+
+      // Demander les permissions
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') {
+        console.warn('❌ Permission de notification refusée');
+        return;
+      }
+
+      // Obtenir le token push
+      try {
+        const token = await this.getExpoPushToken();
+        if (token) {
+          this.pushToken = token;
+          console.log('✅ Push token obtenu:', token);
+        }
+      } catch (error) {
+        console.error('❌ Erreur obtention push token:', error);
       }
     } catch (error) {
-      console.error('❌ Erreur obtention push token:', error);
+      console.error('❌ Erreur initialisation notifications:', error);
     }
   }
 
@@ -157,6 +177,11 @@ export class NotificationService {
    * Envoie une notification locale (in-app)
    */
   async sendLocalNotification(payload: NotificationPayload): Promise<string> {
+    if (!Notifications) {
+      console.warn('⚠️ Notifications not available - skipping local notification');
+      return 'no-notification-support';
+    }
+
     try {
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
@@ -189,47 +214,10 @@ export class NotificationService {
     userId: string | string[],
     payload: NotificationPayload
   ): Promise<boolean> {
-    const mutation = `
-      mutation SendNotification($input: SendNotificationInput!) {
-        sendNotification(input: $input) {
-          success
-          notificationId
-        }
-      }
-    `;
-
+    // Utiliser uniquement les notifications locales pour éviter les erreurs GraphQL
     try {
-      const result = await this.graphql.mutate<{
-        sendNotification: { success: boolean; notificationId: string };
-      }>(mutation, {
-        input: {
-          userId,
-          type: payload.type,
-          channels: ['push', 'in_app'],
-          priority: payload.priority || 'normal',
-          title: payload.title,
-          message: payload.message,
-          data: {
-            inApp: {
-              userId,
-              title: payload.title,
-              message: payload.message,
-              category: this.getNotificationCategory(payload.type),
-            },
-            push: {
-              title: payload.title,
-              body: payload.message,
-              data: payload.data || {},
-            },
-          },
-          metadata: {
-            propertyId: payload.propertyId,
-            propertyTitle: payload.propertyTitle,
-          },
-        },
-      });
-
-      return result.sendNotification.success;
+      await this.sendLocalNotification(payload);
+      return true;
     } catch (error) {
       console.error('Erreur envoi notification:', error);
       return false;
@@ -349,8 +337,12 @@ export class NotificationService {
    * Configure un listener pour les notifications reçues
    */
   addNotificationReceivedListener(
-    callback: (notification: Notifications.Notification) => void
-  ): Notifications.Subscription {
+    callback: (notification: any) => void
+  ): any {
+    if (!Notifications) {
+      console.warn('⚠️ Notifications not available');
+      return { remove: () => {} };
+    }
     return Notifications.addNotificationReceivedListener(callback);
   }
 
@@ -358,8 +350,12 @@ export class NotificationService {
    * Configure un listener pour les clics sur notifications
    */
   addNotificationResponseReceivedListener(
-    callback: (response: Notifications.NotificationResponse) => void
-  ): Notifications.Subscription {
+    callback: (response: any) => void
+  ): any {
+    if (!Notifications) {
+      console.warn('⚠️ Notifications not available');
+      return { remove: () => {} };
+    }
     return Notifications.addNotificationResponseReceivedListener(callback);
   }
 
@@ -367,6 +363,9 @@ export class NotificationService {
    * Supprime le badge de l'application
    */
   async clearBadge(): Promise<void> {
+    if (!Notifications) {
+      return;
+    }
     await Notifications.setBadgeCountAsync(0);
   }
 
@@ -387,6 +386,7 @@ export class NotificationService {
       [NotificationType.PAYMENT_FAILED]: 'payment',
       [NotificationType.MESSAGE_RECEIVED]: 'message',
       [NotificationType.CONVERSATION_STARTED]: 'message',
+      [NotificationType.CONTRACT_GENERATED]: 'contract',
     };
 
     return categoryMap[type] || 'general';

@@ -1381,6 +1381,7 @@ export class WalletService {
     accountName?: string;
     propertyId?: string;
     bookingId?: string;
+    reservationId?: string;
   }): Promise<PaymentResponse> {
     const mutation = `
       mutation ProcessUnifiedPayment($request: PaymentRequest!) {
@@ -1417,7 +1418,8 @@ export class WalletService {
         accountName: input.accountName
       },
       propertyId: input.propertyId,
-      bookingId: input.bookingId
+      bookingId: input.bookingId,
+      reservationId: input.reservationId
     };
 
     try {
@@ -1475,6 +1477,650 @@ export class WalletService {
       console.error('Error fetching country info:', error);
       throw error;
     }
+  }
+}
+
+// ============= INVOICE & PAYMENT INTENT TYPES =============
+
+export type InvoiceType = 'reservation' | 'rent' | 'service' | 'purchase' | 'deposit' | 'commission';
+export type InvoiceStatus = 'unpaid' | 'pending' | 'paid' | 'partially_paid' | 'cancelled' | 'refunded';
+export type PaymentIntentStatusType = 'created' | 'initiated' | 'processing' | 'requires_action' | 'succeeded' | 'failed' | 'cancelled' | 'expired';
+export type PaymentMethodTypeNew = 'mobile_money' | 'card' | 'paypal' | 'stripe' | 'bank_transfer' | 'crypto' | 'wallet_balance';
+export type MobileMoneyProviderType = 'mtn' | 'moov' | 'wave' | 'orange' | 'airtel';
+export type WalletCurrency = 'XOF' | 'EUR' | 'USD' | 'GBP';
+
+export interface InvoiceItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  taxRate?: number;
+  taxAmount?: number;
+}
+
+export interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  type: InvoiceType;
+  referenceId: string;
+  referenceType: string;
+  propertyId?: string;
+
+  clientId: string;
+  clientName?: string;
+  clientEmail?: string;
+
+  ownerId: string;
+  ownerName?: string;
+  ownerEmail?: string;
+
+  subtotal: number;
+  taxAmount: number;
+  taxRate: number;
+  commission: number;
+  commissionRate: number;
+  platformFee: number;
+  total: number;
+  currency: WalletCurrency;
+
+  items: InvoiceItem[];
+  description?: string;
+  notes?: string;
+
+  amountPaid: number;
+  amountDue: number;
+  paymentIntentId?: string;
+
+  issueDate: string;
+  dueDate: string;
+  paidAt?: string;
+
+  status: InvoiceStatus;
+  metadata?: any;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaymentNextAction {
+  type: 'redirect_to_url' | 'use_stripe_sdk' | 'confirm_mobile_money' | 'await_confirmation';
+  redirectUrl?: string;
+  confirmationCode?: string;
+  instructions?: string;
+}
+
+export interface PaymentIntentData {
+  id: string;
+  intentId: string;
+  invoiceId: string;
+
+  amount: number;
+  currency: WalletCurrency;
+  feeAmount: number;
+  netAmount: number;
+
+  paymentMethod: PaymentMethodTypeNew;
+  provider: string;
+
+  status: PaymentIntentStatusType;
+  nextAction?: PaymentNextAction;
+
+  clientId: string;
+  ownerId: string;
+
+  expiresAt: string;
+  completedAt?: string;
+
+  metadata?: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaymentResult {
+  success: boolean;
+  paymentIntentId?: string;
+  status: PaymentIntentStatusType;
+  nextAction?: PaymentNextAction;
+  error?: string;
+}
+
+export interface WalletV2 {
+  id: string;
+  userId: string;
+  walletType: 'user' | 'owner' | 'platform' | 'escrow';
+
+  balance: number;
+  lockedBalance: number;
+  pendingBalance: number;
+  availableBalance: number;
+
+  currency: WalletCurrency;
+
+  dailyLimit: number;
+  monthlyLimit: number;
+  maxTransactionLimit: number;
+
+  totalReceived: number;
+  totalSent: number;
+  totalCommissionPaid: number;
+
+  isVerified: boolean;
+  verificationLevel: string;
+
+  isActive: boolean;
+  isFrozen: boolean;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TransactionV2 {
+  id: string;
+  transactionId: string;
+  walletId: string;
+  userId: string;
+
+  type: string;
+  referenceType?: string;
+  referenceId?: string;
+
+  amount: number;
+  currency: WalletCurrency;
+  feeAmount: number;
+  netAmount: number;
+
+  sourceMethod?: string;
+  destinationMethod?: string;
+
+  counterpartyId?: string;
+  counterpartyName?: string;
+
+  description: string;
+  status: string;
+
+  invoiceId?: string;
+  paymentIntentId?: string;
+
+  balanceAfter: number;
+
+  createdAt: string;
+  completedAt?: string;
+}
+
+export interface InvoiceFilters {
+  type?: InvoiceType;
+  status?: InvoiceStatus;
+  startDate?: string;
+  endDate?: string;
+  minAmount?: number;
+  maxAmount?: number;
+}
+
+export interface InvoiceStats {
+  totalInvoices: number;
+  totalPaid: number;
+  totalPending: number;
+  totalUnpaid: number;
+  totalAmount: number;
+  paidAmount: number;
+  pendingAmount: number;
+}
+
+export interface InitiatePaymentInput {
+  invoiceId: string;
+  paymentMethod: PaymentMethodTypeNew;
+  mobileMoneyData?: {
+    provider: MobileMoneyProviderType;
+    phoneNumber: string;
+    countryCode: string;
+  };
+  cardData?: {
+    stripePaymentMethodId: string;
+  };
+  paypalData?: {
+    email?: string;
+  };
+  cryptoData?: {
+    currency: string;
+    network: string;
+  };
+  successUrl?: string;
+  cancelUrl?: string;
+  metadata?: any;
+}
+
+// Extension de la classe WalletService avec les nouvelles méthodes
+WalletService.prototype.getWalletV2 = async function(): Promise<WalletV2> {
+  const query = `
+    query GetWalletV2 {
+      walletV2 {
+        id
+        userId
+        walletType
+        balance
+        lockedBalance
+        pendingBalance
+        availableBalance
+        currency
+        dailyLimit
+        monthlyLimit
+        maxTransactionLimit
+        totalReceived
+        totalSent
+        totalCommissionPaid
+        isVerified
+        verificationLevel
+        isActive
+        isFrozen
+        createdAt
+        updatedAt
+      }
+    }
+  `;
+
+  const response = await this.graphqlService.query<{ walletV2: WalletV2 }>(query);
+  return response.walletV2;
+};
+
+WalletService.prototype.getInvoice = async function(id: string): Promise<Invoice | null> {
+  const query = `
+    query GetInvoice($id: ID!) {
+      invoice(id: $id) {
+        id
+        invoiceNumber
+        type
+        referenceId
+        referenceType
+        propertyId
+        clientId
+        clientName
+        clientEmail
+        ownerId
+        ownerName
+        ownerEmail
+        subtotal
+        taxAmount
+        taxRate
+        commission
+        commissionRate
+        platformFee
+        total
+        currency
+        items {
+          description
+          quantity
+          unitPrice
+          total
+        }
+        description
+        notes
+        amountPaid
+        amountDue
+        paymentIntentId
+        issueDate
+        dueDate
+        paidAt
+        status
+        metadata
+        createdAt
+        updatedAt
+      }
+    }
+  `;
+
+  const response = await this.graphqlService.query<{ invoice: Invoice }>(query, { id });
+  return response.invoice;
+};
+
+WalletService.prototype.getMyInvoices = async function(
+  filters?: InvoiceFilters,
+  page: number = 1,
+  limit: number = 20
+): Promise<{ invoices: Invoice[]; total: number; pages: number }> {
+  const query = `
+    query GetMyInvoices($filters: InvoiceFiltersInput, $page: Int, $limit: Int) {
+      myInvoices(filters: $filters, page: $page, limit: $limit) {
+        invoices {
+          id
+          invoiceNumber
+          type
+          propertyId
+          ownerId
+          ownerName
+          total
+          amountDue
+          currency
+          dueDate
+          status
+          createdAt
+        }
+        total
+        pages
+      }
+    }
+  `;
+
+  const response = await this.graphqlService.query<{ myInvoices: any }>(query, { filters, page, limit });
+  return response.myInvoices;
+};
+
+WalletService.prototype.initiatePayment = async function(input: InitiatePaymentInput): Promise<PaymentResult> {
+  const mutation = `
+    mutation InitiatePayment($input: InitiatePaymentInput!) {
+      initiatePayment(input: $input) {
+        success
+        paymentIntentId
+        status
+        nextAction {
+          type
+          redirectUrl
+          confirmationCode
+          instructions
+        }
+        error
+      }
+    }
+  `;
+
+  const response = await this.graphqlService.mutate<{ initiatePayment: PaymentResult }>(mutation, { input });
+  return response.initiatePayment;
+};
+
+WalletService.prototype.confirmPayment = async function(
+  paymentIntentId: string,
+  providerReference: string,
+  providerResponse?: any
+): Promise<PaymentResult> {
+  const mutation = `
+    mutation ConfirmPayment($paymentIntentId: String!, $providerReference: String!, $providerResponse: JSON) {
+      confirmPayment(paymentIntentId: $paymentIntentId, providerReference: $providerReference, providerResponse: $providerResponse) {
+        success
+        paymentIntentId
+        status
+        error
+      }
+    }
+  `;
+
+  const response = await this.graphqlService.mutate<{ confirmPayment: PaymentResult }>(mutation, {
+    paymentIntentId,
+    providerReference,
+    providerResponse
+  });
+  return response.confirmPayment;
+};
+
+WalletService.prototype.createReservationInvoice = async function(params: {
+  reservationId: string;
+  propertyId: string;
+  clientId: string;
+  ownerId: string;
+  amount: number;
+  currency: WalletCurrency;
+  checkIn: string;
+  checkOut: string;
+  deposit?: number;
+}): Promise<Invoice> {
+  const mutation = `
+    mutation CreateReservationInvoice(
+      $reservationId: ID!
+      $propertyId: ID!
+      $clientId: ID!
+      $ownerId: ID!
+      $amount: Float!
+      $currency: WalletCurrency!
+      $checkIn: String!
+      $checkOut: String!
+      $deposit: Float
+    ) {
+      createReservationInvoice(
+        reservationId: $reservationId
+        propertyId: $propertyId
+        clientId: $clientId
+        ownerId: $ownerId
+        amount: $amount
+        currency: $currency
+        checkIn: $checkIn
+        checkOut: $checkOut
+        deposit: $deposit
+      ) {
+        id
+        invoiceNumber
+        type
+        total
+        amountDue
+        currency
+        status
+        createdAt
+      }
+    }
+  `;
+
+  const response = await this.graphqlService.mutate<{ createReservationInvoice: Invoice }>(mutation, params);
+  return response.createReservationInvoice;
+};
+
+WalletService.prototype.createRentInvoice = async function(params: {
+  rentalId: string;
+  propertyId: string;
+  clientId: string;
+  ownerId: string;
+  monthlyRent: number;
+  currency: WalletCurrency;
+  periodStart: string;
+  periodEnd: string;
+}): Promise<Invoice> {
+  const mutation = `
+    mutation CreateRentInvoice(
+      $rentalId: ID!
+      $propertyId: ID!
+      $clientId: ID!
+      $ownerId: ID!
+      $monthlyRent: Float!
+      $currency: WalletCurrency!
+      $periodStart: String!
+      $periodEnd: String!
+    ) {
+      createRentInvoice(
+        rentalId: $rentalId
+        propertyId: $propertyId
+        clientId: $clientId
+        ownerId: $ownerId
+        monthlyRent: $monthlyRent
+        currency: $currency
+        periodStart: $periodStart
+        periodEnd: $periodEnd
+      ) {
+        id
+        invoiceNumber
+        type
+        total
+        amountDue
+        currency
+        status
+        createdAt
+      }
+    }
+  `;
+
+  const response = await this.graphqlService.mutate<{ createRentInvoice: Invoice }>(mutation, params);
+  return response.createRentInvoice;
+};
+
+WalletService.prototype.getTransactionsV2 = async function(
+  filters?: any,
+  page: number = 1,
+  limit: number = 20
+): Promise<{ transactions: TransactionV2[]; total: number; pages: number }> {
+  const query = `
+    query GetTransactionsV2($filters: TransactionFiltersV2Input, $page: Int, $limit: Int) {
+      transactionsV2(filters: $filters, page: $page, limit: $limit) {
+        transactions {
+          id
+          transactionId
+          walletId
+          userId
+          type
+          referenceType
+          referenceId
+          amount
+          currency
+          feeAmount
+          netAmount
+          sourceMethod
+          destinationMethod
+          counterpartyId
+          counterpartyName
+          description
+          status
+          invoiceId
+          paymentIntentId
+          balanceAfter
+          createdAt
+          completedAt
+        }
+        total
+        pages
+      }
+    }
+  `;
+
+  const response = await this.graphqlService.query<{ transactionsV2: any }>(query, { filters, page, limit });
+  return response.transactionsV2;
+};
+
+WalletService.prototype.getInvoiceStats = async function(isOwner: boolean = false): Promise<InvoiceStats> {
+  const query = `
+    query GetInvoiceStats($isOwner: Boolean) {
+      invoiceStats(isOwner: $isOwner) {
+        totalInvoices
+        totalPaid
+        totalPending
+        totalUnpaid
+        totalAmount
+        paidAmount
+        pendingAmount
+      }
+    }
+  `;
+
+  const response = await this.graphqlService.query<{ invoiceStats: InvoiceStats }>(query, { isOwner });
+  return response.invoiceStats;
+};
+
+// ============= ONGOING ACTIVITIES =============
+
+export interface OngoingActivity {
+  id: string;
+  type: 'service' | 'reservation' | 'rent';
+  title: string;
+  description?: string;
+  amount: number;
+  currency: string;
+  status: string;
+  paymentStatus: string;
+  startDate?: string;
+  endDate?: string;
+  referenceId: string;
+  referenceType: string;
+  invoiceId?: string;
+  invoice?: Invoice;
+  service?: any;
+  property?: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OngoingActivitiesResponse {
+  activities: OngoingActivity[];
+  total: number;
+  byType: {
+    services: number;
+    reservations: number;
+    rents: number;
+  };
+}
+
+WalletService.prototype.getOngoingActivities = async function(
+  type?: 'service' | 'reservation' | 'rent' | 'all'
+): Promise<OngoingActivitiesResponse> {
+  const query = `
+    query GetOngoingActivities($type: OngoingActivityType) {
+      ongoingActivities(type: $type) {
+        activities {
+          id
+          type
+          title
+          description
+          amount
+          currency
+          status
+          paymentStatus
+          startDate
+          endDate
+          referenceId
+          referenceType
+          invoiceId
+          invoice {
+            id
+            invoiceNumber
+            total
+            amountDue
+            status
+            dueDate
+          }
+          service {
+            id
+            title
+            category
+            pricing {
+              basePrice
+              currency
+              billingPeriod
+            }
+          }
+          property {
+            id
+            title
+            ownerCriteria {
+              acceptedPaymentMethods
+              monthlyRent
+              currency
+            }
+          }
+          createdAt
+          updatedAt
+        }
+        total
+        byType {
+          services
+          reservations
+          rents
+        }
+      }
+    }
+  `;
+
+  const response = await this.graphqlService.query<{ ongoingActivities: OngoingActivitiesResponse }>(
+    query,
+    { type }
+  );
+  return response.ongoingActivities;
+};
+
+// Déclarer les nouvelles méthodes sur le type
+declare module './walletService' {
+  interface WalletService {
+    getWalletV2(): Promise<WalletV2>;
+    getInvoice(id: string): Promise<Invoice | null>;
+    getMyInvoices(filters?: InvoiceFilters, page?: number, limit?: number): Promise<{ invoices: Invoice[]; total: number; pages: number }>;
+    initiatePayment(input: InitiatePaymentInput): Promise<PaymentResult>;
+    confirmPayment(paymentIntentId: string, providerReference: string, providerResponse?: any): Promise<PaymentResult>;
+    createReservationInvoice(params: any): Promise<Invoice>;
+    createRentInvoice(params: any): Promise<Invoice>;
+    getTransactionsV2(filters?: any, page?: number, limit?: number): Promise<{ transactions: TransactionV2[]; total: number; pages: number }>;
+    getInvoiceStats(isOwner?: boolean): Promise<InvoiceStats>;
+    getOngoingActivities(type?: 'service' | 'reservation' | 'rent' | 'all'): Promise<OngoingActivitiesResponse>;
   }
 }
 

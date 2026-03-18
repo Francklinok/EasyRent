@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { 
-  getServiceMarketplaceService, 
-  Service, 
-  ServiceFilters, 
+import {
+  getServiceMarketplaceService,
+  Service,
+  ServiceFilters,
   ServiceConnection,
-  PaginationInput 
+  PaginationInput
 } from '@/services/api/serviceMarketplaceService';
+import { cacheService, CACHE_KEYS } from '@/services/cache/cacheService';
 
 interface UseServicesOptions {
   filters?: ServiceFilters;
@@ -46,6 +47,25 @@ export const useServices = (options: UseServicesOptions = {}): UseServicesReturn
 
   const cacheRef = useRef<Map<string, ServiceConnection>>(new Map());
   const lastQueryRef = useRef<string>('');
+  const initialLoadDone = useRef(false);
+  const hasDataRef = useRef(false);
+
+  // Load cached data instantly on mount (offline-first) - no loading state to avoid UI delay
+  useEffect(() => {
+    const loadCached = async () => {
+      try {
+        const cached = await cacheService.get<Service[]>(CACHE_KEYS.SERVICES_LIST);
+        if (cached && cached.length > 0 && !initialLoadDone.current) {
+          setServices(cached);
+          setTotalCount(cached.length);
+          hasDataRef.current = true;
+        }
+      } catch {
+        // Cache read failed, network fetch will handle it
+      }
+    };
+    loadCached();
+  }, []);
 
   const generateCacheKey = useCallback((filters: ServiceFilters, pagination: PaginationInput, query?: string) => {
     return JSON.stringify({ filters, pagination, query });
@@ -58,7 +78,10 @@ export const useServices = (options: UseServicesOptions = {}): UseServicesReturn
     append = false
   ) => {
     try {
-      setLoading(true);
+      // Only show loading if we have no cached data yet (avoids UI flicker on background refresh)
+      if (!hasDataRef.current) {
+        setLoading(true);
+      }
       setError(null);
       
       console.log('🔍 Loading services with:', { filters, pagination, query });
@@ -101,17 +124,23 @@ export const useServices = (options: UseServicesOptions = {}): UseServicesReturn
         setServices(prev => [...prev, ...newServices]);
       } else {
         setServices(newServices);
+        // Persist first page to AsyncStorage for offline-first
+        if (!pagination.after) {
+          cacheService.set(CACHE_KEYS.SERVICES_LIST, newServices);
+        }
       }
+      hasDataRef.current = newServices.length > 0;
 
       setTotalCount(result.totalCount);
       setHasNextPage(result.pageInfo.hasNextPage);
       setCursor(result.pageInfo.endCursor);
+      initialLoadDone.current = true;
 
       filtersRef.current = filters;
       paginationRef.current = pagination;
 
     } catch (err) {
-      console.error('❌ Error loading services:', err);
+      console.error('[useServices] Error loading services:', err);
       setError(err instanceof Error ? err.message : 'Erreur lors du chargement des services');
     } finally {
       setLoading(false);

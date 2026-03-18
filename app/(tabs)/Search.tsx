@@ -1,4 +1,4 @@
-import AdvancedHousingSearch from "@/components/searchScreen/Searchcomponent"
+import AdvancedHousingSearch from "@/components/search/Searchcomponent"
 import { ThemedView } from "@/components/ui/ThemedView"
 
 export default function Search(){

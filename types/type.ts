@@ -1,6 +1,6 @@
-// Types pour le contrat
+// Types for contract
 
-// Type pour une propriété
+// Type for a property
 export interface Property {
     id:string,
     title: string;
@@ -17,7 +17,7 @@ export interface Property {
     estimatedValue?:number;
   }
   
-  // Type pour un utilisateur (propriétaire ou locataire)
+  // Type for a user (owner or tenant)
   export interface User {
     fullName: string;
     email: string;
@@ -28,7 +28,7 @@ export interface Property {
     birthDate?: string;
   }
   
-  // Statut possible pour une réservation
+  // Possible status for a reservation
   export type ReservationStatus = 
     | 'pending' 
     | 'payment_completed' 
@@ -38,13 +38,13 @@ export interface Property {
     | 'completed' 
     | 'cancelled';
   
-  // Type pour une réservation
+  // Type for a reservation
   export interface Reservation {
     propertyId: string;
     landlordId: string;
     tenantId: string;
-    startDate: Date | any; // Timestamp ou Date
-    endDate: Date | any; // Timestamp ou Date
+    startDate: Date | any; // Timestamp or Date
+    endDate: Date | any; // Timestamp or Date
     monthlyRent: number;
     status: ReservationStatus;
     contractFileUri?: string;
@@ -56,7 +56,7 @@ export interface Property {
     signatureDate?: string;
   }
   
-  // Type pour un historique de paiement
+  // Type for payment history
   export interface PaymentRecord {
     id: string;
     date: Date;
@@ -65,7 +65,7 @@ export interface Property {
     status: 'pending' | 'completed' | 'failed';
   }
   
-  // Type pour les paramètres du code QR
+  // Type for QR code parameters
   export interface QRCodeParams {
     contractId: string;
     propertyTitle: string;
@@ -74,7 +74,7 @@ export interface Property {
     endDate: string;
   }
   
-  // Type pour les paramètres de génération du contrat HTML
+  // Type for contract HTML generation parameters
   // export interface ContractHTMLParams {
   //   contractId: string;
   //   reservation: Reservation;

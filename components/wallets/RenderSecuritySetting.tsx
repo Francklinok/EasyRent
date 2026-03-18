@@ -21,9 +21,10 @@ import {
   ChevronUp,
   X,
 } from "lucide-react-native";
-import { useTheme } from "@/components/contexts/theme/themehook";
+import { useTheme } from "@/hooks/themehook";
 import { ThemedView } from "../ui/ThemedView";
 import { ThemedText } from "../ui/ThemedText";
+import { useLanguage } from '@/components/contexts/language';
 
 const currencies = ["EUR", "USD", "GBP", "JPY"];
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
@@ -40,6 +41,7 @@ const RenderSecuritySettings: React.FC<Props> = ({
   setSelectedCurrency,
 }) => {
   const { theme } = useTheme();
+  const { t } = useLanguage();
 
   const [activeModal, setActiveModal] = useState<string | null>(null);
 
@@ -61,14 +63,13 @@ const RenderSecuritySettings: React.FC<Props> = ({
             type="title"
             style={[styles.securityItemTitle, { color: theme.onSurface }]}
           >
-            Authentification à deux facteurs
+            {t('walletComponents.twoFactorAuth')}
           </ThemedText>
         </ThemedView>
         <ThemedText
           style={[styles.securityItemDescription, { color: theme.onSurface }]}
         >
-          Renforcez la sécurité de votre compte en ajoutant une deuxième
-          couche d'authentification.
+          {t('walletComponents.twoFactorAuthDesc')}
         </ThemedText>
       </ThemedView>
 
@@ -80,14 +81,13 @@ const RenderSecuritySettings: React.FC<Props> = ({
             type="title"
             style={[styles.securityItemTitle, { color: theme.onSurface }]}
           >
-            Authentification biométrique
+            {t('walletComponents.biometricAuth')}
           </ThemedText>
         </ThemedView>
         <ThemedText
           style={[styles.securityItemDescription, { color: theme.onSurface }]}
         >
-          Utilisez votre empreinte digitale ou reconnaissance faciale pour
-          accéder rapidement à votre portefeuille.
+          {t('walletComponents.biometricAuthDesc')}
         </ThemedText>
       </ThemedView>
 
@@ -99,13 +99,13 @@ const RenderSecuritySettings: React.FC<Props> = ({
             type="title"
             style={[styles.securityItemTitle, { color: theme.onSurface }]}
           >
-            Code PIN de sécurité
+            {t('walletComponents.securityPin')}
           </ThemedText>
         </ThemedView>
         <ThemedText
           style={[styles.securityItemDescription, { color: theme.onSurface }]}
         >
-          Définissez un code PIN pour sécuriser les transactions.
+          {t('walletComponents.securityPinDesc')}
         </ThemedText>
       </ThemedView>
     </>
@@ -119,7 +119,7 @@ const RenderSecuritySettings: React.FC<Props> = ({
           { color: theme.onSurface },
         ]}
       >
-        Choisissez votre devise par défaut :
+        {t('walletComponents.chooseDefaultCurrency')}
       </ThemedText>
       <View style={styles.currencySelector}>
         {currencies.map((currency) => (
@@ -158,7 +158,7 @@ const RenderSecuritySettings: React.FC<Props> = ({
       <ThemedText
         style={[styles.securityItemDescription, { color: theme.onSurface }]}
       >
-        Paramètres de notifications à venir.
+        {t('walletComponents.notificationsSettings')}
       </ThemedText>
     </ThemedView>
   );
@@ -166,11 +166,11 @@ const RenderSecuritySettings: React.FC<Props> = ({
   const getModalTitle = () => {
     switch (activeModal) {
       case "security":
-        return "Sécurité et authentification";
+        return t('walletComponents.securityAndAuth');
       case "currency":
-        return "Devise et préférences";
+        return t('walletComponents.currencyAndPreferences');
       case "notifications":
-        return "Notifications";
+        return t('walletComponents.notifications');
       default:
         return "";
     }
@@ -202,7 +202,7 @@ const RenderSecuritySettings: React.FC<Props> = ({
           <ThemedText
             style={[styles.sectionHeaderTitle, { color: theme.onSurface }]}
           >
-            Paramètres
+            {t('walletComponents.settings')}
           </ThemedText>
         </ThemedView>
 
@@ -213,7 +213,7 @@ const RenderSecuritySettings: React.FC<Props> = ({
         >
           <Shield size={20} color={theme.primary} />
           <ThemedText style={{ flex: 1, marginLeft: 8, color: theme.onSurface }}>
-            Sécurité et authentification
+            {t('walletComponents.securityAndAuth')}
           </ThemedText>
           <ChevronDown size={20} color={theme.onSurface} />
         </TouchableOpacity>
@@ -225,7 +225,7 @@ const RenderSecuritySettings: React.FC<Props> = ({
         >
           <DollarSign size={20} color={theme.secondary} />
           <ThemedText style={{ flex: 1, marginLeft: 8, color: theme.onSurface }}>
-            Devise et préférences
+            {t('walletComponents.currencyAndPreferences')}
           </ThemedText>
           <ChevronDown size={20} color={theme.onSurface} />
         </TouchableOpacity>
@@ -237,7 +237,7 @@ const RenderSecuritySettings: React.FC<Props> = ({
         >
           <Bell size={20} color={theme.accent} />
           <ThemedText style={{ flex: 1, marginLeft: 8, color: theme.onSurface }}>
-            Notifications
+            {t('walletComponents.notifications')}
           </ThemedText>
           <ChevronDown size={20} color={theme.onSurface} />
         </TouchableOpacity>

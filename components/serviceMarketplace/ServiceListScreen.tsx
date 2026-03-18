@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import ServiceCard from './ServiceCard';
 import ServiceFilters from './ServiceFilters';
 import {
@@ -23,6 +24,7 @@ import {
 } from '../../services/api/serviceMarketplaceService';
 import { ThemedView } from '../ui/ThemedView';
 import { ThemedText } from '../ui/ThemedText';
+import { useLanguage } from '../contexts/language';
 
 
 interface ServiceListScreenProps {
@@ -40,8 +42,8 @@ const ServiceListScreen: React.FC<ServiceListScreenProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const serviceMarketplace = getServiceMarketplaceService();
+  const { t } = useLanguage();
 
-  // États
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -52,7 +54,6 @@ const ServiceListScreen: React.FC<ServiceListScreenProps> = ({
   const [hasMore, setHasMore] = useState(true);
   const [cursor, setCursor] = useState<string | undefined>();
 
-  // Charger les services
   const loadServices = useCallback(async (
     newFilters?: ServiceFiltersType,
     loadMore = false
@@ -85,8 +86,8 @@ const ServiceListScreen: React.FC<ServiceListScreenProps> = ({
     } catch (error) {
       console.error('Erreur lors du chargement des services:', error);
       Alert.alert(
-        'Erreur',
-        'Impossible de charger les services. Veuillez réessayer.',
+        t('common.error'),
+        t('services.loadError'),
         [{ text: 'OK' }]
       );
     } finally {
@@ -96,7 +97,6 @@ const ServiceListScreen: React.FC<ServiceListScreenProps> = ({
     }
   }, [filters, cursor, serviceMarketplace]);
 
-  // Actualiser la liste
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     setCursor(undefined);
@@ -136,6 +136,14 @@ const ServiceListScreen: React.FC<ServiceListScreenProps> = ({
     loadServices();
   }, []);
 
+  // Recharger les services quand l'écran est focalisé
+  useFocusEffect(
+    useCallback(() => {
+      setCursor(undefined);
+      loadServices(filters, false);
+    }, [filters, loadServices])
+  );
+
   // Rendu d'un service
   const renderService = useCallback(({ item }: { item: Service }) => (
     <ServiceCard
@@ -153,7 +161,7 @@ const ServiceListScreen: React.FC<ServiceListScreenProps> = ({
     return (
       <ThemedView style={styles.loadingFooter}>
         <ActivityIndicator size="small" color="#007AFF" />
-        <ThemedText style={styles.loadingText}>Chargement...</ThemedText>
+        <ThemedText style={styles.loadingText}>{t('common.loading')}</ThemedText>
       </ThemedView>
     );
   }, [loadingMore]);
@@ -165,15 +173,15 @@ const ServiceListScreen: React.FC<ServiceListScreenProps> = ({
     return (
       <ThemedView style={styles.emptyContainer}>
         <Ionicons name="search" size={64} color="#DDD" />
-        <ThemedText style={styles.emptyTitle}>Aucun service trouvé</ThemedText>
+        <ThemedText style={styles.emptyTitle}>{t('services.noServicesFound')}</ThemedText>
         <ThemedText style={styles.emptySubtitle}>
-          Essayez de modifier vos critères de recherche
+          {t('services.modifySearch')}
         </ThemedText>
         <TouchableOpacity
           style={styles.resetButton}
           onPress={() => applyFilters({})}
         >
-          <Text style={styles.resetButtonText}>Réinitialiser les filtres</Text>
+          <Text style={styles.resetButtonText}>{t('services.resetFilters')}</Text>
         </TouchableOpacity>
       </ThemedView>
     );
@@ -206,7 +214,7 @@ const ServiceListScreen: React.FC<ServiceListScreenProps> = ({
       {!loading && (
         <View style={styles.statsContainer}>
           <Text style={styles.statsText}>
-            {services.length} service{services.length > 1 ? 's' : ''} trouvé{services.length > 1 ? 's' : ''}
+            {t('services.foundCount', { count: services.length })}
           </Text>
         </View>
       )}
@@ -215,7 +223,7 @@ const ServiceListScreen: React.FC<ServiceListScreenProps> = ({
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Chargement des services...</Text>
+          <Text style={styles.loadingText}>{t('services.loading')}</Text>
         </View>
       ) : (
         <FlatList

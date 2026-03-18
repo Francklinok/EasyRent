@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { ThemedText } from './ThemedText';
-import { useTheme } from '../contexts/theme/themehook';
+import { useTheme } from '../../hooks/themehook';
 interface FilterButtonProps {
   onPress?: () => void;
   children: React.ReactNode; // Accepte du contenu à l'intérieur

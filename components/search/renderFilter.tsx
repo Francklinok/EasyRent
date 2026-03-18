@@ -19,7 +19,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { ThemedText } from '../ui/ThemedText';
 import { ThemedView } from '../ui/ThemedView';
 import { SearchFilters } from '@/types/FilterType';
-import { useTheme } from '../contexts/theme/themehook';
+import { useTheme } from '../../hooks/themehook';
+import { useLanguage } from '@/components/contexts/language';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -39,14 +40,15 @@ const FilterModal: React.FC<FilterModalProps> = ({
   onClose,
 }) => {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const scrollOffsetY = useRef(0);
   const [draggingDown, setDraggingDown] = useState(false);
 
   const propertyTypes = [
-    { id: 'apartment', label: 'Apartment', icon: 'apartment' },
-    { id: 'house', label: 'House', icon: 'home' },
-    { id: 'studio', label: 'Studio', icon: 'home-city' },
-    { id: 'villa', label: 'Villa', icon: 'home-variant' },
+    { id: 'apartment', label: t('property.apartment'), icon: 'apartment' },
+    { id: 'house', label: t('property.house'), icon: 'home' },
+    { id: 'studio', label: t('property.studio'), icon: 'home-city' },
+    { id: 'villa', label: t('property.villa'), icon: 'home-variant' },
   ];
 
   const countries = [
@@ -96,7 +98,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
           fontWeight: '600',
           color: theme.onSurface
         }}>
-          Price Range
+          {t('search.priceRange')}
         </ThemedText>
       </ThemedView>
       
@@ -105,7 +107,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
         color: theme.onSurface + '80',
         marginBottom: 12
       }}>
-        €{filters.minPrice.toLocaleString()} - €{filters.maxPrice.toLocaleString()} per month
+        {`€${filters.minPrice.toLocaleString()} - €${filters.maxPrice.toLocaleString()} ${t('search.perMonth')}`}
       </ThemedText>
       
       <ThemedView style={{ flexDirection: 'row', gap: 12 }}>
@@ -115,7 +117,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
             color: theme.onSurface + '80',
             marginBottom: 6
           }}>
-            Min Price
+            {t('homeScreen.minPrice')}
           </ThemedText>
           <TextInput
             placeholder="0"
@@ -146,7 +148,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
             color: theme.onSurface + '80',
             marginBottom: 6
           }}>
-            Max Price
+            {t('homeScreen.maxPrice')}
           </ThemedText>
           <TextInput
             placeholder="10000"
@@ -188,7 +190,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
           fontWeight: '600',
           color: theme.onSurface
         }}>
-          Property Details
+          {t('search.propertyDetails')}
         </ThemedText>
       </ThemedView>
 
@@ -199,7 +201,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
             color: theme.onSurface + '80',
             marginBottom: 6
           }}>
-            Min Surface (m²)
+            {t('search.minSurface')}
           </ThemedText>
           <TextInput
             placeholder="20"
@@ -230,7 +232,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
             color: theme.onSurface + '80',
             marginBottom: 6
           }}>
-            Min Rooms
+            {t('search.minRooms')}
           </ThemedText>
           <TextInput
             placeholder="1"
@@ -272,7 +274,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
           fontWeight: '600',
           color: theme.onSurface
         }}>
-          Property Type
+          {t('property.propertyType')}
         </ThemedText>
       </ThemedView>
 
@@ -334,7 +336,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
           fontWeight: '600',
           color: theme.onSurface
         }}>
-          Country
+          {t('property.country')}
         </ThemedText>
       </ThemedView>
 
@@ -435,7 +437,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
                     fontWeight: '700',
                     color: theme.onSurface
                   }}>
-                    Filters
+                    {t('homeScreen.filters')}
                   </ThemedText>
                   
                   <TouchableOpacity
@@ -452,7 +454,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
                       fontWeight: '500',
                       color: theme.primary
                     }}>
-                      Reset
+                      {t('common.reset')}
                     </ThemedText>
                   </TouchableOpacity>
                 </ThemedView>
@@ -488,7 +490,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
                     fontWeight: '600',
                     color: theme.onSurface + '80'
                   }}>
-                    Cancel
+                    {t('common.cancel')}
                   </ThemedText>
                 </TouchableOpacity>
 
@@ -507,7 +509,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
                     fontWeight: '600',
                     color: 'white'
                   }}>
-                    Apply Filters
+                    {t('search.applyFilters')}
                   </ThemedText>
                 </TouchableOpacity>
               </ThemedView>

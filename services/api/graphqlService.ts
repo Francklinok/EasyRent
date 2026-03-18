@@ -18,6 +18,18 @@ export interface GraphQLResponse<T = any> {
   }>;
 }
 
+export class GraphQLError extends Error {
+  code: string;
+  originalError: any;
+
+  constructor(message: string, code: string, originalError?: any) {
+    super(message);
+    this.name = 'GraphQLError';
+    this.code = code;
+    this.originalError = originalError;
+  }
+}
+
 /**
  * Service GraphQL pour effectuer des requêtes GraphQL
  */
@@ -109,7 +121,25 @@ export class GraphQLService {
         const error = response.data.errors[0];
         console.error('❌ [GraphQL] GraphQL Error:', error);
         console.error('❌ [GraphQL] Full error details:', JSON.stringify(error, null, 2));
-        throw new Error(`GraphQL Error: ${error.message}`);
+
+        // Détection spécifique des erreurs d'authentification
+        const errorMessage = error.message.toLowerCase();
+        if (errorMessage.includes('authentication required') ||
+            errorMessage.includes('not authenticated') ||
+            errorMessage.includes('unauthorized') ||
+            error.extensions?.code === 'UNAUTHENTICATED') {
+          throw new GraphQLError(error.message, 'UNAUTHENTICATED', error);
+        }
+
+        // Détection des erreurs de permissions
+        if (errorMessage.includes('forbidden') ||
+            errorMessage.includes('permission denied') ||
+            error.extensions?.code === 'FORBIDDEN') {
+          throw new GraphQLError(error.message, 'FORBIDDEN', error);
+        }
+
+        // Erreur générique
+        throw new GraphQLError(error.message, 'GRAPHQL_ERROR', error);
       }
 
       if (!response.data.data) {
@@ -129,19 +159,19 @@ export class GraphQLService {
         console.error('❌ [GraphQL] Request headers:', error.config?.headers);
       }
 
-      // En mode développement, si c'est une erreur réseau, utiliser les données mockées
+      // En mode développement, si c'est une vraie erreur réseau (pas de réponse), utiliser les données mockées
       const isDev = __DEV__ || process.env.NODE_ENV === 'development';
       const errorMessage = error instanceof Error ? error.message : String(error);
+      // Uniquement les vraies erreurs réseau (pas de réponse du serveur), pas les erreurs HTTP (401, 500...)
       const isNetworkError =
-        axios.isAxiosError(error) ||
+        (axios.isAxiosError(error) && !error.response) ||
         (error && (error as any).code === 'ERR_NETWORK') ||
-        errorMessage.includes('Network Error') ||
+        (error && (error as any).code === 'ECONNREFUSED') ||
         errorMessage.includes('ECONNREFUSED') ||
-        errorMessage.includes('fetch');
+        errorMessage.includes('Network request failed');
 
       if (isDev && isNetworkError) {
-        console.log('🔧 [GraphQL] Network error detected, falling back to mock data service');
-        // Lancer une erreur spécifique que les services peuvent intercepter
+        console.log('🔧 [GraphQL] Network error detected (no response), falling back to mock data service');
         throw new Error('NETWORK_ERROR_USE_MOCK');
       }
 

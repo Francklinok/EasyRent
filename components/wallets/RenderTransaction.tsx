@@ -1,7 +1,8 @@
 import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { ThemedView } from "../ui/ThemedView";
 import { ArrowLeft, Download, Send, Bitcoin } from 'lucide-react-native';
-import { useTheme } from '@/components/contexts/theme/themehook';
+import { useTheme } from '@/hooks/themehook';
+import { useLanguage } from '@/components/contexts/language';
 import _ from 'lodash';
 import { ThemedText } from "../ui/ThemedText";
 import { ThemedScrollView } from "../ui/ScrolleView";
@@ -27,31 +28,26 @@ type Props = {
 
 const RenderTransactions: React.FC<Props> = ({ setCurrentSection,formatAmount,transactionHistory}) => {
   const {theme} = useTheme();
+  const { t } = useLanguage();
   
   return (
-    <ThemedScrollView className="w-full h-full pt-10">
+    <ThemedScrollView className="w-full h-full">
       <ThemedView style={styles.sectionContainer}>
-        <ThemedView style={styles.sectionHeader}>
-          <TouchableOpacity onPress={() => setCurrentSection('main')} style={styles.backButton}>
-            <ArrowLeft size={20} color={theme.onSurface} />
-          </TouchableOpacity>
-          <ThemedText type = "subtitle" style={{ color: theme.onSurface }}>Historique des transactions</ThemedText>
-        </ThemedView>
         
         <ThemedView style={styles.transactionFilterContainer}>
-          <ThemedText  className="px-2 py-4" style={ { color: theme.onSurface }}>Filtrer par</ThemedText>
+          <ThemedText type ="normal"  className="px-2">{t('walletComponents.filterBy')}</ThemedText>
           <ThemedView className="px-2" style={styles.filterOptions}>
             <TouchableOpacity style={[styles.filterOption, { borderColor: theme.surface, backgroundColor: theme.surfaceVariant }]}>
-              <ThemedText style={{ color: theme.text }}>Tout</ThemedText>
+              <ThemedText style={{ color: theme.text }}>{t('walletComponents.all')}</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.filterOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
-              <ThemedText style={ { color: theme.text }}>Envoyés</ThemedText>
+              <ThemedText style={ { color: theme.text }}>{t('walletComponents.sent')}</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.filterOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
-              <ThemedText style={ { color: theme.text }}>Reçus</ThemedText>
+              <ThemedText style={ { color: theme.text }}>{t('walletComponents.received')}</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.filterOption, { borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}>
-              <ThemedText style={ { color: theme.text }}>Crypto</ThemedText>
+              <ThemedText style={ { color: theme.text }}>{t('walletComponents.crypto')}</ThemedText>
             </TouchableOpacity>
           </ThemedView>
         </ThemedView>
@@ -85,7 +81,7 @@ const RenderTransactions: React.FC<Props> = ({ setCurrentSection,formatAmount,tr
                   </ThemedText>
                   {transaction.status === 'pending' && (
                     <ThemedView style={[styles.statusBadge, { backgroundColor: theme.surfaceVariant }]}>
-                      <ThemedText style={ { color: theme.onSurface }}>En attente</ThemedText>
+                      <ThemedText style={ { color: theme.onSurface }}>{t('walletComponents.pending')}</ThemedText>
                     </ThemedView>
                   )}
                 </ThemedView>
@@ -117,16 +113,8 @@ const styles = StyleSheet.create({
     flexBasis: 'auto',
     minHeight: 800,
     padding: 16,
+    paddingTop:10
 
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  backButton: {
-    padding: 8,
-    marginRight: 16,
   },
   sectionHeaderTitle: {
     fontSize: 20,

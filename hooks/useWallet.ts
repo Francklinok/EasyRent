@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getWalletService,
   Wallet,
@@ -7,8 +7,11 @@ import {
   WalletStats,
   TransactionFilters,
   NotificationFilters,
-  Notification
+  Notification,
+  OngoingActivity,
+  OngoingActivitiesResponse
 } from '@/services/api/walletService';
+import { cacheService, CACHE_KEYS } from '@/services/cache/cacheService';
 
 interface UseWalletResult {
   wallet: Wallet | null;
@@ -60,21 +63,37 @@ export function useWallet(): UseWalletResult {
   const [error, setError] = useState<string | null>(null);
 
   const walletService = getWalletService();
+  const initialLoadDone = useRef(false);
+
+  // Load cached wallet data instantly on mount (offline-first)
+  useEffect(() => {
+    const loadCached = async () => {
+      const cached = await cacheService.get<Wallet>(CACHE_KEYS.WALLET_DATA);
+      if (cached && !initialLoadDone.current) {
+        setWallet(cached);
+      }
+    };
+    loadCached();
+  }, []);
 
   const loadWallet = useCallback(async () => {
     try {
-      setLoading(true);
+      if (!wallet) {
+        setLoading(true);
+      }
       setError(null);
 
       const result = await walletService.getWallet();
       setWallet(result);
+      await cacheService.set(CACHE_KEYS.WALLET_DATA, result);
+      initialLoadDone.current = true;
     } catch (err) {
       console.error('Error loading wallet:', err);
       setError(err instanceof Error ? err.message : 'Failed to load wallet');
     } finally {
       setLoading(false);
     }
-  }, [walletService]);
+  }, [walletService, wallet]);
 
   const refresh = useCallback(async () => {
     await loadWallet();
@@ -107,13 +126,28 @@ export function useTransactions(
   const [currentPage, setCurrentPage] = useState(1);
 
   const walletService = getWalletService();
+  const initialLoadDone = useRef(false);
+
+  // Load cached transactions instantly on mount (offline-first)
+  useEffect(() => {
+    const loadCached = async () => {
+      const cached = await cacheService.get<Transaction[]>(CACHE_KEYS.WALLET_TRANSACTIONS);
+      if (cached && cached.length > 0 && !initialLoadDone.current) {
+        setTransactions(cached);
+        setTotalCount(cached.length);
+      }
+    };
+    loadCached();
+  }, []);
 
   const loadTransactions = useCallback(async (
     page: number = 1,
     append: boolean = false
   ) => {
     try {
-      setLoading(true);
+      if (transactions.length === 0) {
+        setLoading(true);
+      }
       setError(null);
 
       const result = await walletService.getTransactions(filters, {
@@ -127,18 +161,23 @@ export function useTransactions(
         setTransactions(prev => [...prev, ...newTransactions]);
       } else {
         setTransactions(newTransactions);
+        // Cache first page only
+        if (page === 1) {
+          await cacheService.set(CACHE_KEYS.WALLET_TRANSACTIONS, newTransactions);
+        }
       }
 
       setTotalCount(result.totalCount);
       setHasNextPage(result.pageInfo.hasNextPage);
       setCurrentPage(page);
+      initialLoadDone.current = true;
     } catch (err) {
       console.error('Error loading transactions:', err);
       setError(err instanceof Error ? err.message : 'Failed to load transactions');
     } finally {
       setLoading(false);
     }
-  }, [walletService, filters, limit]);
+  }, [walletService, filters, limit, transactions.length]);
 
   const refresh = useCallback(async () => {
     await loadTransactions(1, false);
@@ -428,5 +467,71 @@ export function useWalletStats(dateFrom?: string, dateTo?: string) {
     loading,
     error,
     reload: loadStats
+  };
+}
+
+interface UseOngoingActivitiesResult {
+  activities: OngoingActivity[];
+  loading: boolean;
+  error: string | null;
+  total: number;
+  byType: {
+    services: number;
+    reservations: number;
+    rents: number;
+  };
+  refresh: () => Promise<void>;
+}
+
+/**
+ * Hook pour récupérer les activités en cours (services, réservations, loyers)
+ */
+export function useOngoingActivities(
+  type?: 'service' | 'reservation' | 'rent' | 'all'
+): UseOngoingActivitiesResult {
+  const [activities, setActivities] = useState<OngoingActivity[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
+  const [byType, setByType] = useState({
+    services: 0,
+    reservations: 0,
+    rents: 0
+  });
+
+  const walletService = getWalletService();
+
+  const loadActivities = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const result = await walletService.getOngoingActivities(type);
+      setActivities(result.activities);
+      setTotal(result.total);
+      setByType(result.byType);
+    } catch (err) {
+      console.error('Error loading ongoing activities:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load ongoing activities');
+    } finally {
+      setLoading(false);
+    }
+  }, [walletService, type]);
+
+  const refresh = useCallback(async () => {
+    await loadActivities();
+  }, [loadActivities]);
+
+  useEffect(() => {
+    loadActivities();
+  }, [loadActivities]);
+
+  return {
+    activities,
+    loading,
+    error,
+    total,
+    byType,
+    refresh
   };
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getActivityService,
   Activity,
@@ -12,6 +12,7 @@ import {
   PaginationInput,
   TimeRangeInput
 } from '@/services/api/activityService';
+import { cacheService, CACHE_KEYS } from '@/services/cache/cacheService';
 
 interface UseActivitiesResult {
   activities: Activity[];
@@ -67,13 +68,28 @@ export function useActivities(
   const [currentPage, setCurrentPage] = useState(1);
 
   const activityService = getActivityService();
+  const initialLoadDone = useRef(false);
+
+  // Load cached data instantly on mount (offline-first)
+  useEffect(() => {
+    const loadCached = async () => {
+      const cached = await cacheService.get<Activity[]>(CACHE_KEYS.ACTIVITIES_LIST);
+      if (cached && cached.length > 0 && !initialLoadDone.current) {
+        setActivities(cached);
+        setTotalCount(cached.length);
+      }
+    };
+    loadCached();
+  }, []);
 
   const loadActivities = useCallback(async (
     page: number = 1,
     append: boolean = false
   ) => {
     try {
-      setLoading(true);
+      if (activities.length === 0) {
+        setLoading(true);
+      }
       setError(null);
 
       const paginationInput = {
@@ -89,18 +105,23 @@ export function useActivities(
         setActivities(prev => [...prev, ...newActivities]);
       } else {
         setActivities(newActivities);
+        // Cache first page only
+        if (page === 1) {
+          await cacheService.set(CACHE_KEYS.ACTIVITIES_LIST, newActivities);
+        }
       }
 
       setTotalCount(result.totalCount);
       setHasNextPage(result.pageInfo.hasNextPage);
       setCurrentPage(page);
+      initialLoadDone.current = true;
     } catch (err) {
       console.error('Error loading activities:', err);
       setError(err instanceof Error ? err.message : 'Failed to load activities');
     } finally {
       setLoading(false);
     }
-  }, [activityService, filters, pagination]);
+  }, [activityService, filters, pagination, activities.length]);
 
   const refresh = useCallback(async () => {
     await loadActivities(1, false);

@@ -3,7 +3,7 @@ import { View, FlatList, TouchableOpacity, Dimensions } from 'react-native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
-import { useTheme } from '@/components/contexts/theme/themehook';
+import { useTheme } from '@/hooks/themehook';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { useActivityStats } from '@/hooks/useActivity';
@@ -600,7 +600,6 @@ const ActivityInsights: React.FC<ActivityInsightsProps> = ({
   return (
     <ThemedView style={{
       flex: 1,
-      backgroundColor: theme.background,
       padding: 20
     }}>
       <ThemedText style={{

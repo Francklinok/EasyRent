@@ -80,6 +80,11 @@ export  const SearchPropertyCard: React.FC<SearchPropertyCardProps> = ({
   const surface = property.generalHInfo?.surface ?? property.surface ?? null;
   const price = property.ownerCriteria?.monthlyRent ?? property.monthlyRent ?? 0;
   const isRent = property.actionType === 'rent' || !property.actionType;
+  const fence = property.generalLandinfo.fence;
+  const surfaceLand = property.generalLandinfo.surface;
+  const cultivable = property.generalLandinfo.cultivable;
+  const constructible = property.generalLandinfo.constructible;
+
 
   return (
     <TouchableOpacity
@@ -131,32 +136,65 @@ export  const SearchPropertyCard: React.FC<SearchPropertyCardProps> = ({
         {/* Location */}
         {area ? (
           <ThemedView style={propCardStyles.locationRow}>
-            <Ionicons name="location-outline" size={14} color="#636E72" />
-            <ThemedText type = "normal" style={propCardStyles.locationText} numberOfLines={1}>{area}</ThemedText>
+            <Ionicons name="location-outline" size={14} color= {theme.text + "99"} />
+            <ThemedText type = "normal" style={{...propCardStyles.locationText, color:theme.text + "99"}} numberOfLines={1}>{area}</ThemedText>
           </ThemedView>
         ) : null}
 
         {/* Stats row: bedrooms, bathrooms, surface */}
+      {property.type !== 'terrain'? (
         <ThemedView style={propCardStyles.statsRow}>
           {bedrooms != null && (
             <ThemedView style={propCardStyles.statItem}>
               <MaterialCommunityIcons name="bed-outline" size={14} color={cardColor} />
-              <ThemedText type = "body" style={propCardStyles.statText}>{bedrooms} ch</ThemedText>
+              <ThemedText type = "body" style={{...propCardStyles.statText, color:theme.text + "99"}}>{bedrooms} ch</ThemedText>
             </ThemedView>
           )}
           {bathrooms != null && (
             <ThemedView style={propCardStyles.statItem}>
               <MaterialCommunityIcons name="shower" size={14} color={cardColor} />
-              <ThemedText type = "body" style={propCardStyles.statText}>{bathrooms} sdb</ThemedText>
+              <ThemedText type = "body" style={{...propCardStyles.statText, color:theme.text + "99"}}>{bathrooms} sdb</ThemedText>
             </ThemedView>
           )}
           {surface != null && (
             <ThemedView style={propCardStyles.statItem}>
               <MaterialCommunityIcons name="ruler-square" size={14} color={cardColor} />
-              <ThemedText  type= "body" style={propCardStyles.statText}>{surface} m²</ThemedText>
+              <ThemedText  type= "body" style={{...propCardStyles.statText, color:theme.text + "99"}}>{surface} m²</ThemedText>
             </ThemedView>
           )}
         </ThemedView>
+      ):
+      <ThemedView>
+        {surfaceLand && 
+        <ThemedView style={propCardStyles.statItem}>
+          <MaterialCommunityIcons name="ruler-square" size={14} color={cardColor} />
+          <ThemedText  type= "body" style={{...propCardStyles.statText, color:theme.text + "99"}}>{surfaceLand} m²</ThemedText>
+        </ThemedView>}
+
+        {cultivable &&
+        <ThemedView>
+           <MaterialCommunityIcons name="sprout" size={14} color={cardColor} />
+          <ThemedText  type= "body" style={{...propCardStyles.statText, color:theme.text + "99"}}>{cultivable}</ThemedText>
+        </ThemedView>}
+
+        {
+          constructible &&
+          <ThemedView style={propCardStyles.statItem}>
+            <MaterialCommunityIcons name="home-city" size={14} color={cardColor} />
+            <ThemedText  type= "body" style={{...propCardStyles.statText, color:theme.text + "99"}}>{constructible}</ThemedText>
+          </ThemedView>
+        }
+        {
+          fence &&
+           <ThemedView style={propCardStyles.statItem}>
+            <MaterialCommunityIcons name="fence" size={14} color={cardColor} />
+            <ThemedText  type= "body" style={{...propCardStyles.statText, color:theme.text + "99"}}>{fence}</ThemedText>
+          </ThemedView>
+         
+        }
+      </ThemedView>
+      }  
+        
 
         {/* Price + action type */}
         <ThemedView style={propCardStyles.footer}>
@@ -255,7 +293,6 @@ const propCardStyles = StyleSheet.create({
     marginBottom: 8,
   },
   locationText: {
-    color: '#636E72',
     marginLeft: 4,
     flex: 1,
   },

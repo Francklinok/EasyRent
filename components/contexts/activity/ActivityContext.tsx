@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 export interface ActivityLog {
   id: string;
   userId: string;
-  type: 'reservation' | 'visit' | 'documents' | 'payment' | 'contract' | 'approval' | 'interest';
+  type: 'reservation' | 'visit' | 'documents' | 'payment' | 'contract' | 'approval' | 'interest' | 'navigation' | 'settings' | 'authentication' | 'data' | 'premium';
   title: string;
   description: string;
   status: 'pending' | 'completed' | 'failed' | 'in_progress';

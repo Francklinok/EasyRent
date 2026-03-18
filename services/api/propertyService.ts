@@ -6,11 +6,17 @@ export interface Property {
   id: string;
   propertyId: string;
   ownerId: string;
+  ownerName: string;
+  ownerPhone: string;
+  ownerEmail: string;
+  ownerAvatar: string;
   actionType: 'rent' | 'sell';
+  rentalStrategy?: 'global' | 'per_unit' | 'both';
   propertyType: 'villa' | 'apartment' | 'home' | 'penthouse' | 'studio' | 'loft' | 'bureau' | 'chalet' | 'hotel' | 'terrain' | 'commercial';
   title: string;
   description: string;
   address: string;
+  coordinates?: { latitude: number; longitude: number };
   generalHInfo?: {
     rooms: number;
     bedrooms: number;
@@ -25,6 +31,58 @@ export interface Property {
   };
   generalLandinfo?: {
     surface: number;
+  };
+  hotelRoomTypes?: Array<{
+    roomTypeId: string;
+    name: string;
+    category: string;
+    capacity: number;
+    pricePerNight: number;
+    available: number;
+    amenities: string[];
+    description?: string;
+    rooms?: Array<{
+      roomId: string;
+      roomName: string;
+      images: Array<{
+        publicId: string;
+        originalUrl: string;
+        variants: {
+          thumbnail: string;
+          small: string;
+          medium: string;
+          large: string;
+          original: string;
+        };
+      }>;
+      isAvailable: boolean;
+    }>;
+  }>;
+  propertyRooms?: Array<{
+    roomId: string;
+    roomName: string;
+    description?: string;
+    images: Array<{
+      publicId: string;
+      originalUrl: string;
+      variants: {
+        thumbnail: string;
+        small: string;
+        medium: string;
+        large: string;
+        original: string;
+      };
+    }>;
+    amenities?: string[];
+    capacity?: number;
+    price?: number;
+    currency?: string;
+    isRentable?: boolean;
+    isAvailable?: boolean;
+  }>;
+  roomAvailability?: {
+    total: number;
+    available: number;
   };
   images: Array<{ url: string; publicId?: string }> | string[];
   amenities: string[];
@@ -50,6 +108,8 @@ export interface Property {
   isActive: boolean;
   ownerCriteria: {
     monthlyRent: number;
+    currency?: 'XAF' | 'USD' | 'EUR' | 'CNY';
+    acceptedPaymentMethods?: ('bank_card' | 'mobile_money' | 'paypal' | 'cash' | 'bank_transfer' | 'crypto' | 'other')[];
     isGarantRequired: boolean;
     depositAmount: number;
     minimumDuration: string;
@@ -58,9 +118,14 @@ export interface Property {
     guarantorLocation?: string;
     acceptedSituations: string[];
     isdocumentRequired: boolean;
+    requiredDocuments?: {
+      client: string[];
+      guarantor: string[];
+    };
   };
   services?: Array<{ serviceId: string; [key: string]: any }>;
   virtualTours?: any[];
+  cryptoEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 
@@ -103,7 +168,9 @@ export interface CreatePropertyInput {
   title: string;
   description: string;
   address: string;
+  coordinates?: { latitude: number; longitude: number };
   actionType: 'rent' | 'sell';
+  rentalStrategy?: 'global' | 'per_unit' | 'both';
   propertyType: 'villa' | 'apartment' | 'home' | 'penthouse' | 'studio' | 'loft' | 'bureau' | 'chalet' | 'hotel' | 'terrain' | 'commercial';
   generalLandinfo: {
     surface: number;
@@ -125,6 +192,8 @@ export interface CreatePropertyInput {
   availableFrom?: string;
   ownerCriteria: {
     monthlyRent: number;
+    currency?: 'XAF' | 'USD' | 'EUR' | 'CNY';
+    acceptedPaymentMethods?: ('bank_card' | 'mobile_money' | 'paypal' | 'cash' | 'bank_transfer' | 'crypto' | 'other')[];
     isGarantRequired: boolean;
     depositAmount: number;
     minimumDuration: number;
@@ -133,12 +202,65 @@ export interface CreatePropertyInput {
     guarantorLocation: 'same' | 'different';
     acceptedSituations: string[];
     isdocumentRequired: boolean;
+    requiredDocuments?: {
+      client: string[];
+      guarantor: string[];
+    };
   };
+  equipments?: Array<{
+    id: string;
+    name: string;
+    icon: string;
+    lib: string;
+    category: string;
+  }>;
+  atouts?: Array<{
+    id: string;
+    type: string;
+    text: string;
+    icon?: string;
+    lib?: string;
+    category: string;
+    verified?: boolean;
+    priority?: number;
+    customIcon?: boolean;
+  }>;
   services?: Array<{
     serviceId: string;
   }>;
   iserviceAvalaible?: boolean;
   cryptoEnabled?: boolean;
+  hotelRoomTypes?: Array<{
+    roomTypeId: string;
+    name: string;
+    category: string;
+    capacity: number;
+    pricePerNight: number;
+    available: number;
+    amenities: string[];
+    description?: string;
+    rooms?: Array<{
+      roomId: string;
+      roomName: string;
+      images: string[];
+    }>;
+  }>;
+  propertyRooms?: Array<{
+    roomId: string;
+    roomName: string;
+    description?: string;
+    images: string[];
+    amenities?: string[];
+    capacity?: number;
+    price?: number;
+    currency?: string;
+    isRentable?: boolean;
+    isAvailable?: boolean;
+  }>;
+  roomAvailability?: {
+    total: number;
+    available: number;
+  };
 }
 
 export interface UpdatePropertyInput {
@@ -166,6 +288,7 @@ export interface UpdatePropertyInput {
   amenities?: string[];
   availableFrom?: string;
   status?: 'AVAILABLE' | 'RENTED' | 'MAINTENANCE' | 'UNAVAILABLE';
+  hotelRoomTypes?: CreatePropertyInput['hotelRoomTypes'];
   ownerCriteria?: Partial<CreatePropertyInput['ownerCriteria']>;
 }
 
@@ -198,11 +321,21 @@ export class PropertyService {
         property(id: $id) {
           id
           propertyId
+          ownerId
           actionType
+          ownerName
+          ownerPhone
+          ownerEmail
+          ownerId
+          ownerAvatar
           propertyType
           title
           description
           address
+          coordinates {
+            latitude
+            longitude
+          }
           generalLandinfo {
             surface
           }
@@ -217,6 +350,58 @@ export class PropertyService {
             pets
             smoking
             maxOccupants
+          }
+          hotelRoomTypes {
+            roomTypeId
+            name
+            category
+            capacity
+            pricePerNight
+            available
+            amenities
+            description
+            rooms {
+              roomId
+              roomName
+              images {
+                publicId
+                originalUrl
+                variants {
+                  thumbnail
+                  small
+                  medium
+                  large
+                  original
+                }
+              }
+              isAvailable
+            }
+          }
+          propertyRooms {
+            roomId
+            roomName
+            description
+            images {
+              publicId
+              originalUrl
+              variants {
+                thumbnail
+                small
+                medium
+                large
+                original
+              }
+            }
+            amenities
+            capacity
+            price
+            currency
+            isRentable
+            isAvailable
+          }
+          roomAvailability {
+            total
+            available
           }
           images
           amenities
@@ -237,11 +422,18 @@ export class PropertyService {
             lib
             category
           }
+          services {
+            serviceId
+          }
           availableFrom
           status
           isActive
+          iserviceAvalaible
+          rentalStrategy
           ownerCriteria {
             monthlyRent
+            currency
+            acceptedPaymentMethods
             isGarantRequired
             depositAmount
             minimumDuration
@@ -250,7 +442,12 @@ export class PropertyService {
             guarantorLocation
             acceptedSituations
             isdocumentRequired
+            requiredDocuments {
+              client
+              guarantor
+            }
           }
+          cryptoEnabled
           createdAt
           updatedAt
           pricePerSquareMeter
@@ -293,11 +490,20 @@ export class PropertyService {
             node {
               id
               propertyId
+              ownerId
               actionType
+              ownerName
+              ownerPhone
+              ownerEmail
+              ownerAvatar
               propertyType
               title
               description
               address
+              coordinates {
+                latitude
+                longitude
+              }
               generalLandinfo {
                 surface
               }
@@ -313,13 +519,89 @@ export class PropertyService {
                 smoking
                 maxOccupants
               }
+              hotelRoomTypes {
+                roomTypeId
+                name
+                category
+                capacity
+                pricePerNight
+                available
+                amenities
+                description
+                rooms {
+                  roomId
+                  roomName
+                  images {
+                    publicId
+                    originalUrl
+                    variants {
+                      thumbnail
+                      small
+                      medium
+                      large
+                      original
+                    }
+                  }
+                  isAvailable
+                }
+              }
+              propertyRooms {
+                roomId
+                roomName
+                description
+                images {
+                  publicId
+                  originalUrl
+                  variants {
+                    thumbnail
+                    small
+                    medium
+                    large
+                    original
+                  }
+                }
+                amenities
+                capacity
+                price
+                currency
+                isRentable
+                isAvailable
+              }
+              roomAvailability {
+                total
+                available
+              }
               images
               amenities
+              equipments {
+                id
+                name
+                icon
+                lib
+                category
+              }
+              atouts {
+                id
+                type
+                text
+                icon
+                lib
+                category
+                priority
+                verified
+              }
+              services {
+                serviceId
+              }
               availableFrom
               status
               isActive
+              iserviceAvalaible
+              rentalStrategy
               ownerCriteria {
                 monthlyRent
+                currency
+                acceptedPaymentMethods
                 isGarantRequired
                 depositAmount
                 minimumDuration
@@ -328,6 +610,10 @@ export class PropertyService {
                 guarantorLocation
                 acceptedSituations
                 isdocumentRequired
+                requiredDocuments {
+                  client
+                  guarantor
+                }
               }
               createdAt
               updatedAt
@@ -344,6 +630,7 @@ export class PropertyService {
             endCursor
           }
           totalCount
+          availableCount
         }
       }
     `;
@@ -384,10 +671,18 @@ export class PropertyService {
               id
               propertyId
               actionType
+              ownerName
+              ownerPhone
+              ownerEmail
+              ownerAvatar
               propertyType
               title
               description
               address
+              coordinates {
+                latitude
+                longitude
+              }
               generalLandinfo {
                 surface
               }
@@ -403,13 +698,68 @@ export class PropertyService {
                 smoking
                 maxOccupants
               }
+              hotelRoomTypes {
+                roomTypeId
+                name
+                category
+                capacity
+                pricePerNight
+                available
+                amenities
+                description
+                rooms {
+                  roomId
+                  roomName
+                  images {
+                    publicId
+                    originalUrl
+                    variants {
+                      thumbnail
+                      small
+                      medium
+                      large
+                      original
+                    }
+                  }
+                  isAvailable
+                }
+              }
+              propertyRooms {
+                roomId
+                roomName
+                description
+                images {
+                  publicId
+                  originalUrl
+                  variants {
+                    thumbnail
+                    small
+                    medium
+                    large
+                    original
+                  }
+                }
+                amenities
+                capacity
+                price
+                currency
+                isRentable
+                isAvailable
+              }
+              roomAvailability {
+                total
+                available
+              }
               images
               amenities
               availableFrom
               status
               isActive
+              rentalStrategy
               ownerCriteria {
                 monthlyRent
+                currency
+                acceptedPaymentMethods
                 isGarantRequired
                 depositAmount
                 minimumDuration
@@ -418,6 +768,10 @@ export class PropertyService {
                 guarantorLocation
                 acceptedSituations
                 isdocumentRequired
+                requiredDocuments {
+                  client
+                  guarantor
+                }
               }
               createdAt
               updatedAt
@@ -467,15 +821,25 @@ export class PropertyService {
         similarProperties(propertyId: $propertyId, limit: $limit) {
           id
           propertyId
+          ownerName
+          ownerPhone
+          ownerEmail
+          ownerAvatar
           title
           description
           address
+          coordinates {
+            latitude
+            longitude
+          }
           generalLandinfo {
             surface
           }
           images
           ownerCriteria {
             monthlyRent
+            currency
+            acceptedPaymentMethods
           }
           pricePerSquareMeter
           isAvailable
@@ -545,10 +909,18 @@ export class PropertyService {
               id
               propertyId
               actionType
+              ownerName
+              ownerPhone
+              ownerEmail
+              ownerAvatar
               propertyType
               title
               description
               address
+              coordinates {
+                latitude
+                longitude
+              }
               generalLandinfo {
                 surface
               }
@@ -557,6 +929,8 @@ export class PropertyService {
               isActive
               ownerCriteria {
                 monthlyRent
+                currency
+                acceptedPaymentMethods
               }
               createdAt
               updatedAt
@@ -589,6 +963,68 @@ export class PropertyService {
   }
 
   /**
+   * Récupère les propriétés acquises (louées/achetées) par un utilisateur
+   */
+  async getPropertiesAcquiredBy(
+    userId?: string,
+    pagination?: PaginationInput
+  ): Promise<PropertyConnection> {
+    const query = `
+      query GetPropertiesAcquiredBy($userId: ID, $pagination: PaginationInput) {
+        propertiesAcquiredBy(userId: $userId, pagination: $pagination) {
+          edges {
+            node {
+              id
+              propertyId
+              actionType
+              ownerName
+              ownerPhone
+              ownerEmail
+              ownerAvatar
+              propertyType
+              title
+              description
+              address
+              coordinates {
+                latitude
+                longitude
+              }
+              images
+              status
+              ownerCriteria {
+                monthlyRent
+                currency
+                depositAmount
+              }
+              createdAt
+              updatedAt
+            }
+            cursor
+          }
+          pageInfo {
+            hasNextPage
+            hasPreviousPage
+            startCursor
+            endCursor
+          }
+          totalCount
+        }
+      }
+    `;
+
+    try {
+      const response = await this.graphqlService.query<{ propertiesAcquiredBy: PropertyConnection }>(
+        query,
+        { userId, pagination }
+      );
+      return response.propertiesAcquiredBy;
+    } catch (error) {
+      console.error('Error fetching acquired properties:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Crée une nouvelle propriété
    */
   async createProperty(input: CreatePropertyInput): Promise<Property> {
@@ -598,10 +1034,19 @@ export class PropertyService {
           id
           propertyId
           actionType
+          rentalStrategy
+          ownerName
+          ownerPhone
+          ownerEmail
+          ownerAvatar
           propertyType
           title
           description
           address
+          coordinates {
+            latitude
+            longitude
+          }
           generalLandinfo {
             surface
           }
@@ -616,6 +1061,58 @@ export class PropertyService {
             pets
             smoking
             maxOccupants
+          }
+          hotelRoomTypes {
+            roomTypeId
+            name
+            category
+            capacity
+            pricePerNight
+            available
+            amenities
+            description
+            rooms {
+              roomId
+              roomName
+              images {
+                publicId
+                originalUrl
+                variants {
+                  thumbnail
+                  small
+                  medium
+                  large
+                  original
+                }
+              }
+              isAvailable
+            }
+          }
+          propertyRooms {
+            roomId
+            roomName
+            description
+            images {
+              publicId
+              originalUrl
+              variants {
+                thumbnail
+                small
+                medium
+                large
+                original
+              }
+            }
+            amenities
+            capacity
+            price
+            currency
+            isRentable
+            isAvailable
+          }
+          roomAvailability {
+            total
+            available
           }
           images
           amenities
@@ -639,8 +1136,11 @@ export class PropertyService {
           availableFrom
           status
           isActive
+          rentalStrategy
           ownerCriteria {
             monthlyRent
+            currency
+            acceptedPaymentMethods
             isGarantRequired
             depositAmount
             minimumDuration
@@ -649,7 +1149,12 @@ export class PropertyService {
             guarantorLocation
             acceptedSituations
             isdocumentRequired
+            requiredDocuments {
+              client
+              guarantor
+            }
           }
+          cryptoEnabled
           createdAt
           updatedAt
           pricePerSquareMeter
@@ -672,7 +1177,7 @@ export class PropertyService {
   }
 
   /**
-   * Met à jour une propriété existante
+   * update  an existing property
    */
   async updateProperty(id: string, input: UpdatePropertyInput): Promise<Property> {
     const mutation = `
@@ -681,12 +1186,72 @@ export class PropertyService {
           id
           propertyId
           actionType
+          ownerName
+          ownerPhone
+          ownerEmail
+          ownerAvatar
           propertyType
           title
           description
           address
+          coordinates {
+            latitude
+            longitude
+          }
           generalLandinfo {
             surface
+          }
+          hotelRoomTypes {
+            roomTypeId
+            name
+            category
+            capacity
+            pricePerNight
+            available
+            amenities
+            description
+            rooms {
+              roomId
+              roomName
+              images {
+                publicId
+                originalUrl
+                variants {
+                  thumbnail
+                  small
+                  medium
+                  large
+                  original
+                }
+              }
+              isAvailable
+            }
+          }
+          propertyRooms {
+            roomId
+            roomName
+            description
+            images {
+              publicId
+              originalUrl
+              variants {
+                thumbnail
+                small
+                medium
+                large
+                original
+              }
+            }
+            amenities
+            capacity
+            price
+            currency
+            isRentable
+            isAvailable
+          }
+          roomAvailability {
+            total
+            available
           }
           images
           amenities
@@ -695,6 +1260,8 @@ export class PropertyService {
           isActive
           ownerCriteria {
             monthlyRent
+            currency
+            acceptedPaymentMethods
             isGarantRequired
             depositAmount
             minimumDuration
@@ -703,6 +1270,10 @@ export class PropertyService {
             guarantorLocation
             acceptedSituations
             isdocumentRequired
+            requiredDocuments {
+              client
+              guarantor
+            }
           }
           createdAt
           updatedAt
@@ -726,7 +1297,54 @@ export class PropertyService {
   }
 
   /**
-   * Supprime une propriété
+   * Met à jour le statut d'une propriété
+   */
+  async updatePropertyStatus(id: string, status: string): Promise<Property> {
+    const mutation = `
+      mutation UpdatePropertyStatus($id: ID!, $status: PropertyStatus!) {
+        updatePropertyStatus(id: $id, status: $status) {
+          id
+          status
+        }
+      }
+    `;
+
+    try {
+      const response = await this.graphqlService.mutate<{ updatePropertyStatus: Property }>(
+        mutation,
+        { id, status }
+      );
+      return response.updatePropertyStatus;
+    } catch (error) {
+      console.error('Error updating property status:', error);
+      throw error;
+    }
+  }
+
+  async terminatePropertyLease(propertyId: string): Promise<Property> {
+    const mutation = `
+      mutation TerminatePropertyLease($propertyId: ID!) {
+        terminatePropertyLease(propertyId: $propertyId) {
+          id
+          status
+        }
+      }
+    `;
+
+    try {
+      const response = await this.graphqlService.mutate<{ terminatePropertyLease: Property }>(
+        mutation,
+        { propertyId }
+      );
+      return response.terminatePropertyLease;
+    } catch (error) {
+      console.error('Error terminating property lease:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * delete a  property by ID
    */
   async deleteProperty(id: string): Promise<boolean> {
     const mutation = `

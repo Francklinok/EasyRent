@@ -32,9 +32,9 @@ export const languages: LanguageInfo[] = [
 export const translations: Record<LanguageCode, TranslationKeys> = {
   fr,
   en,
-  es,
-  de,
-  ar,
+  es: es as TranslationKeys,
+  de: de as TranslationKeys,
+  ar: ar as TranslationKeys,
 };
 
 export const getTranslation = (lang: LanguageCode): TranslationKeys => {

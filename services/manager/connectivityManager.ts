@@ -1,7 +1,11 @@
+/**
+ * ConnectivityManager - Gestionnaire de connectivité réseau
+ *
+ * Utilise SyncEngine pour la synchronisation automatique lors de la reconnexion.
+ */
 
-// src/services/connectivityManager.ts
 import NetInfo, { NetInfoState, NetInfoSubscription } from '@react-native-community/netinfo';
-import { syncManager } from './syncManager';
+import { syncEngine } from '@/services/offline';
 
 export class ConnectivityManager {
   private unsubscribe: NetInfoSubscription | null = null;
@@ -11,11 +15,16 @@ export class ConnectivityManager {
 
   initialize(): void {
     this.unsubscribe = NetInfo.addEventListener(this.handleConnectivityChange);
-    
-    // Vérifier immédiatement l'état de la connexion
-    NetInfo.fetch().then(state => {
+
+    // Vérification initiale de la connectivité
+    NetInfo.fetch().then((state) => {
       this.isOnline = state.isConnected && state.isInternetReachable === true;
       this.lastOnlineCheck = Date.now();
+
+      // Si connecté au démarrage, démarrer le background sync
+      if (this.isOnline) {
+        syncEngine.startBackgroundSync();
+      }
     });
   }
 
@@ -24,6 +33,7 @@ export class ConnectivityManager {
       this.unsubscribe();
       this.unsubscribe = null;
     }
+    syncEngine.stopBackgroundSync();
   }
 
   private handleConnectivityChange = async (state: NetInfoState): Promise<void> => {
@@ -31,9 +41,21 @@ export class ConnectivityManager {
     this.isOnline = state.isConnected && state.isInternetReachable === true;
     this.lastOnlineCheck = Date.now();
 
+    console.log(
+      `[ConnectivityManager] État réseau: ${this.isOnline ? 'en ligne' : 'hors ligne'}`
+    );
+
     // Si la connexion vient d'être restaurée
     if (!previousOnlineStatus && this.isOnline) {
+      console.log('[ConnectivityManager] Connexion restaurée - démarrage de la synchronisation');
       await this.triggerSync();
+      syncEngine.startBackgroundSync();
+    }
+
+    // Si la connexion est perdue
+    if (previousOnlineStatus && !this.isOnline) {
+      console.log('[ConnectivityManager] Connexion perdue - arrêt du background sync');
+      syncEngine.stopBackgroundSync();
     }
   };
 
@@ -42,9 +64,20 @@ export class ConnectivityManager {
 
     try {
       this.syncInProgress = true;
-      await syncManager.synchronize();
+      console.log('[ConnectivityManager] Déclenchement de la synchronisation delta...');
+
+      // Utiliser SyncEngine pour la synchronisation
+      const result = await syncEngine.synchronize();
+
+      if (result.success) {
+        console.log(
+          `[ConnectivityManager] Sync terminée: pushed=${result.pushed}, pulled=${result.pulled}`
+        );
+      } else {
+        console.warn('[ConnectivityManager] Sync avec erreurs:', result.errors);
+      }
     } catch (error) {
-      console.error('Sync error:', error);
+      console.error('[ConnectivityManager] Erreur de synchronisation:', error);
     } finally {
       this.syncInProgress = false;
     }
@@ -61,6 +94,31 @@ export class ConnectivityManager {
     this.isOnline = state.isConnected && state.isInternetReachable === true;
     this.lastOnlineCheck = Date.now();
     return this.isOnline;
+  }
+
+  /**
+   * Obtient le statut de synchronisation actuel
+   */
+  getSyncStatus() {
+    return syncEngine.getSyncStatus();
+  }
+
+  /**
+   * Force une synchronisation complète (pas seulement delta)
+   */
+  async forceFullSync(): Promise<void> {
+    if (!this.isOnline) {
+      console.warn('[ConnectivityManager] Impossible de sync - hors ligne');
+      return;
+    }
+
+    try {
+      this.syncInProgress = true;
+      // Lancer une sync complète
+      await syncEngine.synchronize();
+    } finally {
+      this.syncInProgress = false;
+    }
   }
 }
 

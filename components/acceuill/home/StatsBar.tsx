@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '@/components/contexts/theme/themehook';
+import { useTheme } from '@/hooks/themehook';
 import { MotiView } from 'moti';
 
 interface StatsBarProps {
@@ -43,23 +43,21 @@ const StatsBar: React.FC<StatsBarProps> = ({
   return (
     <ThemedView style={styles.container}>
       {stats.map((stat, index) => (
-        <MotiView
+        <ThemedView
           key={stat.label}
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ delay: index * 100, type: 'spring' }}
           style={[styles.statCard, { backgroundColor: theme.surfaceVariant }]}
         >
-          <MaterialCommunityIcons name={stat.icon as any} size={24} color={stat.color} />
-          <ThemedView variant="surfaceVariant" style={{ marginLeft: 8 }}>
-            <ThemedText type="heading" style={[styles.value, { color: theme.typography.heading }]}>
+          <ThemedView className ="flex-row pl-4">
+          <MaterialCommunityIcons name={stat.icon as any} size={20} color={stat.color} />
+           <ThemedText type="heading" style={[styles.value, { color: theme.typography.heading }]}>
               {stat.value}
             </ThemedText>
+            </ThemedView>
+           
             <ThemedText type="caption" style={[styles.label, { color: theme.typography.caption }]}>
               {stat.label}
             </ThemedText>
-          </ThemedView>
-        </MotiView>
+        </ThemedView>
       ))}
     </ThemedView>
   );
@@ -74,7 +72,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     padding: 6,
     borderRadius: 16,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView, RefreshControl, TouchableOpacity, View } from 'react-native';
+import { ScrollView, RefreshControl, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
@@ -22,38 +22,74 @@ interface Request {
   message?: string;
 }
 
+interface ExtensionRequest {
+  id: string;
+  propertyId: string;
+  propertyTitle: string;
+  clientId: string;
+  clientName: string;
+  paymentDeadline?: string;
+  extensionRequestedDays?: number;
+  extensionRequestedDate?: string;
+  extensionStatus: string;
+  createdAt: string;
+}
+
 const RequestsManagementScreen = () => {
   const { theme } = useTheme();
   const { user } = useAuth();
   const [requests, setRequests] = useState<Request[]>([]);
+  const [extensionRequests, setExtensionRequests] = useState<ExtensionRequest[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'visit' | 'reservation'>('all');
+  const [extensionLoading, setExtensionLoading] = useState<string | null>(null);
   const bookingService = getBookingService();
 
   const loadRequests = async () => {
     if (!user?.id) return;
     try {
-      const data = await bookingService.getOwnerRequests(user.id);
+      const [data, extensions] = await Promise.all([
+        bookingService.getOwnerRequests(user.id),
+        bookingService.getOwnerExtensionRequests(user.id),
+      ]);
 
       const formattedRequests: Request[] = data.map((item: any) => ({
-        id: item.id || item._id,
-        type: item.visitDate ? 'visit' : 'reservation',
-        propertyId: item.propertyId?._id || item.propertyId || '',
-        propertyTitle: item.propertyId?.title || 'Propriete',
-        clientId: item.clientId?._id || item.clientId || '',
-        clientName: item.clientId?.fullName || item.clientId?.email || 'Client',
-        date: item.visitDate || item.createdAt,
-        time: item.visitTime,
-        status: item.isVisitAccepted === true ? 'accepted' :
-                item.isVisitAccepted === false ? 'rejected' : 'pending',
-        message: item.message
+        id: item.id,
+        type: item.isReservation ? 'reservation' : 'visit',
+        propertyId: item.propertyId,
+        propertyTitle: item.propertyTitle,
+        clientId: item.clientId,
+        clientName: item.clientName,
+        date: item.date,
+        time: item.time,
+        status: (item.status || 'pending') as 'pending' | 'accepted' | 'rejected',
+        message: item.message,
       }));
 
       setRequests(formattedRequests);
+      setExtensionRequests(extensions);
     } catch (error) {
       console.error('Erreur:', error);
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const handleExtensionResponse = async (activityId: string, accepted: boolean) => {
+    try {
+      setExtensionLoading(activityId);
+      await bookingService.respondToExtensionRequest(activityId, accepted);
+      setExtensionRequests(prev => prev.filter(e => e.id !== activityId));
+      Alert.alert(
+        accepted ? 'Prolongation accordée' : 'Prolongation refusée',
+        accepted
+          ? 'Le délai de paiement du client a été mis à jour.'
+          : 'Le client sera notifié. Une grâce de 24h peut s\'appliquer si le délai était expiré.'
+      );
+    } catch (err: any) {
+      Alert.alert('Erreur', err.message || 'Une erreur est survenue.');
+    } finally {
+      setExtensionLoading(null);
     }
   };
 
@@ -72,7 +108,7 @@ const RequestsManagementScreen = () => {
   const pendingCount = requests.filter(r => r.status === 'pending').length;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+    <ThemedView style={{ flex: 1}}>
       <ScrollView
         refreshControl={
           <RefreshControl
@@ -84,15 +120,94 @@ const RequestsManagementScreen = () => {
           />
         }
       >
-        <ThemedView style={{ padding: 16 }}>
-          <ThemedText type="title" style={{ fontSize: 24, marginBottom: 8 }}>
+        <ThemedView style={{ padding: 16, paddingTop:10 }}>
+          <ThemedText type="subtitle" style={{ marginBottom: 8 }}>
             Demandes
           </ThemedText>
           <ThemedText style={{ color: theme.onSurface + '70', marginBottom: 20 }}>
             {pendingCount} en attente
           </ThemedText>
 
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+          {/* Extension requests */}
+          {extensionRequests.length > 0 && (
+            <ThemedView style={{ marginBottom: 20 }}>
+              <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <MaterialCommunityIcons name="clock-alert-outline" size={18} color={theme.warning} />
+                <ThemedText style={{ fontWeight: '700', color: theme.warning }}>
+                  Demandes de prolongation ({extensionRequests.length})
+                </ThemedText>
+              </ThemedView>
+              {extensionRequests.map((ext) => {
+                const requestedLabel = ext.extensionRequestedDays
+                  ? `+${ext.extensionRequestedDays} jour(s)`
+                  : ext.extensionRequestedDate
+                    ? `Jusqu'au ${new Date(Number(ext.extensionRequestedDate)).toLocaleDateString('fr-FR')}`
+                    : 'Prolongation demandée';
+                const isLoading = extensionLoading === ext.id;
+                return (
+                  <View key={ext.id} style={{ marginBottom: 12 }}>
+                    <ThemedView style={{
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: theme.warning + '40',
+                      overflow: 'hidden',
+                    }}>
+                      <View style={{
+                        flexDirection: 'row', alignItems: 'center',
+                        backgroundColor: theme.warning + '12',
+                        paddingHorizontal: 12, paddingVertical: 8, gap: 8,
+                      }}>
+                        <MaterialCommunityIcons name="timer-sand" size={15} color={theme.warning} />
+                        <ThemedText style={{ fontWeight: '700', color: theme.warning, fontSize: 13, flex: 1 }}>
+                          Prolongation — {ext.propertyTitle}
+                        </ThemedText>
+                      </View>
+                      <View style={{ padding: 12 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                          <MaterialCommunityIcons name="account-outline" size={14} color={theme.onSurface + '70'} />
+                          <ThemedText style={{ fontSize: 13, color: theme.onSurface + '80' }}>{ext.clientName}</ThemedText>
+                        </View>
+                        <ThemedText style={{ fontSize: 13, color: theme.onSurface, marginBottom: 12 }}>
+                          Demande: <ThemedText style={{ fontWeight: '600' }}>{requestedLabel}</ThemedText>
+                        </ThemedText>
+                        <View style={{ flexDirection: 'row', gap: 10 }}>
+                          <TouchableOpacity
+                            onPress={() => handleExtensionResponse(ext.id, false)}
+                            disabled={isLoading}
+                            style={{
+                              flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1,
+                              borderColor: theme.error + '60', alignItems: 'center',
+                              opacity: isLoading ? 0.5 : 1,
+                            }}
+                          >
+                            <ThemedText style={{ color: theme.error, fontWeight: '600', fontSize: 13 }}>
+                              Refuser
+                            </ThemedText>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleExtensionResponse(ext.id, true)}
+                            disabled={isLoading}
+                            style={{
+                              flex: 1, paddingVertical: 10, borderRadius: 10,
+                              backgroundColor: theme.success ? theme.success + '20' : '#22c55e20',
+                              borderWidth: 1, borderColor: theme.success ? theme.success + '60' : '#22c55e60',
+                              alignItems: 'center', opacity: isLoading ? 0.5 : 1,
+                            }}
+                          >
+                            <ThemedText style={{ color: theme.success ?? '#22c55e', fontWeight: '600', fontSize: 13 }}>
+                              {isLoading ? '...' : 'Accorder'}
+                            </ThemedText>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </ThemedView>
+                  </View>
+                );
+              })}
+            </ThemedView>
+          )}
+
+          <ThemedView style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
             {(['all', 'visit', 'reservation'] as const).map((f) => (
               <TouchableOpacity
                 key={f}
@@ -109,60 +224,87 @@ const RequestsManagementScreen = () => {
                 </ThemedText>
               </TouchableOpacity>
             ))}
-          </View>
+          </ThemedView>
 
-          {filteredRequests.map((req) => (
-            <View key={req.id} style={{ marginBottom: 12 }}>
-              <ThemedView style={{
-                backgroundColor: theme.surfaceVariant,
-                borderRadius: 12,
-                padding: 12,
-                marginBottom: 4
-              }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <ThemedText style={{ fontWeight: '600', flex: 1 }}>{req.propertyTitle}</ThemedText>
+          {filteredRequests.map((req) => {
+            const isReservation = req.type === 'reservation';
+            const typeColor = isReservation ? theme.success : theme.primary;
+            const typeIcon = isReservation ? 'bookmark-outline' : 'eye-outline';
+            const typeLabel = isReservation ? 'Réservation' : 'Visite';
+            return (
+              <View key={req.id} style={{ marginBottom: 16 }}>
+                <ThemedView style={{
+                  borderRadius: 14,
+                  overflow: 'hidden',
+                  borderWidth: 1,
+                  borderColor: typeColor + '30',
+                }}>
+                  {/* Colored header band */}
                   <View style={{
-                    backgroundColor: req.type === 'visit' ? theme.primary + '20' : theme.success + '20',
-                    paddingHorizontal: 8,
-                    paddingVertical: 2,
-                    borderRadius: 8
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: typeColor + '12',
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    gap: 8,
                   }}>
-                    <ThemedText style={{ fontSize: 11 }}>
-                      {req.type === 'visit' ? 'Visite' : 'Reservation'}
+                    <MaterialCommunityIcons name={typeIcon as any} size={16} color={typeColor} />
+                    <ThemedText style={{ fontWeight: '700', color: typeColor, fontSize: 13, flex: 1 }}>
+                      {typeLabel}
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 11, color: theme.onSurface + '55' }}>
+                      {new Date(req.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                      {req.time ? ` · ${req.time}` : ''}
                     </ThemedText>
                   </View>
-                </View>
 
-                <ThemedText style={{ fontSize: 13, color: theme.onSurface + '80' }}>
-                  {req.clientName}
-                </ThemedText>
-                <ThemedText style={{ fontSize: 12, color: theme.onSurface + '60', marginTop: 2 }}>
-                  {new Date(req.date).toLocaleDateString('fr-FR')} {req.time && `a ${req.time}`}
-                </ThemedText>
+                  {/* Body */}
+                  <View style={{ padding: 12 }}>
+                    <ThemedText style={{ fontWeight: '600', fontSize: 14, marginBottom: 2 }} numberOfLines={1}>
+                      {req.propertyTitle}
+                    </ThemedText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <MaterialCommunityIcons name="account-outline" size={14} color={theme.onSurface + '70'} />
+                      <ThemedText style={{ fontSize: 13, color: theme.onSurface + '80' }}>
+                        {req.clientName}
+                      </ThemedText>
+                    </View>
 
-                {req.message && (
-                  <ThemedText style={{ fontSize: 12, marginTop: 8, fontStyle: 'italic', color: theme.onSurface + '70' }}>
-                    "{req.message}"
-                  </ThemedText>
-                )}
-              </ThemedView>
+                    {req.message ? (
+                      <View style={{
+                        backgroundColor: theme.surfaceVariant,
+                        borderRadius: 8,
+                        padding: 8,
+                        marginTop: 4,
+                      }}>
+                        <ThemedText style={{ fontSize: 12, fontStyle: 'italic', color: theme.onSurface + '70' }} numberOfLines={3}>
+                          "{req.message}"
+                        </ThemedText>
+                      </View>
+                    ) : null}
+                  </View>
 
-              <VisitRequestActions
-                visitId={req.id}
-                propertyId={req.propertyId}
-                clientId={req.clientId}
-                ownerId={user?.id || ''}
-                currentUserId={user?.id || ''}
-                visitDate={req.date}
-                visitTime={req.time}
-                propertyTitle={req.propertyTitle}
-                isReservation={req.type === 'reservation'}
-                status={req.status}
-                onAccept={() => handleResponse(req.id)}
-                onReject={() => handleResponse(req.id)}
-              />
-            </View>
-          ))}
+                  {/* Accept / Reject actions */}
+                  <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+                    <VisitRequestActions
+                      visitId={req.id}
+                      propertyId={req.propertyId}
+                      clientId={req.clientId}
+                      ownerId={user?.id || ''}
+                      currentUserId={user?.id || ''}
+                      visitDate={req.date}
+                      visitTime={req.time}
+                      propertyTitle={req.propertyTitle}
+                      isReservation={isReservation}
+                      status={req.status}
+                      onAccept={() => handleResponse(req.id)}
+                      onReject={() => handleResponse(req.id)}
+                    />
+                  </View>
+                </ThemedView>
+              </View>
+            );
+          })}
 
           {filteredRequests.length === 0 && (
             <ThemedView style={{ alignItems: 'center', paddingVertical: 40 }}>
@@ -174,7 +316,7 @@ const RequestsManagementScreen = () => {
           )}
         </ThemedView>
       </ScrollView>
-    </SafeAreaView>
+    </ThemedView>
   );
 };
 

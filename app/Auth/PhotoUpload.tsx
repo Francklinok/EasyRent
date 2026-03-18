@@ -1,411 +1,311 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
   Alert,
   ActivityIndicator,
   StyleSheet,
-  Animated,
-  Dimensions,
-  Image
+  StatusBar,
+  ScrollView,
+  Image,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
-import * as ImagePicker from 'expo-image-picker';
-
-const { width, height } = Dimensions.get('window');
+import * as FileSystem from 'expo-file-system';
+import { launchImageLibraryWithFallback } from '@/components/utils/imagePickerUtils';
+import { buildApiUrl } from '@/components/utils/networkUtils';
+import { useThemeColors } from '@/hooks/themehook';
 
 const PhotoUpload: React.FC = () => {
-  const [profilePhoto, setProfilePhoto] = useState<string>('');
-  const [loading, setLoading] = useState(false);
-  
-  const router = useRouter();
+  const colors   = useThemeColors();
+  const router   = useRouter();
   const { email } = useLocalSearchParams<{ email: string }>();
-  
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      })
-    ]).start();
-  }, []);
+  const [photoUri,    setPhotoUri]    = useState<string | null>(null);
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
+  const [loading,     setLoading]     = useState(false);
 
+  const BTN      = colors.primary + '80';
+  const TEXT     = colors.text;
+  const GRAY     = colors.input.placeholder;
+  const INPUT_BG = colors.surfaceVariant;
+  const BORDER   = colors.input.border;
+  const BG       = colors.primary + '15';
+  const PRIMARY  = colors.primary;
+
+  // ── Ouvrir galerie ───────────────────────────────────────────────────────────
   const pickImage = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (permissionResult.granted === false) {
-      Alert.alert('Permission requise', 'Permission d\'accès à la galerie requise');
-      return;
-    }
-
-    Alert.alert(
-      'Photo de profil',
-      'Sélectionnez une option',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Galerie', onPress: () => handleImageSelection() },
-        { text: 'Appareil photo', onPress: () => handleCameraSelection() }
-      ]
-    );
-  };
-
-  const handleImageSelection = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    const result = await launchImageLibraryWithFallback({
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      allowsMultipleSelection: false,
+      base64: true,
     });
 
-    if (!result.canceled) {
-      setProfilePhoto(result.assets[0].uri);
-    }
-  };
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      setPhotoUri(asset.uri);
 
-  const handleCameraSelection = async () => {
-    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    
-    if (permissionResult.granted === false) {
-      Alert.alert('Permission requise', 'Permission d\'accès à l\'appareil photo requise');
-      return;
-    }
+      try {
+        let base64Data: string;
 
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+        if (asset.base64) {
+          base64Data = asset.base64;
+          console.log('✅ Base64 fourni directement par le picker');
+        } else {
+          console.log('🔄 Conversion en base64 via FileSystem...');
+          base64Data = await FileSystem.readAsStringAsync(asset.uri, {
+            encoding: 'base64' as any,
+          });
+          console.log(`✅ Converti avec succès, longueur: ${base64Data.length}`);
+        }
 
-    if (!result.canceled) {
-      setProfilePhoto(result.assets[0].uri);
-    }
-  };
-
-  const uploadProfilePhoto = async (imageUri: string) => {
-    const formData = new FormData();
-    formData.append('profilePhoto', {
-      uri: imageUri,
-      type: 'image/jpeg',
-      name: 'profile.jpg',
-    } as any);
-
-    try {
-      const response = await fetch('http://192.168.1.76:3000/api/v1/auth/upload-profile-photo', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
+        const mimeType = asset.mimeType ||
+          (asset.uri.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg');
+        const dataUrl = `data:${mimeType};base64,${base64Data}`;
+        setPhotoBase64(dataUrl);
+      } catch (err) {
+        console.error('❌ Erreur conversion base64:', err);
+        Alert.alert('Erreur', 'Impossible de traiter la photo sélectionnée');
+        setPhotoUri(null);
+        setPhotoBase64(null);
       }
-
-      return await response.json();
-    } catch (error) {
-      throw error;
     }
   };
 
+  // ── Upload ───────────────────────────────────────────────────────────────────
   const handleUpload = async () => {
-    if (!profilePhoto) {
-      Alert.alert('Aucune photo', 'Veuillez sélectionner une photo ou passer cette étape');
+    if (!photoUri || !photoBase64) {
+      Alert.alert('Aucune photo', 'Sélectionnez d\'abord une photo');
       return;
     }
-
     setLoading(true);
     try {
-      await uploadProfilePhoto(profilePhoto);
-      
-      Alert.alert(
-        '✅ Photo uploadée!',
-        'Votre photo de profil a été uploadée avec succès. Vous pouvez maintenant vous connecter.',
-        [{ text: 'Se connecter', onPress: () => router.replace('/Auth/Login') }]
-      );
-    } catch (error) {
-      console.error('Photo upload error:', error);
-      Alert.alert('Erreur', 'Impossible d\'uploader la photo');
+      const url = buildApiUrl('/api/v1/auth/upload-profile-photo', '3000');
+      console.log('Upload URL:', url);
+      console.log('Email:', email);
+      console.log('Base64 length:', photoBase64.length);
+
+      const formData = new FormData();
+      formData.append('email', email as string);
+      formData.append('photo', {
+        uri:  photoUri,
+        name: 'profile.jpg',
+        type: 'image/jpeg',
+      } as any);
+
+      const res  = await fetch(url, {
+        method: 'POST',
+        body:   formData,
+      });
+
+      const text = await res.text();
+      console.log('Upload response:', res.status, text);
+
+      let data: any = {};
+      try { data = JSON.parse(text); } catch {}
+
+      if (!res.ok) throw new Error(data.message || `Erreur ${res.status}: ${text}`);
+
+      Alert.alert('Succès', 'Photo enregistrée !', [
+        { text: 'Se connecter', onPress: () => router.replace('/Auth/Login') },
+      ]);
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      Alert.alert('Erreur upload', err?.message || 'Upload échoué');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSkip = () => {
-    Alert.alert(
-      'Passer cette étape',
-      'Vous pourrez ajouter une photo plus tard dans votre profil',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Passer', onPress: () => router.replace('/Auth/Login') }
-      ]
-    );
-  };
-
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <LinearGradient
-        colors={['#f093fb', '#f5576c', '#4facfe']}
-        style={styles.gradient}
+    <SafeAreaView style={[styles.safe, { backgroundColor: BG }]}>
+      <StatusBar barStyle="dark-content" backgroundColor={BG} />
+
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.floatingElements}>
-          <Animated.View style={[styles.floatingCircle, { top: 100, right: 30, opacity: fadeAnim }]} />
-          <Animated.View style={[styles.floatingCircle, { top: 200, left: 40, opacity: fadeAnim }]} />
-          <Animated.View style={[styles.floatingCircle, { bottom: 150, right: 50, opacity: fadeAnim }]} />
+        {/* ── Titre ─────────────────────────────────────────────────────────── */}
+        <Text style={[styles.title, { color: TEXT }]}>Photo de profil</Text>
+        <Text style={[styles.subtitle, { color: GRAY }]}>
+          Ajoutez une photo pour personnaliser votre profil
+        </Text>
+
+        {/* ── Aperçu photo ──────────────────────────────────────────────────── */}
+        <View style={[styles.photoBox, { backgroundColor: INPUT_BG, borderColor: BORDER }]}>
+          {photoUri ? (
+            <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
+          ) : (
+            <View style={styles.photoPlaceholder}>
+              <Ionicons name="person-circle-outline" size={90} color={GRAY} />
+            </View>
+          )}
         </View>
 
-        <Animated.View style={[
-          styles.formContainer,
-          {
-            opacity: fadeAnim,
-            transform: [
-              { translateY: slideAnim },
-              { scale: scaleAnim }
-            ]
-          }
-        ]}>
-          <BlurView intensity={20} style={styles.blurContainer}>
-            <View style={styles.headerContainer}>
-              <Ionicons name="camera" size={50} color="#f5576c" />
-              <Text style={styles.title}>Photo de profil</Text>
-              <Text style={styles.subtitle}>
-                Ajoutez une photo pour personnaliser votre profil
-              </Text>
-            </View>
+        {/* ── Bouton choisir ────────────────────────────────────────────────── */}
+        <TouchableOpacity
+          style={[styles.pickBtn, { borderColor: PRIMARY }]}
+          onPress={pickImage}
+          disabled={loading}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="image-outline" size={20} color={PRIMARY} style={{ marginRight: 8 }} />
+          <Text style={[styles.pickBtnText, { color: PRIMARY }]}>
+            {photoUri ? 'Changer la photo' : 'Choisir une photo'}
+          </Text>
+        </TouchableOpacity>
 
-            <View style={styles.photoContainer}>
-              <TouchableOpacity 
-                onPress={pickImage}
-                style={styles.photoUpload}
-                disabled={loading}
-              >
-                {profilePhoto ? (
-                  <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
-                ) : (
-                  <View style={styles.photoPlaceholder}>
-                    <Ionicons name="camera" size={40} color="#f5576c" />
-                    <Text style={styles.placeholderText}>Ajouter une photo</Text>
-                  </View>
-                )}
-                <View style={styles.cameraIcon}>
-                  <Ionicons name="add-circle" size={28} color="#f5576c" />
-                </View>
-              </TouchableOpacity>
-            </View>
+        {/* ── Statut ────────────────────────────────────────────────────────── */}
+        {photoUri && (
+          <View style={[styles.statusBox, { backgroundColor: PRIMARY + '15', borderColor: PRIMARY + '40' }]}>
+            <Ionicons name="checkmark-circle" size={18} color={PRIMARY} />
+            <Text style={[styles.statusText, { color: PRIMARY }]}>Photo prête à uploader</Text>
+          </View>
+        )}
 
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity 
-                onPress={handleUpload}
-                disabled={loading || !profilePhoto}
-                style={[styles.button, (!profilePhoto || loading) && styles.buttonDisabled]}
-              >
-                <LinearGradient colors={['#f5576c', '#f093fb']} style={styles.buttonGradient}>
-                  {loading ? (
-                    <ActivityIndicator color="white" size="small" />
-                  ) : (
-                    <>
-                      <Text style={styles.buttonText}>Uploader la photo</Text>
-                      <Ionicons name="cloud-upload" size={20} color="white" style={styles.buttonIcon} />
-                    </>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
+        {/* ── Bouton upload ─────────────────────────────────────────────────── */}
+        <TouchableOpacity
+          style={[
+            styles.uploadBtn,
+            { backgroundColor: photoUri && !loading ? BTN : BORDER },
+          ]}
+          onPress={handleUpload}
+          disabled={!photoUri || loading}
+          activeOpacity={0.85}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <>
+              <Ionicons name="cloud-upload-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.uploadBtnText}>Uploader la photo</Text>
+            </>
+          )}
+        </TouchableOpacity>
 
-              <TouchableOpacity 
-                onPress={handleSkip}
-                style={styles.skipButton}
-                disabled={loading}
-              >
-                <Text style={styles.skipText}>Passer cette étape</Text>
-              </TouchableOpacity>
-            </View>
+        {/* ── Passer ─ */}
+        <TouchableOpacity
+          style={styles.skipBtn}
+          onPress={() => router.replace('/Auth/Login')}
+          disabled={loading}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.skipText, { color: GRAY }]}>Passer cette étape →</Text>
+        </TouchableOpacity>
 
-            <View style={styles.infoContainer}>
-              <Ionicons name="information-circle" size={16} color="rgba(255, 255, 255, 0.7)" />
-              <Text style={styles.infoText}>
-                Vous pourrez modifier votre photo à tout moment dans les paramètres
-              </Text>
-            </View>
-          </BlurView>
-        </Animated.View>
-      </LinearGradient>
-    </KeyboardAvoidingView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
   },
-  gradient: {
-    flex: 1,
-    justifyContent: 'center',
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: 28,
+    paddingTop: 48,
+    paddingBottom: 40,
     alignItems: 'center',
-    padding: 20,
   },
-  floatingElements: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-  },
-  floatingCircle: {
-    position: 'absolute',
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  formContainer: {
-    width: '100%',
-    maxWidth: 400,
-  },
-  blurContainer: {
-    borderRadius: 25,
-    padding: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
+
+  // ── Texte ────────────────────────────────────────────────────────────────────
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
-    marginTop: 15,
-    marginBottom: 10,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20,
+    marginBottom: 36,
   },
-  photoContainer: {
+
+  // ── Photo ────────────────────────────────────────────────────────────────────
+  photoBox: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 2,
+    marginBottom: 24,
+    overflow: 'hidden',
     alignItems: 'center',
-    marginBottom: 30,
-  },
-  photoUpload: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
   },
-  profileImage: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
+  photo: {
+    width: 160,
+    height: 160,
   },
   photoPlaceholder: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(245, 87, 108, 0.1)',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  placeholderText: {
-    color: '#f5576c',
+
+  // ── Bouton choisir ───────────────────────────────────────────────────────────
+  pickBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: 30,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    marginBottom: 20,
+  },
+  pickBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  // ── Statut ───────────────────────────────────────────────────────────────────
+  statusBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+    width: '100%',
+  },
+  statusText: {
     fontSize: 14,
     fontWeight: '600',
-    marginTop: 8,
   },
-  cameraIcon: {
-    position: 'absolute',
-    bottom: 10,
-    right: 10,
-    backgroundColor: 'white',
-    borderRadius: 14,
-    padding: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  buttonContainer: {
-    gap: 15,
-  },
-  button: {
-    borderRadius: 15,
-    overflow: 'hidden',
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonGradient: {
+
+  // ── Bouton upload ─────────────────────────────────────────────────────────────
+  uploadBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    borderRadius: 30,
+    height: 54,
+    width: '100%',
+    marginBottom: 16,
   },
-  buttonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+  uploadBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
-  buttonIcon: {
-    marginLeft: 10,
-  },
-  skipButton: {
-    alignItems: 'center',
+
+  // ── Passer ───────────────────────────────────────────────────────────────────
+  skipBtn: {
     paddingVertical: 12,
   },
   skipText: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
     textDecorationLine: 'underline',
-  },
-  infoContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 15,
-    borderRadius: 12,
-    marginTop: 20,
-    gap: 8,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    lineHeight: 20,
   },
 });
 

@@ -1,148 +1,318 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  ScrollView,
   StyleSheet,
   Platform,
   Dimensions,
-  Animated,
+  Alert
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import Octicons from '@expo/vector-icons/Octicons';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import ItemData from '@/components/info/index';
-import Atout from '@/components/info/atoutFils';
-import Criteria from '@/components/info/criteriaFile';
 import Services from '@/components/info/servicesFiles';
-import Equipment from '@/components/info/equipmentFiles';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { useTheme } from '@/components/contexts/theme/themehook';
-import { BackButton } from '@/components/ui/BackButton';
-import data from '@/assets/data/data';
-import enrichItems from '@/components/utils/homeUtils/extendData';
-import { Image } from 'expo-image';
+import { useTheme } from '@/hooks/themehook';
+import { useProperty } from '@/hooks/useProperties';
+import { ActivityIndicator } from 'react-native';
+import { getChatService, ConversationType } from '@/services/api/chatService';
+import { useActivity } from '@/components/contexts/activity/ActivityContext';
+import Criteria from '@/components/info/criteriaFile';
+import { useLanguage } from '@/components/contexts/language';
+import { Currency } from 'lucide-react-native';
+
+
+const HOTEL_TYPES = ['Hôtel', 'Hotel', 'Auberge', 'Motel', 'Resort', 'Chambre d\'hôte', 'Guesthouse'];
 
 const { width, height } = Dimensions.get('window');
 
 interface ComponentProps {
   itemData?: any;
+  onClick?:() => void;
 }
 
-// Composant pour les badges animés
-const AnimatedBadge = ({ children, isActive, onPress }: any) => {
-  const [scaleAnim] = useState(new Animated.Value(1));
-
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.95,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        activeOpacity={0.8}
-      >
-        {children}
-      </TouchableOpacity>
-    </Animated.View>
-  );
-};
-
 export default function Info() {
-  const { id } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  const id = (params.infoId || params.id) as string;
+  const passedItemData = params.itemData as string | undefined;
   const { theme } = useTheme();
+  const { t } = useLanguage();
+  const router = useRouter();
+  const { addActivity } = useActivity();
+  const [creatingConversation, setCreatingConversation] = useState(false);
 
-  const extendedData = useMemo(() => enrichItems(data), []);
-  const currentItem = useMemo(() => extendedData.find(item => item.id === id), [extendedData, id]);
+  // Parse passed item data if available (for instant loading)
+  const parsedPassedData = useMemo(() => {
+    if (passedItemData) {
+      try {
+        return JSON.parse(passedItemData);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [passedItemData]);
+
+  // Only fetch from network if no data was passed
+  const { property: fetchedProperty, loading: fetchLoading, error } = useProperty(
+    parsedPassedData ? '' : id // Don't fetch if we have passed data
+  );
+
+  // Use passed data immediately, or fetched data as fallback
+  const property = parsedPassedData || fetchedProperty;
+  const loading = parsedPassedData ? false : fetchLoading;
+
+  const handleStartConversation = useCallback(async () => {
+    if (!property || !property.ownerId) {
+      Alert.alert(t('common.error'), t('info.conversationError'));
+      return;
+    }
+
+
+    try {
+      setCreatingConversation(true);
+      const chatService = getChatService();
+
+      // create a new conversation or get existing one
+      const conversation = await chatService.createOrGetConversation({
+        participantId: property.ownerId,
+        type: ConversationType.PROPERTY_INQUIRY,
+        propertyId: property.id
+      });
+
+
+      // Log activity
+      addActivity({
+        userId: 'current-user', 
+        type: 'navigation',
+        title: 'Consultation de propriété',
+        description: `Vous avez consulté ${property.title}`,
+        status: 'completed',
+        propertyId: property.id,
+        propertyTitle: property.title
+      });
+
+      // Navigate to ChatList with conversationId
+      router.push(`/(tabs)/ChatList?conversationId=${conversation.id}`);
+    } catch (error) {
+      console.error('Erreur création conversation:', error);
+      Alert.alert(
+        t('common.error'),
+        t('info.conversationStartError')
+      );
+    } finally {
+      setCreatingConversation(false);
+    }
+  }, [property, router, addActivity]);
+
+  const currentItem = useMemo(() => {
+    // If we have passed item data (ExtendedItemTypes format), use it directly
+    if (parsedPassedData) {
+      return {
+        ...parsedPassedData,
+        // Ensure required fields are present
+        owner: parsedPassedData.owner || {
+          id: 'owner1',
+          name: 'Propriétaire',
+          phone: '+237 677 123 456',
+          email: 'owner@email.com',
+          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop'
+        },
+        propertyAvailability: parsedPassedData.propertyAvailability || {
+          startDate: new Date().toISOString(),
+          type: 'immediate' as const
+        },
+        ownerCriteria: parsedPassedData.ownerCriteria || {
+          minimumDuration: '6 mois',
+          solvability: 'instant',
+          guarantorRequired: false,
+          acceptedSituations: ['employed', 'student'],
+          monthlyRent: parsedPassedData.price || 0,
+          depositAmount: 0,
+          isdocumentRequired: false,
+          requiredDocuments: { tenant: [], guarantor: [] },
+          currency:parsedPassedData.currency
+        },
+        equipments: parsedPassedData.equipments || [],
+        atouts: parsedPassedData.atouts || parsedPassedData.features || [],
+        services: parsedPassedData.services || [],
+      };
+    }
+
+    if (!property) return null;
+
+    // Handle both string[] and object[] formats for images
+    const firstImage = property.images?.[0];
+    const imageUrl = typeof firstImage === 'string'
+      ? firstImage
+      : firstImage?.url || 'https://via.placeholder.com/400x300';
+
+    return {
+      id: property.id,
+      title: property.title,
+      location: property.address || property.generalHInfo?.area || 'Location',
+      price: property.ownerCriteria?.monthlyRent || 0,
+      type: property.propertyType || 'villa',
+      listType: property.actionType === 'rent' ? 'rent' : 'sale',
+      // Include propertyType and actionType for booking screen compatibility
+      propertyType: property.propertyType || 'villa',
+      actionType: property.actionType || 'rent',
+      avatar: imageUrl,
+      images: property.images || [],
+      imageAvif: imageUrl,
+      imageWebP: imageUrl,
+      thumbnail: imageUrl,
+      availibility: property.status ,
+      stars: 0.0,
+      review: property.description || '',
+      description: property.description || '',
+      virtualTourAvailable: property.virtualTours?.length > 0 || false,
+      generalInfo: {
+        bedrooms: property.generalHInfo?.bedrooms || 0,
+        bathrooms: property.generalHInfo?.bathrooms || 0,
+        surface: property.generalLandinfo?.surface || property.generalHInfo?.surface || 0,
+        rooms: property.generalHInfo?.rooms || 0,
+        furnished: property.generalHInfo?.furnished || false,
+        pets: property.generalHInfo?.pets || false,
+        smoking: property.generalHInfo?.smoking || false,
+      },
+      owner: {
+        id: property.ownerId || 'owner1',
+        name: property.ownerName || 'Propriétaire',
+        phone: property.ownerPhone || '+237 677 123 456',
+        email: property.ownerEmail || 'owner@email.com',
+        avatar: property.ownerAvatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop'
+      },
+      propertyAvailability: {
+        startDate: property.availableFrom || new Date().toISOString(),
+        type: 'immediate' as const
+      },
+      equipments: property.equipments || [],
+      atouts: property.atouts || [],
+      ownerCriteria: {
+        minimumDuration: property.ownerCriteria?.minimumDuration || '6 mois',
+        solvability: property.ownerCriteria?.solvability || 'instant',
+        currency: property.ownerCriteria?.currency || 'XAF',
+        guarantorRequired: property.ownerCriteria?.guarantorRequired || false,
+        guarantorLocation: property.ownerCriteria?.guarantorLocation,
+        acceptedSituations: property.ownerCriteria?.acceptedSituations || ['employed', 'student'],
+        monthlyRent: property.ownerCriteria?.monthlyRent || 0,
+        depositAmount: property.ownerCriteria?.depositAmount || 0,
+        isdocumentRequired: property.ownerCriteria?.isdocumentRequired || false,
+        requiredDocuments: property.ownerCriteria?.requiredDocuments || {
+          tenant: [],
+          guarantor: []
+        }
+      },
+      services: property.services || [],
+      features: property.amenities || [],
+      hotelRoomTypes: property.hotelRoomTypes || [],
+      propertyRooms: property.propertyRooms || [],
+      rentalStrategy: property.rentalStrategy || 'global',
+      roomAvailability: property.roomAvailability || null,
+      energyScore: 7,
+      distanceToAmenities: {
+        schools: 500,
+        healthcare: 1000,
+        shopping: 300,
+        transport: 200
+      }
+    };
+  }, [property, parsedPassedData]);
+
 
   const [activeComponent, setActiveComponent] = useState<string>('Description');
 
-  const componentMap: Record<string, { 
-    component: React.ComponentType<ComponentProps>, 
-    icon: string, 
-    iconLib: string,
-    gradient: string[] 
-  }> = useMemo(
-    () => ({
-      Description: { 
-        component: ItemData, 
-        icon: 'description', 
+  // Check if  the  propert is hotel
+  const isHotel = useMemo(() => {
+    if (!currentItem?.type) return false;
+    return HOTEL_TYPES.some(hotelType =>
+      currentItem.type.toLowerCase().includes(hotelType.toLowerCase())
+    );
+  }, [currentItem?.type]);
+
+  const componentMap = useMemo(() => {
+    const map: Record<string, {
+      component: React.ComponentType<ComponentProps>,
+      icon: string,
+      iconLib: string,
+      gradient: string[]
+    }> = {
+      Description: {
+        component: ItemData,
+        icon: 'description',
         iconLib: 'MaterialIcons',
         gradient: ['#667eea', '#764ba2']
       },
-      Criteria: { 
-        component: Criteria, 
-        icon: 'checklist', 
-        iconLib: 'Octicons',
-        gradient: ['#f093fb', '#f5576c']
-      },
-      Atout: { 
-        component: Atout, 
-        icon: 'star', 
-        iconLib: 'AntDesign',
-        gradient: ['#4facfe', '#00f2fe']
-      },
-      Equipment: { 
-        component: Equipment, 
-        icon: 'build', 
+    };
+
+    // Add Criteria and Services only if not a hotel
+    if (!isHotel) {
+      map.Criteria = {
+        component: Criteria,
+        icon: 'criteria',
         iconLib: 'MaterialIcons',
-        gradient: ['#43e97b', '#38f9d7']
-      },
-      Services: { 
-        component: Services, 
-        icon: 'room-service', 
+        gradient: ['#4facfe', '#00f2fe']
+      };
+      map.Services = {
+        component: Services,
+        icon: 'room-service',
         iconLib: 'MaterialIcons',
         gradient: ['#fa709a', '#fee140']
-      },
-    }),
-    []
-  );
+      };
+    }
+
+    return map;
+  }, [isHotel]);
 
   const ActiveComponent = componentMap[activeComponent]?.component;
 
-  const renderIcon = (iconLib: string, iconName: string, size: number, color: string) => {
-    switch (iconLib) {
-      case 'MaterialIcons':
-        return <MaterialIcons name={iconName as any} size={size} color={color} />;
-      case 'Octicons':
-        return <Octicons name={iconName as any} size={size} color={color} />;
-      case 'AntDesign':
-        return <AntDesign name={iconName as any} size={size} color={color} />;
-      default:
-        return <MaterialIcons name="description" size={size} color={color} />;
-    }
-  };
-
-  if (!currentItem) {
+  // loading state
+  if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.surface }]}>
+        <LinearGradient
+          colors={theme.priceGradient}
+          style={styles.errorContainer}
+        >
+          <ActivityIndicator size="large" color="white" />
+          <ThemedText type="subtitle" color="white" style={styles.errorText}>Chargement...</ThemedText>
+        </LinearGradient>
+      </SafeAreaView>
+    );
+  }
+
+  // Error  state
+  if (error) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.surface }]}>
         <LinearGradient
           colors={theme.priceGradient}
           style={styles.errorContainer}
         >
           <MaterialIcons name="error-outline" size={64} color="white" />
-          <ThemedText style={styles.errorText}>Item non trouvé</ThemedText>
+          <ThemedText type="subtitle" color="white" style={styles.errorText}>Erreur: {error}</ThemedText>
+        </LinearGradient>
+      </SafeAreaView>
+    );
+  }
+
+  // Item not  found
+  if (!currentItem) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.surface }]}>
+        <LinearGradient
+          colors={theme.priceGradient}
+          style={styles.errorContainer}
+        >
+          <MaterialIcons name="error-outline" size={64} color="white" />
+          <ThemedText type="subtitle" color="white" style={styles.errorText}>Propriété non trouvée</ThemedText>
         </LinearGradient>
       </SafeAreaView>
     );
@@ -152,133 +322,26 @@ export default function Info() {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.surface }]}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-            {/* HEADER avec gradient et glassmorphism */}
-      <LinearGradient
-        colors={theme.priceGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.headerGradient}
-      >
-        <BlurView intensity={20} tint="light" style={styles.headerBlur}>
-          <View style={styles.headerContent}>
-            <BackButton />
-            
-            {/* Avatar avec effet glow */}
-            <View style={styles.avatarContainer}>
-              <View style={styles.avatarGlow}>
-                <Image
-                  source={{ uri: currentItem.owner?.avatar ?? 'https://picsum.photos/200/200' }}
-                  style={styles.avatar}
-                  contentFit="cover"
-                />
-              </View>
-              <View style={styles.onlineIndicator} />
-            </View>
-
-            {/* Info propriétaire */}
-            <View style={styles.ownerInfo}>
-              <ThemedText style={styles.ownerName}>
-                {currentItem.owner?.name || 'Propriétaire'}
-              </ThemedText>
-              <View style={styles.responseRate}>
-                <View className="flex-col gap-1">
-                  <View className = "flex-row gap-1">
-                  <MaterialIcons name="verified" size={16} color= {theme.success} />
-                    <ThemedText style={{ color: theme.text }}>
-                    Taux de réponse
-                  </ThemedText>
-                  </View>
-                 
-                  <ThemedText className = "text-center" style={{ color: theme.success }}>
-                    100%
-                  </ThemedText>
-                </View>
-
-                
-              </View>
-            </View>
-
-            {/* Actions avec effet glassmorphism */}
-            <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.actionButton}>
-                <BlurView intensity={15} tint="light" style={styles.actionButtonBlur}>
-                  <Octicons name="verified" size={20} color="white" />
-                </BlurView>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton}>
-                <BlurView intensity={15} tint="light" style={styles.actionButtonBlur}>
-                  <AntDesign name="message1" size={20} color="white" />
-                </BlurView>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </BlurView>
-      </LinearGradient>
-
-      {/* Onglets avec design moderne */}
-      <View style={[styles.tabContainer, { backgroundColor: theme.surface }]}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabScrollContent}
-        >
-          {Object.entries(componentMap).map(([key, config]) => {
-            const isActive = activeComponent === key;
-            return (
-              <AnimatedBadge
-                key={key}
-                isActive={isActive}
-                onPress={() => setActiveComponent(key)}
-              >
-                <View style={styles.tabWrapper}>
-                  {isActive ? (
-                    <LinearGradient
-                      colors={config.gradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.activeTab}
-                    >
-                      <View style={styles.tabContent}>
-                        {renderIcon(config.iconLib, config.icon, 16, 'white')}
-                        <Text style={styles.activeTabText}>{key}</Text>
-                      </View>
-                    </LinearGradient>
-                  ) : (
-                    <View style={[styles.inactiveTab, { backgroundColor: theme.surface }]}>
-                      <View style={styles.tabContent}>
-                        {renderIcon(config.iconLib, config.icon, 16, theme.onSurface)}
-                        <Text style={[styles.inactiveTabText, { color: theme.onSurface }]}>
-                          {key}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              </AnimatedBadge>
-            );
-          })}
-        </ScrollView>
-      </View>
-
       {/* Contenu avec animation */}
-      <ScrollView 
+      <ThemedView 
         style={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-        bounces={true}
       >
         <View style={styles.contentWrapper}>
           {ActiveComponent ? (
-            <ActiveComponent itemData={currentItem} />
+            <ActiveComponent
+             itemData={currentItem}
+             onClick = {handleStartConversation}
+             />
           ) : (
-            <View style={styles.noDataContainer}>
+            <ThemedView style={styles.noDataContainer}>
               <MaterialIcons name="inbox" size={48} color={theme.outline} />
-              <ThemedText style={[styles.noDataText, { color: theme.outline }]}>
+              <ThemedText type="body" variant="secondary">
                 Aucune donnée disponible
               </ThemedText>
-            </View>
+            </ThemedView>
           )}
         </View>
-      </ScrollView>
+      </ThemedView>
     </SafeAreaView>
   );
 }
@@ -294,16 +357,12 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   errorText: {
-    fontSize: 18,
-    color: 'white',
-    fontWeight: '600',
   },
   headerGradient: {
     paddingTop: Platform.OS === 'ios' ? 50 : StatusBar.currentHeight || 24,
     paddingBottom: 10,
   },
   headerBlur: {
-    // flex: 1,
   },
   headerContent: {
     flexDirection: 'row',
@@ -445,7 +504,5 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   noDataText: {
-    fontSize: 16,
-    fontWeight: '500',
   },
 });

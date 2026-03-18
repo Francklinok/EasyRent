@@ -10,7 +10,8 @@ import { ThemedText } from "@/components/ui/ThemedText";
 import { ThemedView } from "@/components/ui/ThemedView";
 import { ExtendedItemTypes } from "@/types/ItemType";
 import { useRouter } from "expo-router";
-import { useTheme } from "@/components/contexts/theme/themehook";
+import { useTheme } from "@/hooks/themehook";
+import { useToggleFavorite } from "@/hooks/useToggleFavorite";
 
 const { width } = Dimensions.get("window");
 
@@ -32,6 +33,11 @@ const RenderServiceListItem: React.FC<Props> = ({
   const { theme } = useTheme();
   const router = useRouter();
 
+  const { isFavorite, handleToggleFavorite } = useToggleFavorite({
+    item,
+    setAnimatingElement,
+  });
+
   const handlePress = useCallback(() => {
     console.log('🔗 [RenderServiceListItem] Navigating to service:', item.id, 'Full item:', item);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -49,7 +55,6 @@ const RenderServiceListItem: React.FC<Props> = ({
     }, 200);
   }, [item.id, router, setAnimatingElement]);
 
-  const isFavorite = favorites.includes(item.id);
 
   return (
     <ThemedView
@@ -82,7 +87,7 @@ const RenderServiceListItem: React.FC<Props> = ({
               </ThemedView>
 
               {/* Favorite */}
-              <TouchableOpacity style={styles.favoriteBtn}>
+              <TouchableOpacity style={styles.favoriteBtn} onPress={handleToggleFavorite}>
                 <MaterialIcons
                   name={isFavorite ? "favorite" : "favorite-border"}
                   size={20}
@@ -109,7 +114,7 @@ const RenderServiceListItem: React.FC<Props> = ({
                   <MaterialCommunityIcons name="shape" size={14} color={theme.subtext} />
                   <ThemedText type ="caption" style={styles.infoText}>{item.type}</ThemedText>
                 </ThemedView>
-:                <ThemedView style={styles.infoItem}>
+                <ThemedView style={styles.infoItem}>
                   <MaterialIcons name="location-on" size={14} color={theme.subtext} />
                   <ThemedText type ="caption" style={styles.infoText} numberOfLines={1}>
                     {item.location}
@@ -220,7 +225,7 @@ const styles = StyleSheet.create({
     bottom: 8,
     left: 8,
     right: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     paddingVertical: 4,
     borderRadius: 8,
     backgroundColor: "rgba(99,102,241,0.9)",

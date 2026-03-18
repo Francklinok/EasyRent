@@ -1,7 +1,5 @@
 import React from 'react';
 import {
-  View,
-  Text,
   TouchableOpacity,
   Image,
   StyleSheet,
@@ -10,6 +8,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Service, ServiceCategory, ServiceStatus } from '../../services/api/serviceMarketplaceService';
+import { useLanguage } from '../contexts/language';
+import { ThemedView } from '../ui/ThemedView';
+import { ThemedText } from '../ui/ThemedText';
+import { useTheme } from '@/hooks/themehook';
 
 interface ServiceCardProps {
   service: Service;
@@ -26,19 +28,33 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
   isFavorite = false,
   style,
 }) => {
+  const { t } = useLanguage();
+  const {theme} = useTheme()
   const getCategoryIcon = (category: ServiceCategory): string => {
     const iconMap: Record<ServiceCategory, string> = {
       [ServiceCategory.MAINTENANCE]: 'construct',
       [ServiceCategory.CLEANING]: 'sparkles',
-      [ServiceCategory.SECURITY]: 'shield-checkmark',
       [ServiceCategory.GARDENING]: 'leaf',
-      [ServiceCategory.INSURANCE]: 'umbrella',
+      [ServiceCategory.SECURITY]: 'shield-checkmark',
+      [ServiceCategory.PROPERTY_MANAGEMENT]: 'business',
+      [ServiceCategory.CONSTRUCTION]: 'hammer',
+      [ServiceCategory.RENOVATION]: 'build',
+      [ServiceCategory.AGRICULTURE]: 'leaf-outline',
       [ServiceCategory.UTILITIES]: 'flash',
-      [ServiceCategory.WELLNESS]: 'heart',
+      [ServiceCategory.WASTE_MANAGEMENT]: 'trash',
+      [ServiceCategory.PEST_CONTROL]: 'bug',
+      [ServiceCategory.HEALTHCARE_HOME]: 'medical',
+      [ServiceCategory.CHILDCARE_HOME]: 'happy',
+      [ServiceCategory.ELDERCARE_HOME]: 'accessibility',
+      [ServiceCategory.TRANSPORT_LOGISTICS]: 'car',
+      [ServiceCategory.INSPECTION]: 'search',
+      [ServiceCategory.LEGAL_ADMIN]: 'document-text',
       [ServiceCategory.EMERGENCY]: 'alert-circle',
-      [ServiceCategory.ECO]: 'earth',
-      [ServiceCategory.TECH]: 'laptop',
-      [ServiceCategory.COLLABORATIVE]: 'people',
+      [ServiceCategory.ECO_SERVICES]: 'earth',
+      [ServiceCategory.HOSPITALITY_SERVICES]: 'bed',
+      [ServiceCategory.OFFICE_SERVICES]: 'briefcase',
+      [ServiceCategory.COMMERCIAL_SERVICES]: 'storefront',
+      [ServiceCategory.OTHER]: 'ellipsis-horizontal',
     };
     return iconMap[category] || 'help-circle';
   };
@@ -47,25 +63,37 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
     const colorMap: Record<ServiceCategory, string> = {
       [ServiceCategory.MAINTENANCE]: '#FF6B35',
       [ServiceCategory.CLEANING]: '#4ECDC4',
-      [ServiceCategory.SECURITY]: '#45B7D1',
       [ServiceCategory.GARDENING]: '#96CEB4',
-      [ServiceCategory.INSURANCE]: '#FFEAA7',
+      [ServiceCategory.SECURITY]: '#45B7D1',
+      [ServiceCategory.PROPERTY_MANAGEMENT]: '#6C5CE7',
+      [ServiceCategory.CONSTRUCTION]: '#E17055',
+      [ServiceCategory.RENOVATION]: '#FDCB6E',
+      [ServiceCategory.AGRICULTURE]: '#00B894',
       [ServiceCategory.UTILITIES]: '#FD79A8',
-      [ServiceCategory.WELLNESS]: '#A29BFE',
+      [ServiceCategory.WASTE_MANAGEMENT]: '#636E72',
+      [ServiceCategory.PEST_CONTROL]: '#D63031',
+      [ServiceCategory.HEALTHCARE_HOME]: '#0984E3',
+      [ServiceCategory.CHILDCARE_HOME]: '#FFEAA7',
+      [ServiceCategory.ELDERCARE_HOME]: '#A29BFE',
+      [ServiceCategory.TRANSPORT_LOGISTICS]: '#2D3436',
+      [ServiceCategory.INSPECTION]: '#00CEC9',
+      [ServiceCategory.LEGAL_ADMIN]: '#6C5CE7',
       [ServiceCategory.EMERGENCY]: '#E17055',
-      [ServiceCategory.ECO]: '#00B894',
-      [ServiceCategory.TECH]: '#6C5CE7',
-      [ServiceCategory.COLLABORATIVE]: '#FDCB6E',
+      [ServiceCategory.ECO_SERVICES]: '#00B894',
+      [ServiceCategory.HOSPITALITY_SERVICES]: '#74B9FF',
+      [ServiceCategory.OFFICE_SERVICES]: '#B2BEC3',
+      [ServiceCategory.COMMERCIAL_SERVICES]: '#FDCB6E',
+      [ServiceCategory.OTHER]: '#DFE6E9',
     };
     return colorMap[category] || '#74B9FF';
   };
 
   const getStatusBadge = (status: ServiceStatus) => {
     const statusConfig = {
-      [ServiceStatus.ACTIVE]: { color: '#00B894', text: 'Actif' },
-      [ServiceStatus.INACTIVE]: { color: '#636E72', text: 'Inactif' },
-      [ServiceStatus.PENDING]: { color: '#FDCB6E', text: 'En attente' },
-      [ServiceStatus.SUSPENDED]: { color: '#E17055', text: 'Suspendu' },
+      [ServiceStatus.ACTIVE]: { color: '#00B894', text: t('services.status.active') },
+      [ServiceStatus.INACTIVE]: { color: '#636E72', text: t('services.status.inactive') },
+      [ServiceStatus.PENDING]: { color: '#FDCB6E', text: t('services.status.pending') },
+      [ServiceStatus.SUSPENDED]: { color: '#E17055', text: t('services.status.suspended') },
     };
     return statusConfig[status];
   };
@@ -85,15 +113,14 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
 
   return (
     <TouchableOpacity
-      style={[styles.container, style]}
+      style={[styles.container, style, {borderWidth:1, borderColor:theme.outline + "80"}]}
       onPress={() => onPress?.(service)}
       activeOpacity={0.7}
     >
-      {/* En-tête avec image et favoris */}
-      <View style={styles.header}>
-        <View style={[styles.categoryBadge, { backgroundColor: categoryColor }]}>
+      <ThemedView backgroundColor = "transparent" style={styles.header}>
+        <ThemedView style={[styles.categoryBadge, { backgroundColor: categoryColor }]}>
           <Ionicons name={categoryIcon as any} size={20} color="white" />
-        </View>
+        </ThemedView>
 
         {onFavorite && (
           <TouchableOpacity
@@ -108,89 +135,81 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
             />
           </TouchableOpacity>
         )}
-      </View>
+      </ThemedView>
 
-      {/* Image du service */}
       {service.media.photos.length > 0 && (
-        <View style={styles.imageContainer}>
+        <ThemedView style={styles.imageContainer}>
           <Image
             source={{ uri: service.media.photos[0] }}
             style={styles.serviceImage}
             resizeMode="cover"
           />
-        </View>
+        </ThemedView>
       )}
 
-      {/* Contenu principal */}
-      <View style={styles.content}>
-        {/* Titre et statut */}
-        <View style={styles.titleRow}>
-          <Text style={styles.title} numberOfLines={2}>
+      <ThemedView style={styles.content}>
+        <ThemedView style={styles.titleRow}>
+          <ThemedText type = "normaltitle" style={styles.title} numberOfLines={2}>
             {service.title}
-          </Text>
-          <View style={[styles.statusBadge, { backgroundColor: statusBadge.color }]}>
-            <Text style={styles.statusText}>{statusBadge.text}</Text>
-          </View>
-        </View>
+          </ThemedText>
+          <ThemedView style={[styles.statusBadge, { backgroundColor: statusBadge.color }]}>
+            <ThemedText type ="caption" style={{...styles.statusText,  color:"white"}}>{statusBadge.text}</ThemedText>
+          </ThemedView>
+        </ThemedView>
 
-        {/* Description */}
-        <Text style={styles.description} numberOfLines={3}>
+        <ThemedText type = "normal" style={styles.description} numberOfLines={3}>
           {service.description}
-        </Text>
+        </ThemedText>
 
-        {/* Fournisseur */}
         {service.provider && (
-          <View style={styles.providerRow}>
-            <Ionicons name="business" size={16} color="#636E72" />
-            <Text style={styles.providerName}>
-              {service.provider.companyName || 'Prestataire'}
-            </Text>
+          <ThemedView style={styles.providerRow}>
+            <Ionicons name="business" size={16} color= {theme.text + "90"}/>
+            <ThemedText type = "normal" style={styles.providerName}>
+              {service.provider.companyName || t('services.provider')}
+            </ThemedText>
             {service.provider.isVerified && (
               <Ionicons name="checkmark-circle" size={16} color="#00B894" />
             )}
-          </View>
+          </ThemedView>
         )}
 
-        {/* Prix et évaluation */}
-        <View style={styles.footer}>
-          <View style={styles.priceContainer}>
-            <Text style={styles.price}>
+        <ThemedView style={styles.footer}>
+          <ThemedView style={styles.priceContainer}>
+            <ThemedText type = "subtitle" style={styles.price}>
               {formatPrice(service.pricing.basePrice, service.pricing.currency)}
-            </Text>
-            <Text style={styles.billingPeriod}>
+            </ThemedText>
+            <ThemedText type ="normal" style={{...styles.billingPeriod, color:theme.text + "80"}}>
               /{service.pricing.billingPeriod}
-            </Text>
-          </View>
+            </ThemedText>
+          </ThemedView>
 
-          <View style={styles.ratingContainer}>
+          <ThemedView style={styles.ratingContainer}>
             <Ionicons name="star" size={16} color="#FDCB6E" />
-            <Text style={styles.rating}>{service.rating.toFixed(1)}</Text>
-            <Text style={styles.reviewCount}>({service.totalReviews})</Text>
-          </View>
-        </View>
+            <ThemedText type = "normal" style={styles.rating}>{service.rating.toFixed(1)}</ThemedText>
+            <ThemedText type ="caption" style={styles.reviewCount}>({service.totalReviews})</ThemedText>
+          </ThemedView>
+        </ThemedView>
 
-        {/* Tags */}
         {service.tags.length > 0 && (
-          <View style={styles.tagsContainer}>
+          <ThemedView style={styles.tagsContainer}>
             {service.tags.slice(0, 3).map((tag, index) => (
-              <View key={index} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
-              </View>
+              <ThemedView key={index} style={styles.tag}>
+                <ThemedText type ="caption">{tag}</ThemedText>
+              </ThemedView>
             ))}
             {service.tags.length > 3 && (
-              <Text style={styles.moreTagsText}>+{service.tags.length - 3}</Text>
+              <ThemedText type = "caption" style={styles.moreTagsText}>+{service.tags.length - 3}</ThemedText>
             )}
-          </View>
+          </ThemedView>
         )}
 
-        {/* Informations d'urgence */}
         {service.availability.isEmergency && (
-          <View style={styles.emergencyBadge}>
+          <ThemedView style={styles.emergencyBadge}>
             <Ionicons name="flash" size={14} color="#E17055" />
-            <Text style={styles.emergencyText}>Service d'urgence</Text>
-          </View>
+            <ThemedText type = "caption" style={styles.emergencyText}>{t('services.emergency')}</ThemedText>
+          </ThemedView>
         )}
-      </View>
+      </ThemedView>
     </TouchableOpacity>
   );
 };
@@ -208,7 +227,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 1,
     overflow: 'hidden',
   } as ViewStyle,
 
@@ -239,13 +258,13 @@ const styles = StyleSheet.create({
 
   imageContainer: {
     height: 160,
-    backgroundColor: '#F8F9FA',
+    // backgroundColor: '#F8F9FA',
   } as ViewStyle,
 
   serviceImage: {
     width: '100%',
     height: '100%',
-  } as ViewStyle,
+  } ,
 
   content: {
     padding: 16,
@@ -259,41 +278,34 @@ const styles = StyleSheet.create({
   } as ViewStyle,
 
   title: {
-    fontSize: 18,
     fontWeight: '600',
-    color: '#2D3436',
     flex: 1,
     marginRight: 8,
-  } as TextStyle,
+  },
 
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-  } as ViewStyle,
+  },
 
   statusText: {
-    fontSize: 12,
     fontWeight: '500',
     color: 'white',
   } as TextStyle,
 
   description: {
-    fontSize: 14,
-    color: '#636E72',
     lineHeight: 20,
-    marginBottom: 12,
+    marginBottom: 8,
   } as TextStyle,
 
   providerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   } as ViewStyle,
 
   providerName: {
-    fontSize: 14,
-    color: '#636E72',
     marginLeft: 6,
     marginRight: 4,
     flex: 1,
@@ -312,14 +324,10 @@ const styles = StyleSheet.create({
   } as ViewStyle,
 
   price: {
-    fontSize: 20,
     fontWeight: '700',
-    color: '#2D3436',
   } as TextStyle,
 
   billingPeriod: {
-    fontSize: 14,
-    color: '#636E72',
     marginLeft: 2,
   } as TextStyle,
 
@@ -329,15 +337,11 @@ const styles = StyleSheet.create({
   } as ViewStyle,
 
   rating: {
-    fontSize: 14,
     fontWeight: '600',
-    color: '#2D3436',
     marginLeft: 4,
   } as TextStyle,
 
   reviewCount: {
-    fontSize: 12,
-    color: '#636E72',
     marginLeft: 2,
   } as TextStyle,
 
@@ -357,14 +361,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   } as ViewStyle,
 
-  tagText: {
-    fontSize: 12,
-    color: '#636E72',
-  } as TextStyle,
-
+ 
   moreTagsText: {
-    fontSize: 12,
-    color: '#636E72',
     fontStyle: 'italic',
   } as TextStyle,
 
@@ -379,7 +377,6 @@ const styles = StyleSheet.create({
   } as ViewStyle,
 
   emergencyText: {
-    fontSize: 12,
     color: '#E17055',
     fontWeight: '500',
     marginLeft: 4,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   favoritesService,
   FavoriteProperty,
@@ -6,6 +6,7 @@ import {
   FavoriteFilters,
   PriceAlert
 } from '@/services/api/favoritesService';
+import { cacheService, CACHE_KEYS } from '@/services/cache/cacheService';
 
 interface UseFavoritesResult {
   favorites: FavoriteProperty[];
@@ -33,19 +34,33 @@ export function useFavorites(userId: string, initialFilters?: FavoriteFilters): 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentFilters, setCurrentFilters] = useState<FavoriteFilters | null>(initialFilters || null);
+  const initialLoadDone = useRef(false);
+
+  // Load cached data instantly on mount (before network)
+  useEffect(() => {
+    const loadCached = async () => {
+      const cached = await cacheService.get<FavoriteProperty[]>(CACHE_KEYS.FAVORITES_PROPERTIES);
+      if (cached && cached.length > 0 && !initialLoadDone.current) {
+        setFavorites(cached);
+        setStats({ totalFavorites: cached.length, availableProperties: cached.length });
+      }
+    };
+    loadCached();
+  }, []);
 
   const loadFavorites = useCallback(async (filters?: FavoriteFilters) => {
     try {
-      setLoading(true);
+      // Only show loading spinner if we have no cached data yet
+      if (!initialLoadDone.current) {
+        setLoading(true);
+      }
       setError(null);
 
-      const [favoritesData, statsData] = await Promise.all([
-        favoritesService.getFavorites(userId, filters),
-        favoritesService.getFavoriteStats(userId)
-      ]);
+      const favoritesData = await favoritesService.getFavorites(userId, filters);
 
       setFavorites(favoritesData);
-      setStats(statsData);
+      setStats({ totalFavorites: favoritesData.length, availableProperties: favoritesData.length });
+      initialLoadDone.current = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load favorites');
     } finally {
@@ -229,7 +244,7 @@ export function useFavorites(userId: string, initialFilters?: FavoriteFilters): 
     if (userId) {
       loadFavorites(currentFilters || undefined);
     }
-  }, [userId, loadFavorites, currentFilters]);
+  }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     favorites,

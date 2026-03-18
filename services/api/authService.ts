@@ -29,6 +29,7 @@ export interface AuthUser {
   lastName: string;
   phone?: string;
   role: string;
+  isOwner: boolean;
   isEmailVerified: boolean;
   isPhoneVerified: boolean;
   isPremium: boolean;
@@ -486,6 +487,7 @@ export class AuthService {
           lastName
           phone
           role
+          isOwner
           isEmailVerified
           isPhoneVerified
           isPremium

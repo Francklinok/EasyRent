@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 import { ThemedView } from "@/components/ui/ThemedView";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ui/ThemedText";
-import { useTheme } from "@/components/contexts/theme/themehook";
+import { useTheme } from "@/hooks/themehook";
 import { ExtendedItemTypes } from '@/types/ItemType';
 
 type  Props = {

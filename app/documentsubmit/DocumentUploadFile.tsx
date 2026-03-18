@@ -10,11 +10,12 @@ import { Property } from '@/types/property';
 import { BackButton } from '@/components/ui/BackButton';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { useTheme } from '@/components/contexts/theme/themehook';
+import { useTheme } from '@/hooks/themehook';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import { useNotifications } from '@/components/contexts/notifications/NotificationContext';
 import { useBooking } from '@/components/contexts/booking/BookingContext';
+import { useLanguage } from '@/components/contexts/language';
 
 
 // Liste complète des documents possibles
@@ -30,6 +31,7 @@ const allDocuments = [
 const DocumentUploadScreen = () => {
   const route = useRoute()
   const { theme } = useTheme()
+  const { t } = useLanguage();
   const { addNotification } = useNotifications();
   const { updateReservationDocuments, updateReservationStatus } = useBooking();
   const params = route.params as { reservationId: string, property: string };
@@ -89,7 +91,7 @@ const DocumentUploadScreen = () => {
       setUploading(null);
     } catch (error) {
       console.error('Document upload error:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue lors du téléchargement du document.');
+      Alert.alert(t('common.error'), t('documents.uploadError'));
       setUploading(null);
     }
   };
@@ -105,8 +107,8 @@ const DocumentUploadScreen = () => {
       
       if (missingRequiredDocs.length > 0) {
         Alert.alert(
-          'Documents manquants',
-          `Veuillez télécharger les documents suivants: ${missingRequiredDocs.join(', ')}`
+          t('documents.missingDocs'),
+          t('documents.missingDocsMsg', { docs: missingRequiredDocs.join(', ') })
         );
         setLoading(false);
         return;
@@ -136,11 +138,11 @@ const DocumentUploadScreen = () => {
       // Simuler l'envoi au backend et attendre l'approbation
       setTimeout(() => {
         Alert.alert(
-          'Documents soumis',
-          'Vos documents ont été soumis avec succès. Le propriétaire va les examiner. Vous pouvez continuer le processus ou attendre l\'approbation.',
+          t('documents.submitted'),
+          t('documents.submittedMsg'),
           [
-            { text: 'Attendre l\'approbation', style: 'cancel' },
-            { text: 'Continuer maintenant', onPress: () => router.push('/finalBooking/bookingstatus') }
+            { text: t('documents.waitApproval'), style: 'cancel' },
+            { text: t('documents.continueNow'), onPress: () => router.push('/finalBooking/bookingstatus') }
           ]
         );
         setLoading(false);
@@ -148,7 +150,7 @@ const DocumentUploadScreen = () => {
       
     } catch (error) {
       console.error('Document submission error:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue lors de la soumission de vos documents.');
+      Alert.alert(t('common.error'), t('documents.submitError'));
       setLoading(false);
     }
   };
@@ -217,9 +219,10 @@ const DocumentUploadScreen = () => {
     return null;
   }
 
-  // Si pas de reservationId, rediriger vers booking
+  // Si pas de reservationId, rediriger vers home
   if (!reservationId) {
-    router.push('/booking/bookingscreen');
+    console.warn('⚠️ [DocumentUpload] No reservationId provided, redirecting to home');
+    router.push('/home/home');
     return null;
   }
 
@@ -242,7 +245,7 @@ const DocumentUploadScreen = () => {
                 color: theme.onSurface,
                 textAlign: 'center'
               }}>
-                Documents requis
+                {t('documents.requiredDocuments')}
               </ThemedText>
             </ThemedView>
             
@@ -251,9 +254,9 @@ const DocumentUploadScreen = () => {
               textAlign: 'center',
               marginBottom: 8
             }}>
-              {requiredDocuments.length > 0 
-                ? `Le propriétaire demande ${requiredDocuments.length} document(s)`
-                : 'Aucun document requis par le propriétaire'
+              {requiredDocuments.length > 0
+                ? t('documents.ownerRequests', { count: String(requiredDocuments.length) })
+                : t('documents.noDocumentsRequired')
               }
             </ThemedText>
           </MotiView>
@@ -281,19 +284,19 @@ const DocumentUploadScreen = () => {
                   textAlign: 'center',
                   marginBottom: 16
                 }}>
-                  Avez-vous vos documents prêts ?
+                  {t('documents.haveDocumentsReady')}
                 </ThemedText>
-                
+
                 <ThemedView style={{ gap: 12 }}>
                   <CustomButton
-                    title="Oui, j'ai mes documents"
+                    title={t('documents.yesHaveDocuments')}
                     onPress={() => setHasDocuments(true)}
                     type="primary"
                     icon={<MaterialCommunityIcons name="file-document" size={20} color="white" />}
                   />
-                  
+
                   <CustomButton
-                    title="Non, continuer sans documents"
+                    title={t('documents.noContinueWithout')}
                     onPress={() => setHasDocuments(false)}
                     type="outline"
                     icon={<MaterialCommunityIcons name="arrow-right" size={20} color={theme.primary} />}

@@ -1,173 +1,126 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { ScrollView, Alert, TouchableOpacity, Dimensions, Image, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, router } from 'expo-router';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { ScrollView, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { MotiView } from 'moti';
-import { BackButton } from '@/components/ui/BackButton';
-import { useTheme } from '@/components/contexts/theme/themehook';
+import { useTheme } from '@/hooks/themehook';
 import { useAuth } from '@/components/contexts/authContext/AuthContext';
 import { useActivity } from '@/components/contexts/activity/ActivityContext';
 import { getBookingService } from '@/services/api/bookingService';
 import { ItemType } from '@/types/ItemType';
 import { CustomButton, DatePicker } from '@/components/ui';
-import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLanguage } from '@/components/contexts/language';
 
-const { width } = Dimensions.get('window');
-
-// Visit Status Badge Component
-interface VisitStatusBadgeProps {
-  status: VisitStatus;
-  compact?: boolean;
-}
-
-const VisitStatusBadge: React.FC<VisitStatusBadgeProps> = ({ status, compact = false }) => {
-  const { theme } = useTheme();
-
-  const getStatusConfig = () => {
-    switch(status) {
-      case 'pending':
-        return {
-          color: theme.warning || '#F59E0B',
-          icon: 'clock-outline' as const,
-          label: 'En attente',
-          description: 'Le propriétaire n\'a pas encore répondu'
-        };
-      case 'accepted':
-        return {
-          color: theme.success || '#10B981',
-          icon: 'check-circle' as const,
-          label: 'Acceptée',
-          description: 'Votre visite a été confirmée par le propriétaire'
-        };
-      case 'rejected':
-        return {
-          color: theme.error || '#EF4444',
-          icon: 'close-circle' as const,
-          label: 'Refusée',
-          description: 'Le propriétaire a refusé cette demande'
-        };
-      case 'failed':
-        return {
-          color: '#DC2626',
-          icon: 'alert-circle' as const,
-          label: 'Échouée',
-          description: 'La demande n\'a pas pu être envoyée'
-        };
-    }
-  };
-
-  const config = getStatusConfig();
-
-  if (compact) {
-    return (
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: config.color + '15',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: config.color + '30'
-      }}>
-        <MaterialCommunityIcons name={config.icon} size={16} color={config.color} />
-        <ThemedText style={{
-          color: config.color,
-          fontSize: 13,
-          fontWeight: '600',
-          marginLeft: 6
-        }}>
-          {config.label}
-        </ThemedText>
-      </View>
-    );
-  }
-
-  return (
-    <MotiView
-      from={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ type: 'timing', duration: 300 }}
-    >
-      <ThemedView style={{
-        backgroundColor: config.color + '10',
-        borderRadius: 14,
-        padding: 16,
-        borderWidth: 1.5,
-        borderColor: config.color + '40',
-        marginBottom: 16
-      }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-          <View style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: config.color + '20',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginRight: 12
-          }}>
-            <MaterialCommunityIcons name={config.icon} size={22} color={config.color} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="normal" intensity="strong" style={{
-              color: config.color,
-              fontSize: 16,
-              marginBottom: 2
-            }}>
-              Visite {config.label.toLowerCase()}
-            </ThemedText>
-            <ThemedText style={{
-              fontSize: 12,
-              color: theme.onSurface + '70'
-            }}>
-              {config.description}
-            </ThemedText>
-          </View>
-        </View>
-      </ThemedView>
-    </MotiView>
-  );
-};
-
+// Types - Utiliser les valeurs exactes du backend
 type VisitType = 'physical' | 'virtual' | 'self-guided';
-type VisitStatus = 'pending' | 'accepted' | 'rejected' | 'failed';
-type TimeSlot = {
-  time: string;
-  available: boolean;
-  premium?: boolean;
-};
+type VisitStatus = 'PENDING' | 'ACCEPTED' | 'REFUSED' | 'CANCELLED';
+type TimeSlot = { time: string; available: boolean; premium?: boolean };
 
 interface VisitRequest {
   id: string;
-  status: VisitStatus;
+  visiteStatus: VisitStatus;
   visitDate: string;
   visitTime: string;
   visitType: VisitType;
   createdAt: string;
   message?: string;
+  rejectionReason?: string;
 }
+
+// Note: STATUS_CONFIG is now created inside the component to access t() function
+
+// Status Badge Component
+const VisitStatusBadge: React.FC<{ status: VisitStatus }> = ({ status }) => {
+  const { theme } = useTheme();
+  const { t } = useLanguage();
+
+  const colorMap: Record<VisitStatus, string> = {
+    PENDING: theme.warning,
+    ACCEPTED: theme.success,
+    REFUSED: theme.error,
+    CANCELLED: theme.error
+  };
+
+  const STATUS_CONFIG: Record<VisitStatus, { color: string; icon: string; label: string; description: string }> = {
+    PENDING: { color: '', icon: 'clock-outline', label: t('visit.statusPending'), description: t('visit.statusPendingDesc') },
+    ACCEPTED: { color: '', icon: 'check-circle', label: t('visit.statusAccepted'), description: t('visit.statusAcceptedDesc') },
+    REFUSED: { color: '', icon: 'close-circle', label: t('visit.statusRefused'), description: t('visit.statusRefusedDesc') },
+    CANCELLED: { color: '', icon: 'alert-circle', label: t('visit.statusCancelled'), description: t('visit.statusCancelledDesc') }
+  };
+
+  const config = STATUS_CONFIG[status];
+  const color = colorMap[status];
+
+  return (
+    <ThemedView style={{
+      backgroundColor: color + '10',
+      borderRadius: 14,
+      padding: 16,
+      borderWidth: 1.5,
+      borderColor: color + '40',
+      marginBottom: 10
+    }}>
+      <ThemedView backgroundColor="transparent" style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <ThemedView style={{
+          width: 40, height: 40, borderRadius: 20,
+          backgroundColor: color + '20',
+          alignItems: 'center', justifyContent: 'center', marginRight: 12
+        }}>
+          <MaterialCommunityIcons name={config.icon as any} size={22} color={color} />
+        </ThemedView>
+        <ThemedView backgroundColor="transparent" style={{ flex: 1 }}>
+          <ThemedText style={{ color, fontSize: 16, fontWeight: '600', marginBottom: 2 }}>
+            {t('visit.title')} {config.label.toLowerCase()}
+          </ThemedText>
+          <ThemedText style={{ fontSize: 12, color: theme.onSurface + '70' }}>
+            {config.description}
+          </ThemedText>
+        </ThemedView>
+      </ThemedView>
+    </ThemedView>
+  );
+};
 
 const VisitScreen = () => {
   const params = useLocalSearchParams();
-  const property = useMemo(() => {
-    try {
-      return params.property ? JSON.parse(params.property as string) as ItemType : null;
-    } catch (error) {
-      console.error('Error parsing property:', error);
-      return null;
-    }
-  }, [params.property]);
-
+  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const { user, isAuthenticated, initializing } = useAuth();
   const { addActivity } = useActivity();
   const bookingService = getBookingService();
 
+  // Parse property from params - instant loading with pre-loaded data
+  const property = useMemo<ItemType | null>(() => {
+    try {
+      if (!params.property) {
+        return null;
+      }
+      if (typeof params.property === 'object') {
+        return params.property as unknown as ItemType;
+      }
+      const trimmed = (params.property as string).trim();
+      if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+        return null;
+      }
+      const parsed = JSON.parse(trimmed) as ItemType;
+
+      // Ensure we have an id field - use _id if id is not present
+      const finalProperty = {
+        ...parsed,
+        id: parsed.id || (parsed as any)._id
+      };
+
+      return finalProperty;
+    } catch {
+      return null;
+    }
+  }, [params.property]);
+
+  // State
+  const [isLoadingVisit, setIsLoadingVisit] = useState(true);
   const [loading, setLoading] = useState(false);
   const [visitType, setVisitType] = useState<VisitType>('physical');
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -176,101 +129,104 @@ const VisitScreen = () => {
   const [notes, setNotes] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [currentVisitRequest, setCurrentVisitRequest] = useState<VisitRequest | null>(null);
-  const [checkingStatus, setCheckingStatus] = useState(false);
 
-  // Check authentication
-  useEffect(() => {
-    if (!initializing && !isAuthenticated) {
-      Alert.alert(
-        'Connexion requise',
-        'Vous devez être connecté pour programmer une visite.',
-        [
-          { text: 'Se connecter', onPress: () => router.push('/Auth/Login') },
-          { text: 'Annuler', onPress: () => router.back(), style: 'cancel' }
-        ]
-      );
-    }
-  }, [initializing, isAuthenticated]);
+  // Load existing visit from backend
+  const loadVisit = useCallback(async () => {
+    const propertyId = property?.id || (property as any)?._id;
+    const userId = user?.id || (user as any)?._id;
 
-  // Fonction pour vérifier le statut de la visite
-  const checkVisitStatus = async () => {
-    if (!currentVisitRequest || !user?.id || !property) return;
-
-    try {
-      setCheckingStatus(true);
-      
-    } catch (error) {
-      console.error('Error checking visit status:', error);
-    } finally {
-      setCheckingStatus(false);
-    }
-  };
-
-  // Vérifier le statut toutes les 10 secondes si une visite est en attente
-  useEffect(() => {
-    if (currentVisitRequest && currentVisitRequest.status === 'pending') {
-      const interval = setInterval(checkVisitStatus, 10000);
-      return () => clearInterval(interval);
-    }
-  }, [currentVisitRequest]);
-
-  // Safety check
-  if (!property) {
-    Alert.alert('Erreur', 'Informations de propriété manquantes', [
-      { text: 'OK', onPress: () => router.back() }
-    ]);
-    return null;
-  }
-
-  // Generate time slots based on property availability
-  const generateTimeSlots = (): TimeSlot[] => {
-    const slots: TimeSlot[] = [
-      { time: '09:00', available: true, premium: true },
-      { time: '10:00', available: true },
-      { time: '11:00', available: true },
-      { time: '12:00', available: false },
-      { time: '14:00', available: true },
-      { time: '15:00', available: true, premium: true },
-      { time: '16:00', available: true },
-      { time: '17:00', available: true },
-      { time: '18:00', available: true, premium: true },
-    ];
-    return slots;
-  };
-
-  const timeSlots = generateTimeSlots();
-
-  const scheduleVisit = async () => {
-    if (!selectedTime) {
-      Alert.alert('Attention', 'Veuillez sélectionner une heure de visite');
+    if (!propertyId || !userId) {
+      setIsLoadingVisit(false);
       return;
     }
 
-    if (!user || !user.id) {
-      Alert.alert('Erreur', 'Vous devez être connecté pour programmer une visite.');
+    setIsLoadingVisit(true);
+
+    try {
+      const existingVisit = await bookingService.getUserVisitForProperty(propertyId, userId);
+
+      if (existingVisit) {
+        // Vérifier si c'est une visite (pas une réservation)
+        if (existingVisit.isReservation === true) {
+          setCurrentVisitRequest(null);
+          setIsLoadingVisit(false);
+          return;
+        }
+
+        // Extraire le statut directement du backend
+        const rawStatus = existingVisit.visiteStatus || existingVisit.status || 'PENDING';
+        const backendStatus = rawStatus.toUpperCase() as VisitStatus;
+
+        const visitRequest: VisitRequest = {
+          id: existingVisit._id || existingVisit.id,
+          visiteStatus: backendStatus,
+          visitDate: existingVisit.visitDate,
+          visitTime: existingVisit.visitDate
+            ? new Date(existingVisit.visitDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+            : '',
+          visitType: 'physical',
+          createdAt: existingVisit.createdAt || new Date().toISOString(),
+          message: existingVisit.message,
+          rejectionReason: existingVisit.rejectionReason || existingVisit.reason || ''
+        };
+
+        setCurrentVisitRequest(visitRequest);
+      } else {
+        setCurrentVisitRequest(null);
+      }
+    } catch {
+      setCurrentVisitRequest(null);
+    } finally {
+      setIsLoadingVisit(false);
+    }
+  }, [property, user, bookingService]);
+
+  // Time slots
+  const timeSlots: TimeSlot[] = [
+    { time: '09:00', available: true, premium: true },
+    { time: '10:00', available: true },
+    { time: '11:00', available: true },
+    { time: '12:00', available: false },
+    { time: '14:00', available: true },
+    { time: '15:00', available: true, premium: true },
+    { time: '16:00', available: true },
+    { time: '17:00', available: true },
+    { time: '18:00', available: true, premium: true },
+  ];
+
+  // Schedule visit
+  const scheduleVisit = async () => {
+    if (!selectedTime) {
+      Alert.alert(t('visit.attention'), t('visit.selectTime'));
+      return;
+    }
+
+    if (!user?.id || !property?.id) {
+      Alert.alert(t('common.error'), t('visit.missingInfo'));
       return;
     }
 
     try {
       setLoading(true);
 
-      // Vérifier les conflits d'horaires
-      const conflictCheck = await bookingService.checkTimeSlotConflict(
-        property.id,
-        selectedDate.toISOString(),
-        selectedTime
-      );
-
-      if (conflictCheck.hasConflict) {
-        setLoading(false);
-        Alert.alert(
-          'Créneau déjà réservé',
-          'Ce créneau horaire est déjà pris par une autre visite. Veuillez choisir un autre horaire.',
-          [{ text: 'OK', style: 'default' }]
-        );
+      // Vérifier que l'utilisateur n'est pas le propriétaire
+      const propertyDetails = await bookingService.getPropertyDetails(property.id);
+      if (propertyDetails.ownerId === user.id) {
+        Alert.alert(t('visit.notAuthorized'), t('visit.ownPropertyMsg'));
         return;
       }
 
+      // Vérifier les conflits de créneaux
+      const conflictCheck = await bookingService.checkTimeSlotConflict(property.id, selectedDate.toISOString(), selectedTime);
+      if (conflictCheck.hasConflict) {
+        Alert.alert(t('visit.slotTaken'), t('visit.slotTakenMsg'));
+        return;
+      }
+
+      // Extract selected unit info if present (passed from info page)
+      const selectedUnit = (property as any)?._selectedUnit;
+
+      // Créer la visite
       const result = await bookingService.createVisitRequest({
         propertyId: property.id,
         clientId: user.id,
@@ -278,13 +234,15 @@ const VisitScreen = () => {
         visitTime: selectedTime,
         visitType: visitType,
         numberOfVisitors: visitors,
-        message: notes || `Demande de visite ${visitType === 'physical' ? 'physique' : visitType === 'virtual' ? 'virtuelle' : 'autonome'} pour ${property.title}`
-      });
+        message: notes,
+        unitId: selectedUnit?.roomId,
+        unitName: selectedUnit?.roomName,
+      }, property?.title, `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Client');
 
-      // Créer l'objet de demande de visite avec le statut
+      // Mettre à jour l'état local
       const visitRequest: VisitRequest = {
         id: result?.visitId || `visit_${Date.now()}`,
-        status: 'pending',
+        visiteStatus: 'PENDING',
         visitDate: selectedDate.toISOString(),
         visitTime: selectedTime,
         visitType: visitType,
@@ -294,790 +252,355 @@ const VisitScreen = () => {
 
       setCurrentVisitRequest(visitRequest);
 
+      // Ajouter l'activité
       addActivity({
         userId: user.id,
         type: 'visit',
-        title: 'Visite programmée',
-        description: `${visitType === 'physical' ? 'Visite physique' : visitType === 'virtual' ? 'Visite virtuelle' : 'Visite autonome'} programmée pour ${property?.title} le ${selectedDate.toLocaleDateString()} à ${selectedTime}`,
+        title: t('visit.visitScheduled'),
+        description: t('visit.visitScheduledDesc', { title: property?.title }),
         status: 'pending',
         propertyId: property.id,
         propertyTitle: property?.title,
-        metadata: {
-          visitDate: selectedDate.toISOString(),
-          visitTime: selectedTime,
-          visitType: visitType,
-          numberOfVisitors: visitors,
-          visitRequestId: visitRequest.id
-        }
+        metadata: { visitRequestId: visitRequest.id }
       });
 
-      setLoading(false);
-
-      Alert.alert(
-        'Demande de visite envoyée !',
-        `Votre demande de ${visitType === 'physical' ? 'visite physique' : visitType === 'virtual' ? 'visite virtuelle' : 'visite autonome'} a été envoyée au propriétaire. Elle est en attente d'acceptation.`,
-        [
-          {
-            text: 'Compris',
-            onPress: () => {
-              // La visite est maintenant affichée avec le badge "pending"
-            }
-          }
-        ]
-      );
+      Alert.alert(t('visit.requestSent'), t('visit.requestSentMsg'));
     } catch (error: any) {
       console.error('Error scheduling visit:', error);
+      Alert.alert(t('common.error'), error.message || t('common.error'));
+    } finally {
       setLoading(false);
-
-      if (error.message === 'NETWORK_ERROR_USE_MOCK' || error.message?.includes('Network Error')) {
-        // Créer une demande de visite en mode hors ligne (statut pending)
-        const offlineVisitRequest: VisitRequest = {
-          id: `visit_offline_${Date.now()}`,
-          status: 'pending',
-          visitDate: selectedDate.toISOString(),
-          visitTime: selectedTime,
-          visitType: visitType,
-          createdAt: new Date().toISOString(),
-          message: notes
-        };
-
-        setCurrentVisitRequest(offlineVisitRequest);
-
-        addActivity({
-          userId: user.id,
-          type: 'visit',
-          title: 'Visite programmée (hors ligne)',
-          description: `${visitType === 'physical' ? 'Visite physique' : visitType === 'virtual' ? 'Visite virtuelle' : 'Visite autonome'} programmée pour ${property?.title}`,
-          status: 'pending',
-          propertyId: property.id,
-          propertyTitle: property?.title,
-          metadata: {
-            visitDate: selectedDate.toISOString(),
-            visitTime: selectedTime,
-            visitType: visitType,
-            visitRequestId: offlineVisitRequest.id
-          }
-        });
-
-        Alert.alert(
-          'Mode hors ligne',
-          'Votre demande a été enregistrée localement et sera envoyée dès la connexion.',
-          [
-            {
-              text: 'Compris',
-              onPress: () => {
-                // La visite s'affiche avec le badge "pending"
-              }
-            }
-          ]
-        );
-      } else {
-        // Marquer la visite comme échouée
-        const failedVisitRequest: VisitRequest = {
-          id: `visit_failed_${Date.now()}`,
-          status: 'failed',
-          visitDate: selectedDate.toISOString(),
-          visitTime: selectedTime,
-          visitType: visitType,
-          createdAt: new Date().toISOString(),
-          message: notes
-        };
-
-        setCurrentVisitRequest(failedVisitRequest);
-
-        Alert.alert('Erreur', error.message || 'Une erreur est survenue lors de l\'envoi de votre demande.');
-      }
     }
   };
 
+  // Skip visit and go to booking
   const skipVisit = () => {
     Alert.alert(
-      'Passer la visite ?',
-      'Vous pouvez réserver directement sans visite préalable. Voulez-vous continuer ?',
+      t('visit.skipVisitTitle'),
+      t('visit.skipVisitMsg'),
       [
         {
-          text: 'Oui, réserver directement',
+          text: t('visit.yesBookDirectly'),
           onPress: () => router.push({
-            pathname: '/booking/bookingscreen',
-            params: {
-              property: JSON.stringify(property),
-              skipVisit: 'true'
-            }
+            pathname: '/booking/Bookingscreen',
+            params: { property: JSON.stringify(property), skipVisit: 'true' }
           })
         },
-        { text: 'Non, programmer une visite', style: 'cancel' }
+        { text: t('visit.noScheduleVisit'), style: 'cancel' }
       ]
     );
   };
 
-  const renderVisitTypeCard = (
-    type: VisitType,
-    icon: string,
-    title: string,
-    description: string,
-    features: string[]
-  ) => {
+  // Go to booking after visit accepted
+  const goToBooking = () => {
+    router.replace({
+      pathname: '/booking/Bookingscreen',
+      params: {
+        property: JSON.stringify(property),
+        visitScheduled: 'true',
+        visitType: currentVisitRequest?.visitType || 'physical',
+        visitId: currentVisitRequest?.id || ''
+      }
+    });
+  };
+
+  // Effects
+  useEffect(() => {
+    loadVisit();
+  }, [loadVisit]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadVisit();
+    }, [loadVisit])
+  );
+
+  useEffect(() => {
+    if (!initializing && !isAuthenticated) {
+      Alert.alert(t('auth.loginRequired'), t('auth.loginRequiredMsg'), [
+        { text: t('auth.login'), onPress: () => router.push('/Auth/Login') },
+        { text: t('common.cancel'), onPress: () => router.back(), style: 'cancel' }
+      ]);
+    }
+  }, [initializing, isAuthenticated, t]);
+
+  // Render visit type card
+  const renderVisitTypeCard = (type: VisitType, icon: string, title: string, description: string, features: string[]) => {
     const isSelected = visitType === type;
-
     return (
-      <TouchableOpacity
-        onPress={() => setVisitType(type)}
-        style={{ marginBottom: 10 }}
-      >
-        <MotiView
-          animate={{
-            scale: isSelected ? 1.01 : 1,
-            borderColor: isSelected ? theme.primary : theme.outline + '30',
-          }}
-          transition={{ type: 'timing', duration: 200 }}
-        >
-          <ThemedView
-            style={{
-              borderRadius: 14,
-              borderWidth: 1.5,
-              borderColor: isSelected ? theme.primary : theme.outline + '30',
-              overflow: 'hidden',
-            }}
-          >
-            <LinearGradient
-              colors={isSelected ? [theme.primary + '12', theme.primary + '05'] : [theme.surface, theme.surfaceVariant]}
-              style={{ padding: 12 }}
-            >
-              <ThemedView style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <ThemedView
-                  style={{
-                    backgroundColor: isSelected ? theme.primary : theme.outline + '40',
-                    borderRadius: 12,
-                    width: 44,
-                    height: 44,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: 12
-                  }}
-                >
-                  <MaterialCommunityIcons
-                    name={icon as any}
-                    size={22}
-                    color={isSelected ? 'white' : theme.onSurface + '80'}
-                  />
-                </ThemedView>
-                <ThemedView style={{ flex: 1 }}>
-                  <ThemedText type="normal" intensity="strong" style={{ color: isSelected ? theme.primary : theme.onSurface, fontSize: 14, marginBottom: 2 }}>
-                    {title}
-                  </ThemedText>
-                  <ThemedText style={{ fontSize: 11, color: theme.onSurface + '70', lineHeight: 14 }}>
-                    {description}
-                  </ThemedText>
-                </ThemedView>
-                {isSelected && (
-                  <MaterialCommunityIcons name="check-circle" size={20} color={theme.primary} />
-                )}
-              </ThemedView>
-
-              {isSelected && (
-                <MotiView
-                  from={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  transition={{ type: 'timing', duration: 250 }}
-                >
-                  <ThemedView
-                    style={{
-                      backgroundColor: theme.surface,
-                      borderRadius: 8,
-                      padding: 8,
-                      marginTop: 8
-                    }}
-                  >
-                    {features.map((feature, index) => (
-                      <ThemedView key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: index < features.length - 1 ? 6 : 0 }}>
-                        <Ionicons name="checkmark-circle" size={14} color={theme.success} />
-                        <ThemedText style={{ fontSize: 11, color: theme.onSurface + '90', marginLeft: 6 }}>
-                          {feature}
-                        </ThemedText>
-                      </ThemedView>
-                    ))}
-                  </ThemedView>
-                </MotiView>
-              )}
-            </LinearGradient>
+      <TouchableOpacity onPress={() => setVisitType(type)} style={{ marginBottom: 12 }}>
+        <ThemedView style={{ borderRadius: 14, borderWidth: 1, borderColor: theme.outline, overflow: 'hidden', padding: 10 }}>
+          <ThemedView style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: 4 }}>
+            <ThemedView style={{
+              backgroundColor: isSelected ? theme.primary : theme.outline + '40',
+              borderRadius: 10, width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: 12
+            }}>
+              <MaterialCommunityIcons name={icon as any} size={22} color={isSelected ? 'white' : theme.onSurface + '80'} />
+            </ThemedView>
+            <ThemedView style={{ flex: 1 }}>
+              <ThemedText type="normal" style={{ marginBottom: 4 }}>{title}</ThemedText>
+              <ThemedText type="caption" intensity="light" style={{ lineHeight: 14 }}>{description}</ThemedText>
+            </ThemedView>
+            {isSelected && <MaterialCommunityIcons name="check-circle" size={20} color={theme.success} />}
           </ThemedView>
-        </MotiView>
+          {isSelected && (
+            <ThemedView style={{ borderRadius: 8, paddingLeft: 4, marginTop: 2 }}>
+              {features.map((feature, index) => (
+                <ThemedView key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: index < features.length - 1 ? 6 : 0 }}>
+                  <Ionicons name="checkmark-circle" size={14} color={theme.success} />
+                  <ThemedText type="body" intensity="light" style={{ marginLeft: 8 }}>{feature}</ThemedText>
+                </ThemedView>
+              ))}
+            </ThemedView>
+          )}
+        </ThemedView>
       </TouchableOpacity>
     );
   };
 
+  // Render time slots
   const renderTimeSlots = () => (
     <ThemedView style={{ marginTop: 12 }}>
-      <ThemedView style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 8
-      }}>
-        <ThemedText type="normal" intensity="strong" style={{ color: theme.onSurface, fontSize: 14 }}>
-          Horaires disponibles
-        </ThemedText>
+      <ThemedView style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <ThemedText type="normal">{t('visit.availableSlots')}</ThemedText>
         {selectedTime && (
-          <ThemedView style={{
-            backgroundColor: theme.primary + '15',
-            paddingHorizontal: 10,
-            paddingVertical: 4,
-            borderRadius: 12
-          }}>
-            <ThemedText style={{ color: theme.primary, fontSize: 12, fontWeight: '600' }}>
-              {selectedTime}
-            </ThemedText>
+          <ThemedView style={{ backgroundColor: theme.primary + '15', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+            <ThemedText style={{ color: theme.primary, fontSize: 12, fontWeight: '600' }}>{selectedTime}</ThemedText>
           </ThemedView>
         )}
       </ThemedView>
-
-      <ThemedView style={{
-        backgroundColor: theme.surfaceVariant,
-        borderRadius: 12,
-        padding: 10
-      }}>
-        <ThemedView style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+      <ThemedView style={{ borderRadius: 12, padding: 10 }}>
+        <ThemedView style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {timeSlots.map((slot) => {
             const isSelected = selectedTime === slot.time;
-            const isAvailable = slot.available;
-
             return (
               <TouchableOpacity
                 key={slot.time}
-                onPress={() => isAvailable && setSelectedTime(slot.time)}
-                disabled={!isAvailable}
-                style={{ width: 'auto' }}
+                onPress={() => slot.available && setSelectedTime(slot.time)}
+                disabled={!slot.available}
+                style={{
+                  paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1,
+                  borderColor: isSelected ? theme.primary : theme.outline + '70',
+                  backgroundColor: isSelected ? theme.primary : slot.premium ? theme.warning + '15' : theme.surface,
+                  opacity: slot.available ? 1 : 0.4, marginBottom: 2, marginRight: 6
+                }}
               >
-                <MotiView
-                  animate={{
-                    scale: isSelected ? 1.05 : 1,
-                  }}
-                  transition={{ type: 'timing', duration: 150 }}
-                >
-                  <ThemedView
-                    style={{
-                      paddingVertical: 8,
-                      paddingHorizontal: 14,
-                      borderRadius: 8,
-                      borderWidth: 1.5,
-                      borderColor: isSelected
-                        ? theme.primary
-                        : isAvailable
-                          ? theme.outline + '40'
-                          : theme.outline + '20',
-                      backgroundColor: isSelected
-                        ? theme.primary
-                        : slot.premium
-                          ? theme.warning + '15'
-                          : theme.surface,
-                      opacity: isAvailable ? 1 : 0.4,
-                      position: 'relative'
-                    }}
-                  >
-                    {slot.premium && !isSelected && (
-                      <ThemedView style={{
-                        position: 'absolute',
-                        top: -4,
-                        right: -4,
-                        backgroundColor: theme.warning,
-                        borderRadius: 6,
-                        width: 12,
-                        height: 12,
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <MaterialCommunityIcons name="star" size={8} color="white" />
-                      </ThemedView>
-                    )}
-                    <ThemedText
-                      style={{
-                        color: isSelected ? 'white' : isAvailable ? theme.onSurface : theme.onSurface + '50',
-                        fontSize: 13,
-                        fontWeight: isSelected ? '600' : '500'
-                      }}
-                    >
-                      {slot.time}
-                    </ThemedText>
+                {slot.premium && !isSelected && (
+                  <ThemedView style={{
+                    position: 'absolute', top: -4, right: -4, backgroundColor: theme.warning,
+                    borderRadius: 6, width: 12, height: 12, alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <MaterialCommunityIcons name="star" size={8} color="white" />
                   </ThemedView>
-                </MotiView>
+                )}
+                <ThemedText type="body" style={{
+                  color: isSelected ? 'white' : slot.available ? theme.onSurface : theme.onSurface + '50',
+                  fontWeight: isSelected ? '600' : '500'
+                }}>
+                  {slot.time}
+                </ThemedText>
               </TouchableOpacity>
             );
           })}
-        </ThemedView>
-
-        {/* Légende */}
-        <ThemedView style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 12,
-          marginTop: 8,
-          paddingTop: 8,
-          borderTopWidth: 1,
-          borderTopColor: theme.outline + '20'
-        }}>
-          <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <ThemedView style={{
-              width: 8,
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: theme.warning
-            }} />
-            <ThemedText style={{ fontSize: 10, color: theme.onSurface + '70' }}>
-              Premium
-            </ThemedText>
-          </ThemedView>
-          <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <ThemedView style={{
-              width: 8,
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: theme.outline + '40',
-              opacity: 0.4
-            }} />
-            <ThemedText style={{ fontSize: 10, color: theme.onSurface + '70' }}>
-              Indisponible
-            </ThemedText>
-          </ThemedView>
         </ThemedView>
       </ThemedView>
     </ThemedView>
   );
 
+  // Loading state
+  if (isLoadingVisit) {
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <ThemedText style={{ marginTop: 16 }}>{t('visit.loading')}</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  // Error state - no property
+  if (!property) {
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <MaterialCommunityIcons name="alert-circle" size={64} color={theme.error} />
+        <ThemedText style={{ fontSize: 18, fontWeight: '600', marginTop: 16, textAlign: 'center', color: theme.error }}>
+          {t('visit.errorLoading')}
+        </ThemedText>
+        <ThemedText style={{ fontSize: 14, color: theme.onSurface + '70', marginTop: 8, textAlign: 'center' }}>
+          {t('visit.errorLoadingMsg')}
+        </ThemedText>
+        <CustomButton title={t('common.back')} onPress={() => router.back()} className="mt-6" />
+      </ThemedView>
+    );
+  }
+
+  // Visit already accepted - show success and button to continue
+  if (currentVisitRequest?.visiteStatus === 'ACCEPTED') {
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <MaterialCommunityIcons name="check-circle" size={80} color={theme.success} />
+        <ThemedText type="normaltitle" style={{ color: theme.success, marginTop: 16, textAlign: 'center' }}>
+          {t('visit.visitAccepted')}
+        </ThemedText>
+        <ThemedText type="normal" style={{ marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
+          {t('visit.visitAcceptedMsg')}
+        </ThemedText>
+        <CustomButton
+          title={t('visit.continueToBooking')}
+          onPress={goToBooking}
+          className="mt-6 w-full"
+        />
+        <CustomButton title={t('common.back')} onPress={() => router.back()} type="outline" className="mt-3 w-full" />
+      </ThemedView>
+    );
+  }
+
+  // Main render
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14 }}>
+    <ThemedView style={{ flex: 1 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingTop: 0, paddingBottom: insets.bottom + 10 }}>
         {/* Header */}
-        <MotiView
-          from={{ opacity: 0, translateY: -20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'spring', damping: 15 }}
-          style={{ marginBottom: 14 }}
-        >
-          <ThemedView style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-            <BackButton />
-            <ThemedView style={{ flex: 1, marginLeft: 8 }}>
-              <ThemedText type="title" intensity="strong" style={{ color: theme.onSurface, fontSize: 20 }}>
-                Programmer une visite
-              </ThemedText>
-              <ThemedText style={{ fontSize: 12, color: theme.onSurface + '70', marginTop: 2 }} numberOfLines={1}>
+        <ThemedView>
+          <ThemedView style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 1 }}>
+            <ThemedView style={{ flex: 1, alignItems: 'center' }}>
+              <ThemedText type="normaltitle" numberOfLines={1}>
                 {property?.title || 'Propriété sélectionnée'}
               </ThemedText>
             </ThemedView>
           </ThemedView>
-
-          {/* Property Preview Card - Compact */}
-          <MotiView
-            from={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: 'spring', damping: 15, delay: 100 }}
-          >
-            <ThemedView
-              style={{
-                borderRadius: 12,
-                overflow: 'hidden',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.08,
-                shadowRadius: 8,
-                elevation: 3
-              }}
-            >
-              <Image
-                source={{ uri: property.images?.[0] || 'https://via.placeholder.com/400x120' }}
-                style={{ width: '100%', height: 120 }}
-                resizeMode="cover"
-              />
-              <LinearGradient
-                colors={[theme.surface, theme.surfaceVariant]}
-                style={{ padding: 10 }}
-              >
-                <ThemedView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <ThemedView>
-                    <ThemedText type="normal" intensity="strong" style={{ color: theme.primary, fontSize: 16 }}>
-                      {property.price?.toLocaleString()} €
-                    </ThemedText>
-                    <ThemedText style={{ fontSize: 10, color: theme.onSurface + '70', marginTop: 1 }}>
-                      {property.listType === 'sale' ? 'Prix de vente' : 'Par mois'}
-                    </ThemedText>
-                  </ThemedView>
-                  <ThemedView style={{ flexDirection: 'row', gap: 10 }}>
-                    <ThemedView style={{ alignItems: 'center' }}>
-                      <MaterialCommunityIcons name="bed" size={16} color={theme.onSurface} />
-                      <ThemedText style={{ fontSize: 10, color: theme.onSurface + '70', marginTop: 1 }}>
-                        {property.bedrooms || 0}
-                      </ThemedText>
-                    </ThemedView>
-                    <ThemedView style={{ alignItems: 'center' }}>
-                      <MaterialCommunityIcons name="shower" size={16} color={theme.onSurface} />
-                      <ThemedText style={{ fontSize: 10, color: theme.onSurface + '70', marginTop: 1 }}>
-                        {property.bathrooms || 0}
-                      </ThemedText>
-                    </ThemedView>
-                    <ThemedView style={{ alignItems: 'center' }}>
-                      <MaterialCommunityIcons name="ruler-square" size={16} color={theme.onSurface} />
-                      <ThemedText style={{ fontSize: 10, color: theme.onSurface + '70', marginTop: 1 }}>
-                        {property.surface || 0}m²
-                      </ThemedText>
-                    </ThemedView>
-                  </ThemedView>
-                </ThemedView>
-              </LinearGradient>
-            </ThemedView>
-          </MotiView>
-        </MotiView>
+        </ThemedView>
 
         {/* Visit Status Badge */}
-        {currentVisitRequest && (
-          <MotiView
-            from={{ opacity: 0, translateY: -10 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'spring', damping: 15, delay: 150 }}
-            style={{ marginTop: 14 }}
-          >
-            <VisitStatusBadge status={currentVisitRequest.status} />
-          </MotiView>
-        )}
+        {currentVisitRequest && <VisitStatusBadge status={currentVisitRequest.visiteStatus} />}
 
         {/* Visit Types */}
-        <MotiView
-          from={{ opacity: 0, translateX: -20 }}
-          animate={{ opacity: 1, translateX: 0 }}
-          transition={{ type: 'spring', damping: 15, delay: 200 }}
-        >
-          <ThemedText type="normal" intensity="strong" style={{ color: theme.onSurface, fontSize: 14, marginBottom: 10, marginTop: 4 }}>
-            Type de visite
-          </ThemedText>
-
-          {renderVisitTypeCard(
-            'physical',
-            'home-city',
-            'Visite physique',
-            'Rencontrez l\'agent sur place',
-            [
-              'Accompagnement personnalisé',
-              'Découverte complète du bien',
-              'Réponses à toutes vos questions',
-              'Visite du quartier incluse'
-            ]
-          )}
-
-          {renderVisitTypeCard(
-            'virtual',
-            'video',
-            'Visite virtuelle',
-            'Visite guidée en vidéo en direct',
-            [
-              'Visite en direct par vidéo',
-              'Interaction avec l\'agent',
-              'Depuis chez vous',
-              'Enregistrement disponible'
-            ]
-          )}
-
-          {renderVisitTypeCard(
-            'self-guided',
-            'key',
-            'Visite autonome',
-            'Accès sécurisé sans rendez-vous',
-            [
-              'Accès par code sécurisé',
-              'À votre rythme',
-              'Disponible 24/7',
-              'Support à distance disponible'
-            ]
-          )}
-        </MotiView>
+        <ThemedView>
+          <ThemedText type="normal" style={{ marginBottom: 10, marginTop: 4 }}>{t('visit.visitType')}</ThemedText>
+          {renderVisitTypeCard('physical', 'home-city', t('visit.physicalVisit'), t('visit.physicalVisitDesc'), [t('visit.physicalFeature1'), t('visit.physicalFeature2')])}
+          {renderVisitTypeCard('virtual', 'video', t('visit.virtualVisit'), t('visit.virtualVisitDesc'), [t('visit.virtualFeature1'), t('visit.virtualFeature2')])}
+          {renderVisitTypeCard('self-guided', 'key', t('visit.selfGuidedVisit'), t('visit.selfGuidedVisitDesc'), [t('visit.selfGuidedFeature1'), t('visit.selfGuidedFeature2')])}
+        </ThemedView>
 
         {/* Date Selection */}
-        <MotiView
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'spring', damping: 15, delay: 300 }}
-          style={{ marginTop: 16 }}
-        >
-          <ThemedText type="normal" intensity="strong" style={{ color: theme.onSurface, fontSize: 14, marginBottom: 8 }}>
-            Date et heure
-          </ThemedText>
+        <ThemedView style={{ marginTop: 2 }}>
+          <ThemedText type="normal" style={{ marginBottom: 6 }}>{t('visit.dateAndTime')}</ThemedText>
           <TouchableOpacity
             onPress={() => setShowDatePicker(!showDatePicker)}
             style={{
-              backgroundColor: theme.surface,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: theme.outline + '30',
-              padding: 12,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between'
+              backgroundColor: theme.surface, borderRadius: 10, borderWidth: 1, borderColor: theme.outline + '30',
+              padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'
             }}
           >
             <ThemedView style={{ flexDirection: 'row', alignItems: 'center' }}>
               <MaterialCommunityIcons name="calendar" size={20} color={theme.primary} />
-              <ThemedText style={{ marginLeft: 10, color: theme.onSurface, fontSize: 13 }}>
-                {selectedDate.toLocaleDateString('fr-FR', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric'
-                })}
+              <ThemedText type="normal" style={{ marginLeft: 10 }}>
+                {selectedDate.toLocaleDateString('fr-FR', { weekday: 'short', month: 'short', day: 'numeric' })}
               </ThemedText>
             </ThemedView>
-            <MaterialCommunityIcons
-              name={showDatePicker ? "chevron-up" : "chevron-down"}
-              size={20}
-              color={theme.onSurface}
-            />
+            <MaterialCommunityIcons name={showDatePicker ? "chevron-up" : "chevron-down"} size={20} color={theme.onSurface} />
           </TouchableOpacity>
 
           {showDatePicker && (
-            <MotiView
-              from={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              transition={{ type: 'timing', duration: 200 }}
-              style={{ marginTop: 8 }}
-            >
-              <ThemedView
-                style={{
-                  backgroundColor: theme.surfaceVariant,
-                  borderRadius: 10,
-                  padding: 10,
-                  borderWidth: 1,
-                  borderColor: theme.outline + '20'
-                }}
-              >
-                <DatePicker
-                  date={selectedDate}
-                  onDateChange={(date) => {
-                    setSelectedDate(date);
-                    setShowDatePicker(false);
-                  }}
-                  minimumDate={new Date()}
-                />
-              </ThemedView>
-            </MotiView>
+            <ThemedView style={{ marginTop: 8 }}>
+              <DatePicker date={selectedDate} onDateChange={(date) => { setSelectedDate(date); setShowDatePicker(false); }} minimumDate={new Date()} />
+            </ThemedView>
           )}
-        </MotiView>
+        </ThemedView>
 
         {/* Time Slots */}
-        <MotiView
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'spring', damping: 15, delay: 400 }}
-        >
-          {renderTimeSlots()}
-        </MotiView>
+        <ThemedView>{renderTimeSlots()}</ThemedView>
 
         {/* Number of Visitors */}
         {visitType === 'physical' && (
-          <MotiView
-            from={{ opacity: 0, translateY: 20 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'spring', damping: 15, delay: 500 }}
-            style={{ marginTop: 14 }}
-          >
-            <ThemedText type="normal" intensity="strong" style={{ color: theme.onSurface, fontSize: 14, marginBottom: 8 }}>
-              Nombre de visiteurs
-            </ThemedText>
+          <ThemedView style={{ marginTop: 8 }}>
+            <ThemedText type="normal" style={{ marginBottom: 8 }}>{t('visit.numberOfVisitors')}</ThemedText>
             <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <TouchableOpacity
-                onPress={() => setVisitors(Math.max(1, visitors - 1))}
-                style={{
-                  backgroundColor: theme.surface,
-                  borderRadius: 10,
-                  width: 42,
-                  height: 42,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 1,
-                  borderColor: theme.outline + '30'
-                }}
-              >
+              <TouchableOpacity onPress={() => setVisitors(Math.max(1, visitors - 1))} style={{
+                backgroundColor: theme.surface, borderRadius: 10, width: 42, height: 42,
+                alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.outline + '30'
+              }}>
                 <MaterialCommunityIcons name="minus" size={20} color={theme.onSurface} />
               </TouchableOpacity>
-              <ThemedView
-                style={{
-                  flex: 1,
-                  backgroundColor: theme.surfaceVariant,
-                  borderRadius: 10,
-                  padding: 10,
-                  alignItems: 'center',
-                  borderWidth: 1,
-                  borderColor: theme.primary + '40'
-                }}
-              >
-                <ThemedText type="normal" intensity="strong" style={{ color: theme.primary, fontSize: 15 }}>
-                  {visitors} {visitors > 1 ? 'personnes' : 'personne'}
+              <ThemedView style={{
+                flex: 1, backgroundColor: theme.surfaceVariant, borderRadius: 10, padding: 10,
+                alignItems: 'center', borderWidth: 1, borderColor: theme.outline + '30'
+              }}>
+                <ThemedText type="normal">
+                  {visitors} {visitors > 1 ? t('visit.people') : t('visit.person')}
                 </ThemedText>
               </ThemedView>
-              <TouchableOpacity
-                onPress={() => setVisitors(Math.min(6, visitors + 1))}
-                style={{
-                  backgroundColor: theme.primary,
-                  borderRadius: 10,
-                  width: 42,
-                  height: 42,
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
+              <TouchableOpacity onPress={() => setVisitors(Math.min(6, visitors + 1))} style={{
+                backgroundColor: theme.primary, borderRadius: 10, width: 42, height: 42, alignItems: 'center', justifyContent: 'center'
+              }}>
                 <MaterialCommunityIcons name="plus" size={20} color="white" />
               </TouchableOpacity>
             </ThemedView>
-          </MotiView>
+          </ThemedView>
         )}
 
         {/* Action Buttons */}
-        <MotiView
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'spring', damping: 15, delay: 600 }}
-          style={{ marginTop: 20, gap: 10, marginBottom: 20 }}
-        >
-          {/* Afficher des boutons différents selon le statut de la visite */}
+        <ThemedView style={{ marginTop: 14, gap: 10, marginBottom: 14 }}>
           {!currentVisitRequest ? (
+            // No visit request - show create buttons
             <>
-              {/* Pas encore de visite programmée */}
-              <CustomButton
-                title="Envoyer la demande de visite"
-                onPress={scheduleVisit}
-                loading={loading}
-                type="primary"
-              />
-
-              <CustomButton
-                title="Passer la visite"
-                onPress={skipVisit}
-                type="outline"
-              />
+              <CustomButton title={t('visit.sendRequest')} onPress={scheduleVisit} loading={loading} type="secondary" />
+              <CustomButton title={t('visit.skipToBooking')} onPress={skipVisit} type="success" />
             </>
-          ) : currentVisitRequest.status === 'pending' ? (
+          ) : currentVisitRequest.visiteStatus === 'PENDING' ? (
+            // Pending visit
             <>
-              {/* Visite en attente d'approbation */}
               <ThemedView style={{
-                backgroundColor: theme.warning + '10',
-                borderRadius: 12,
-                padding: 16,
-                borderWidth: 1,
-                borderColor: theme.warning + '30',
-                marginBottom: 10
+                backgroundColor: theme.warning + '10', borderRadius: 12, padding: 16,
+                borderWidth: 1, borderColor: theme.warning + '30', marginBottom: 10
               }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                  <MaterialCommunityIcons
-                    name="clock-outline"
-                    size={20}
-                    color={theme.warning}
-                  />
-                  <ThemedText type="normal" intensity="strong" style={{
-                    color: theme.warning,
-                    fontSize: 14,
-                    marginLeft: 8
-                  }}>
-                    En attente d'approbation
-                  </ThemedText>
-                </View>
-                <ThemedText style={{
-                  fontSize: 13,
-                  color: theme.onSurface + '80',
-                  lineHeight: 18
-                }}>
-                  Votre demande a été envoyée au propriétaire. Vous recevrez une notification dès qu'il aura répondu.
+                <ThemedView backgroundColor="transparent" style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <MaterialCommunityIcons name="clock-outline" size={20} color={theme.warning} />
+                  <ThemedText style={{ color: theme.warning, fontSize: 14, marginLeft: 8, fontWeight: '600' }}>{t('visit.pendingApproval')}</ThemedText>
+                </ThemedView>
+                <ThemedText style={{ fontSize: 13, color: theme.onSurface + '80', lineHeight: 18 }}>
+                  {t('visit.pendingApprovalMsg')}
                 </ThemedText>
               </ThemedView>
-
-              <CustomButton
-                title="Annuler et choisir un autre créneau"
-                onPress={() => setCurrentVisitRequest(null)}
-                type="outline"
-              />
+              <CustomButton title={t('visit.refreshStatus')} onPress={loadVisit} type="outline" />
             </>
-          ) : currentVisitRequest.status === 'accepted' ? (
+          ) : currentVisitRequest.visiteStatus === 'REFUSED' ? (
+            // Refused visit
             <>
-              {/* Visite acceptée - Peut passer à la réservation */}
-              <CustomButton
-                title="Passer à la réservation"
-                onPress={() => router.push({
-                  pathname: '/booking/bookingscreen',
-                  params: {
-                    property: JSON.stringify(property),
-                    visitScheduled: 'true',
-                    visitType: currentVisitRequest.visitType,
-                    visitId: currentVisitRequest.id
-                  }
-                })}
-                type="primary"
-              />
-
-              <CustomButton
-                title="Retour"
-                onPress={() => router.back()}
-                type="outline"
-              />
-            </>
-          ) : currentVisitRequest.status === 'rejected' ? (
-            <>
-              {/* Visite refusée - Peut réessayer */}
               <ThemedView style={{
-                backgroundColor: theme.error + '10',
-                borderRadius: 12,
-                padding: 16,
-                borderWidth: 1,
-                borderColor: theme.error + '30',
-                marginBottom: 10
+                backgroundColor: theme.error + '10', borderRadius: 12, padding: 16,
+                borderWidth: 1, borderColor: theme.error + '30', marginBottom: 10
               }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                  <MaterialCommunityIcons
-                    name="close-circle"
-                    size={20}
-                    color={theme.error}
-                  />
-                  <ThemedText type="normal" intensity="strong" style={{
-                    color: theme.error,
-                    fontSize: 14,
-                    marginLeft: 8
-                  }}>
-                    Demande refusée
-                  </ThemedText>
-                </View>
-                <ThemedText style={{
-                  fontSize: 13,
-                  color: theme.onSurface + '80',
-                  lineHeight: 18
-                }}>
-                  Le propriétaire a refusé ce créneau. Essayez un autre horaire ou contactez-le directement.
+                <ThemedView backgroundColor="transparent" style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <MaterialCommunityIcons name="close-circle" size={20} color={theme.error} />
+                  <ThemedText style={{ color: theme.error, fontSize: 14, marginLeft: 8, fontWeight: '600' }}>{t('visit.requestRefused')}</ThemedText>
+                </ThemedView>
+                <ThemedText style={{ fontSize: 13, color: theme.onSurface + '80', lineHeight: 18 }}>
+                  {t('visit.requestRefusedMsg')}
                 </ThemedText>
+                {currentVisitRequest.rejectionReason && (
+                  <ThemedView style={{
+                    backgroundColor: theme.surface, borderRadius: 8, padding: 12, marginTop: 12,
+                    borderLeftWidth: 3, borderLeftColor: theme.error
+                  }}>
+                    <ThemedText style={{ fontSize: 12, color: theme.onSurface + '60', fontWeight: '600', marginBottom: 4 }}>{t('visit.refusalReason')}</ThemedText>
+                    <ThemedText style={{ fontSize: 13, color: theme.onSurface + '90', lineHeight: 18, fontStyle: 'italic' }}>
+                      "{currentVisitRequest.rejectionReason}"
+                    </ThemedText>
+                  </ThemedView>
+                )}
               </ThemedView>
-
-              <CustomButton
-                title="Choisir un autre créneau"
-                onPress={() => setCurrentVisitRequest(null)}
-                type="primary"
-              />
-
-              <CustomButton
-                title="Passer la visite et réserver"
-                onPress={skipVisit}
-                type="outline"
-              />
+              <CustomButton title={t('visit.chooseAnotherSlot')} onPress={() => setCurrentVisitRequest(null)} type="primary" />
+              <CustomButton title={t('visit.skipAndBook')} onPress={skipVisit} type="outline" />
             </>
           ) : (
+            // Other status (CANCELLED etc)
             <>
-              {/* Visite échouée - Peut réessayer */}
-              <CustomButton
-                title="Réessayer l'envoi"
-                onPress={scheduleVisit}
-                loading={loading}
-                type="primary"
-              />
-
-              <CustomButton
-                title="Passer la visite"
-                onPress={skipVisit}
-                type="outline"
-              />
+              <CustomButton title={t('visit.newRequest')} onPress={() => setCurrentVisitRequest(null)} type="primary" />
+              <CustomButton title={t('visit.skipToBooking')} onPress={skipVisit} type="outline" />
             </>
           )}
-        </MotiView>
+        </ThemedView>
       </ScrollView>
-    </SafeAreaView>
+    </ThemedView>
   );
 };
 

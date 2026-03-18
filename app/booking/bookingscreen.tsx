@@ -1,909 +1,1100 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Alert, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import React, { useState, useRef, useEffect } from 'react';
+import { ScrollView, Alert, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLocalSearchParams, router } from 'expo-router';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { CustomButton, CustomInput, DatePicker, PropertyCard } from '../../components/ui';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import { CustomButton, CustomInput, DatePicker } from '../../components/ui';
 import { Property } from '@/types/property';
-import { router } from 'expo-router';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNotifications } from '@/components/contexts/notifications/NotificationContext';
-import { LinearGradient } from 'expo-linear-gradient';
-import { MotiView } from 'moti';
-import { BackButton } from '@/components/ui/BackButton';
-import { useTheme } from '@/components/contexts/theme/themehook';
-import { ThemeColors } from '@/components/contexts/theme/themeTypes';
+import { useTheme } from '@/hooks/themehook';
 import { useBooking } from '@/components/contexts/booking/BookingContext';
 import { useActivity } from '@/components/contexts/activity/ActivityContext';
+import { DocumentUploadSection } from '@/components/booking/DocumentUploadSection';
+import { getPropertyConfig, isVisitRequired, PropertyType, ActionType, normalizePropertyType, normalizeActionType } from '@/constants/propertyTypeConfigs';
+import useBookingStatus from '@/hooks/useBookingStatus';
+import { getBookingService } from '@/services/api/bookingService';
+import { useAuthUser } from '@/components/contexts/authContext/AuthContext';
+import { useLanguage } from '@/components/contexts/language';
 
-
-type RootStackParamList = {
-
-  Reservation: { property: Property };
-  DocumentUpload: { reservationId: string; property: Property };
-};
-
-type ReservationScreenRouteProp = RouteProp<RootStackParamList, 'Reservation'>;
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Reservation'>;
-
-// Données d'essai pour remplacer les données du backend
-const MOCK_USER = {
-  uid: 'user123',
-  fullName: 'Jean Dupont'
-};
-
+// Types
 type BookingMode = 'direct' | 'visit';
-type VisitStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'active';
+type reserStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
 
 interface Visit {
   id: string;
   date: Date;
   time: string;
-  status: VisitStatus;
+  status: reserStatus;
   notes?: string;
-}  
+}
+
+interface OwnerStats {
+  acceptanceRate: number;
+  averageResponseTime: number;
+  completedReservations: number;
+  rating: number;
+}
+
+// Status Badge Component
+const BookingStatusBadge: React.FC<{ status: string; bookingData: any; theme: any; onPayment: () => void }> = ({ 
+  status, bookingData, theme, onPayment
+}) => {
+  const { t } = useLanguage();
+  const STATUS_CONFIG:any = {
+    pending: { color: theme.warning, icon: 'clock-outline', title: t('bookingScreen.statusPending'), message: t('bookingScreen.statusPendingMsg') },
+    accepted: { color: theme.success, icon: 'check-circle', title: t('bookingScreen.statusAccepted'), message: t('bookingScreen.statusAcceptedMsg') },
+    rejected: { color: theme.error, icon: 'close-circle', title: t('bookingScreen.statusRejected'), message: bookingData.rejectionReason || t('bookingScreen.statusRejectedDefault') },
+    completed: { color: theme.success, icon: 'check-all', title: t('bookingScreen.statusCompleted'), message: t('bookingScreen.statusCompletedMsg') }
+  }
+
+  const  statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG['pending'];
+
+  return (
+    <ThemedView style={{ marginBottom: 20 }}>
+      <ThemedView style={{
+        backgroundColor: statusConfig.color + '15',
+        borderRadius: 16,
+        padding: 16,
+        borderLeftWidth: 4,
+        borderLeftColor: statusConfig.color
+      }}>
+        <ThemedView style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent' }}>
+          <MaterialCommunityIcons name={statusConfig.icon as any} size={28} color={statusConfig.color} />
+          <ThemedView style={{ marginLeft: 12, flex: 1, backgroundColor: 'transparent' }}>
+            <ThemedText style={{ fontSize: 16, fontWeight: '600', color: statusConfig.color }}>
+              {statusConfig.title}
+            </ThemedText>
+            <ThemedText style={{ fontSize: 13, color: theme.onSurface + '80', marginTop: 2 }}>
+              {statusConfig.message}
+            </ThemedText>
+          </ThemedView>
+        </ThemedView>
+        {status === 'accepted' && (
+          <CustomButton
+            title={t('bookingScreen.proceedPayment')}
+            onPress={onPayment}
+            style={{ marginTop: 12 }}
+          />
+        )}
+      </ThemedView>
+    </ThemedView>
+  );
+};
+
+// Timeline Component
+const Timeline: React.FC<{ currentStep: number; requiresDocuments: boolean; theme: any }> = ({ 
+  currentStep, requiresDocuments, theme
+}) => {
+  const { t } = useLanguage();
+  const steps = requiresDocuments
+    ? [
+        { number: 1, title: t('bookingScreen.stepInfo'), icon: 'clipboard-text' },
+        { number: 2, title: t('bookingScreen.stepDocuments'), icon: 'file-document' },
+        { number: 3, title: t('bookingScreen.stepConfirmation'), icon: 'check-circle' }
+      ]
+    : [
+        { number: 1, title: t('bookingScreen.stepInfo'), icon: 'clipboard-text' },
+        { number: 2, title: t('bookingScreen.stepConfirmation'), icon: 'check-circle' }
+      ];
+
+  return (
+    <ThemedView style={{ marginBottom: 24 }}>
+      <ThemedView style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingHorizontal: 20 }}>
+        {steps.map((step, index) => (
+          <React.Fragment key={step.number}>
+            <ThemedView style={{ alignItems: 'center', flex: 1 }}>
+              <ThemedView style={{
+                width: 50, height: 50, borderRadius: 25,
+                backgroundColor: currentStep >= step.number ? theme.primary : theme.surfaceVariant,
+                alignItems: 'center', justifyContent: 'center', marginBottom: 8,
+                borderWidth: 2, borderColor: currentStep === step.number ? theme.primary : 'transparent'
+              }}>
+                <MaterialCommunityIcons
+                  name={step.icon as any}
+                  size={24}
+                  color={currentStep >= step.number ? 'white' : theme.onSurface + '60'}
+                />
+              </ThemedView>
+              <ThemedText style={{
+                fontSize: 12,
+                color: currentStep >= step.number ? theme.primary : theme.onSurface + '60',
+                fontWeight: currentStep === step.number ? '600' : '400',
+                textAlign: 'center'
+              }}>
+                {step.title}
+              </ThemedText>
+            </ThemedView>
+            {index < steps.length - 1 && (
+              <ThemedView style={{
+                flex: 0.3, height: 2,
+                backgroundColor: currentStep > step.number ? theme.primary : theme.outline + '30',
+                marginBottom: 30
+              }} />
+            )}
+          </React.Fragment>
+        ))}
+      </ThemedView>
+    </ThemedView>
+  );
+};
 
 const ReservationScreen = () => {
-  const route = useRoute<ReservationScreenRouteProp>();
-  const navigation = useNavigation<NavigationProp>();
-  const { property } = route.params;
+  const params = useLocalSearchParams();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const { addNotification } = useNotifications();
-  const { addReservation } = useBooking();
+  const { addReservation, getUserReservations } = useBooking();
   const { addActivity } = useActivity();
+  const bookingService = getBookingService();
+  const user = useAuthUser();
+  const  insets = useSafeAreaInsets()
+
+  const hasHandledNavigation = useRef(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [property, setProperty] = useState<Property | null>(null);
+  const [parseError, setParseError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [bookingMode, setBookingMode] = useState<BookingMode>('direct');
   const [visit, setVisit] = useState<Visit | null>(null);
-  const [visitDate, setVisitDate] = useState(new Date());
-  const [visitTime, setVisitTime] = useState('10:00');
   const [showBookingForm, setShowBookingForm] = useState(false);
-  
-  // Detect if property is for sale or rent
-  const isForSale = property?.type === 'sale' || property?.listingType === 'sale' || property?.price > 50000;
-  const actionType = isForSale ? 'interest' : 'booking';
-
-  const validationSchema = Yup.object().shape(isForSale ? {
-    // Sale validation schema
-    budget: Yup.number()
-      .min(property?.price * 0.8 || 0, 'Budget insuffisant pour cette propriété')
-      .required('Budget requis'),
-    financingType: Yup.string().required('Type de financement requis'),
-    timeframe: Yup.string().required('Délai d\'achat requis'),
-    currentSituation: Yup.string().required('Situation actuelle requise')
-  } : {
-    // Rent validation schema
-    startDate: Yup.date().required('Date de début requise'),
-    endDate: Yup.date().min(
-      Yup.ref('startDate'),
-      'La date de fin doit être après la date de début'
-    ).required('Date de fin requise'),
-    numberOfOccupants: Yup.number()
-      .min(1, 'Au moins 1 occupant requis')
-      .max(property?.maxOccupants || 10, `Maximum ${property?.maxOccupants || 10} occupants`)
-      .required('Nombre d\'occupants requis'),
-    hasGuarantor: Yup.boolean(),
-    monthlyIncome: Yup.number()
-      .min((property?.monthlyRent || 0) * 2, 'Le revenu doit être au moins le double du loyer')
-      .required('Revenu mensuel requis'),
+  const [uploadedDocumentIds, setUploadedDocumentIds] = useState<string[]>([]);
+  const [clientMessage, setClientMessage] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [paymentDelayMode, setPaymentDelayMode] = useState<'days' | 'date'>('days');
+  const [proposedPaymentDays, setProposedPaymentDays] = useState<string>('');
+  const [proposedPaymentDate, setProposedPaymentDate] = useState<Date | null>(null);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [visitStatus, setVisitStatus] = useState<'loading' | 'not_required' | 'pending' | 'accepted' | 'refused' | 'none'>('loading');
+  const [ownerStats] = useState<OwnerStats>({
+    acceptanceRate: 85,
+    averageResponseTime: 4,
+    completedReservations: 23,
+    rating: 4.8
   });
 
-  const scheduleVisit = () => {
-    setLoading(true);
-    setTimeout(() => {
-      const newVisit: Visit = {
-        id: 'visit-' + Date.now(),
-        date: visitDate,
-        time: visitTime,
-        status: 'pending',
-        notes: 'Visite programmée'
-      };
-      setVisit(newVisit);
-      
-      // Log visit scheduling activity
-      addActivity({
-        userId: MOCK_USER.uid,
-        type: 'visit',
-        title: 'Visite programmée',
-        description: `Demande de visite pour ${property?.title || 'cette propriété'} le ${visitDate.toLocaleDateString()} à ${visitTime}`,
-        status: 'pending',
-        propertyId: property?.id,
-        propertyTitle: property?.title,
-        metadata: {
-          visitDate: visitDate.toISOString(),
-          visitTime: visitTime
-        }
-      });
-      
-      // Send automatic message to owner
-      sendVisitRequestMessage(newVisit);
-      
-      // Send notification to owner
-      sendNotificationToOwner(newVisit);
-      
-      // Update profiles
-      updateProfileStatus('client', 'Visit Scheduled');
-      updateProfileStatus('owner', 'Visit Scheduled');
-      
-      setLoading(false);
-      Alert.alert('Succès', 'Votre demande de visite a été envoyée au propriétaire. Vous recevrez une confirmation sous 24h.');
-    }, 1000);
-  };
-
-  const sendVisitRequestMessage = (visit: Visit) => {
-    if (!property) {
-      console.error('Property data not available');
-      return;
-    }
-    
-    // Add message to chat list for owner
-    const visitMessage = {
-      id: 'visit-msg-' + Date.now(),
-      sender: {
-        name: MOCK_USER.fullName,
-        avatar: 'https://ui-avatars.com/api/?name=' + MOCK_USER.fullName.replace(' ', '+'),
-      },
-      content: `Demande de visite pour ${property.title || 'cette propriété'} le ${visit.date.toLocaleDateString()} à ${visit.time}`,
-      timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-      count: 1,
-      isArchived: false,
-      status: 'online',
-      isBot: false,
-      isSentByCurrentUser: false,
-      statusIcon: 'sent',
-      messageType: 'visit_request',
-      visitData: visit,
-      propertyData: {
-        title: property.title || 'Propriété',
-        address: property.address || '',
-        ownerId: property.ownerId || property.owner?.id || 'unknown'
-      }
-    };
-    console.log('Message sent to owner ID:', property.ownerId || property.owner?.id);
-    console.log('Visit message:', visitMessage);
-  };
-
-  const sendNotificationToOwner = (visit: Visit) => {
-    if (!property) {
-      console.error('Property data not available for notification');
-      return;
-    }
-    
-    addNotification({
-      type: 'visit_request',
-      title: 'Nouvelle demande de visite',
-      message: `${MOCK_USER.fullName} souhaite visiter ${property.title || 'votre propriété'}`,
-      data: { visit, property }
-    });
-    
-    console.log('Notification sent to owner ID:', property.ownerId || property.owner?.id);
-  };
-
-  const updateProfileStatus = (userType: 'client' | 'owner', status: string) => {
-    console.log(`Profile status updated for ${userType}: ${status}`);
-  };
-
-  // Check if visit time has passed
-  const checkVisitTime = () => {
-    if (visit && visit.status === 'confirmed') {
-      const visitDateTime = new Date(visit.date);
-      const [hours, minutes] = visit.time.split(':');
-      visitDateTime.setHours(parseInt(hours), parseInt(minutes));
-      
-      const now = new Date();
-      if (now > visitDateTime) {
-        setVisit({ ...visit, status: 'completed' });
-        setShowBookingForm(true);
-        updateProfileStatus('client', 'Visit Active');
-        Alert.alert('Visite active', 'Votre visite est maintenant active. Vous pouvez procéder à la réservation.');
-      }
-    }
-  };
-
-  // Check visit time every minute
-  React.useEffect(() => {
-    const interval = setInterval(checkVisitTime, 60000);
-    return () => clearInterval(interval);
-  }, [visit]);
-
-  const confirmVisit = () => {
-    if (visit) {
-      setVisit({ ...visit, status: 'confirmed' });
-      
-      // Log visit confirmation
-      addActivity({
-        userId: MOCK_USER.uid,
-        type: 'visit',
-        title: 'Visite confirmée',
-        description: `Visite confirmée par le propriétaire pour ${property?.title}`,
-        status: 'completed',
-        propertyId: property?.id,
-        propertyTitle: property?.title,
-        metadata: {
-          visitDate: visit.date.toISOString(),
-          visitTime: visit.time
-        }
-      });
-      
-      updateProfileStatus('client', 'Visit Accepted');
-      updateProfileStatus('owner', 'Visit Accepted');
-      Alert.alert('Visite confirmée', 'Votre visite a été confirmée par le propriétaire.');
-    }
-  };
-
-  const completeVisit = () => {
-    if (visit) {
-      setVisit({ ...visit, status: 'completed' });
-      
-      // Log visit completion
-      addActivity({
-        userId: MOCK_USER.uid,
-        type: 'visit',
-        title: 'Visite terminée',
-        description: `Visite terminée avec succès pour ${property?.title}`,
-        status: 'completed',
-        propertyId: property?.id,
-        propertyTitle: property?.title,
-        metadata: {
-          visitDate: visit.date.toISOString(),
-          visitTime: visit.time
-        }
-      });
-      
-      setShowBookingForm(true);
-      Alert.alert('Visite terminée', 'Vous pouvez maintenant procéder à la réservation.');
-    }
-  };
-
+  // Hooks
+  const { bookingData, status: bookingStatus, updateStatus, isPending } = useBookingStatus('idle');
+  
+  // Form handling
   const formik = useFormik({
-    initialValues: isForSale ? {
-      // Sale form values
-      budget: 0,
-      financingType: '',
-      timeframe: '',
-      currentSituation: '',
-      preApproved: false,
-      cashBuyer: false
-    } : {
-      // Rent form values
+    initialValues: {
       startDate: new Date(),
       endDate: new Date(new Date().setMonth(new Date().getMonth() + 12)),
       numberOfOccupants: 1,
       hasGuarantor: false,
       monthlyIncome: 0,
+      budget: 0,
+      financingType: '',
+      intendedUse: '',
+      specialRequirements: '',
+      roomType: '',
+      // New fields for land/property purchases
+      profession: '',
+      country: '',
+      address: '',
+      constructionPlan: ''
     },
-    validationSchema,
-    
-    onSubmit: (values) => {
-      try {
-        setLoading(true);
-        
-        // Simuler l'envoi des données au backend
-        setTimeout(() => {
-          console.log('Données de réservation:', {
-            propertyId: property?.id || 'unknown',
-            propertyTitle: property?.title || 'Propriété',
-            tenantId: MOCK_USER.uid,
-            tenantName: MOCK_USER.fullName,
-            landlordId: property?.ownerId || property?.owner?.id || 'unknown',
-            startDate: values.startDate,
-            endDate: values.endDate,
-            numberOfOccupants: values.numberOfOccupants,
-            hasGuarantor: values.hasGuarantor,
-            monthlyIncome: values.monthlyIncome,
-            monthlyRent: property?.monthlyRent || 0,
-            status: 'pending',
-            createdAt: new Date(),
-            documentsSubmitted: false,
-          });
-          
-          // Redirection vers l'écran de téléchargement de documents
-          navigation.navigate('DocumentUpload', { 
-            reservationId: 'mock-reservation-id-123',
-            property
-          });
-          
-          setLoading(false);
-        }, 1500); // Simuler un délai réseau de 1,5 seconde
-        
-      } catch (error) {
-        console.error('Erreur de simulation:', error);
-        Alert.alert('Erreur', 'Une erreur est survenue lors de la soumission de votre réservation.');
-        setLoading(false);
-      }
+    validationSchema: Yup.object().shape({}),
+    onSubmit: async (values) => {
     },
   });
+  
+useEffect(() => {
+  const parseProperty = () => {
+    try {
+      if (!params.property || Array.isArray(params.property)) {
+        setParseError(true);
+        return;
+      }
+
+      const parsed: Property = JSON.parse(params.property);
+
+      if (!parsed.id) {
+        setParseError(true);
+        return;
+      }
+
+      setProperty(parsed);
+      setParseError(false);
+    } catch {
+      setParseError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  parseProperty();
+}, [params.property]);
+
+
+  // Vérifier si une visite est requise et son statut
+  useEffect(() => {
+    const checkVisitRequirement = async () => {
+      if (!property?.id || !user?.id) return;
+
+      // Si skipVisit est passé en paramètre, autoriser l'accès direct
+      if (params.skipVisit === 'true') {
+        setVisitStatus('not_required');
+        setShowBookingForm(true);
+        return;
+      }
+
+      // Si visitScheduled est passé, la visite a été effectuée
+      if (params.visitScheduled === 'true') {
+        setVisitStatus('accepted');
+        setShowBookingForm(true);
+        return;
+      }
+
+      // Normaliser le type de propriété
+      const rawType = property?.propertyType || property?.type || 'apartment';
+      const normalizedType = normalizePropertyType(rawType);
+      const actionType = (property?.actionType || property?.listType || 'rent') as ActionType;
+
+      // Vérifier si la visite est requise pour ce type de propriété
+      const visitRequired = isVisitRequired(normalizedType, actionType);
+
+      if (!visitRequired) {
+        setVisitStatus('not_required');
+        setShowBookingForm(true);
+        return;
+      }
+
+      // Visite requise : vérifier l'activité existante du user pour cette propriété
+      try {
+        // 1. D'abord vérifier s'il existe déjà une réservation acceptée ou en cours
+        //    Si oui, la visite a forcément déjà eu lieu → on affiche le formulaire
+        const existingBooking = await bookingService.getUserBookingForProperty(property.id, user.id);
+        if (existingBooking) {
+          // Une réservation existe → bypass le check visite
+          setVisitStatus('accepted');
+          setShowBookingForm(true);
+          return;
+        }
+
+        // 2. Pas de réservation → vérifier le statut de la visite
+        const existingVisit = await bookingService.getUserVisitForProperty(property.id, user.id);
+
+        if (existingVisit && !existingVisit.isReservation) {
+          const status = (existingVisit.visiteStatus || existingVisit.status || 'PENDING').toUpperCase();
+
+          if (status === 'ACCEPTED') {
+            setVisitStatus('accepted');
+            setShowBookingForm(true);
+          } else if (status === 'REFUSED' || status === 'CANCELLED') {
+            setVisitStatus('refused');
+            setShowBookingForm(false);
+          } else {
+            setVisitStatus('pending');
+            setShowBookingForm(false);
+          }
+        } else if (existingVisit && existingVisit.isReservation) {
+          // → la visite est implicitement acceptée
+          setVisitStatus('accepted');
+          setShowBookingForm(true);
+        } else {
+          setVisitStatus('none');
+          setShowBookingForm(false);
+        }
+      } catch {
+        setVisitStatus('none');
+        setShowBookingForm(false);
+      }
+    };
+
+    checkVisitRequirement();
+  }, [property, user?.id, params.skipVisit, params.visitScheduled]);
+
+  useEffect(() => {
+    if (!property?.id || !user?.id) return;
+
+    const loadExistingBooking = async () => {
+      try {
+        const serverBooking = await bookingService.getUserBookingForProperty(property.id, user.id);
+        if (serverBooking) {
+          let mappedStatus: any = 'pending';
+          if (serverBooking.isReservationAccepted === true) mappedStatus = 'accepted';
+          else if (serverBooking.status === 'REFUSED') mappedStatus = 'rejected';
+
+          updateStatus(mappedStatus, {
+            reservationId: serverBooking.id,
+            propertyId: serverBooking.propertyId,
+            propertyTitle: property.title,
+            ownerId: property?.ownerId,
+            clientId: serverBooking.clientId,
+            createdAt: new Date(serverBooking.createdAt)
+          });
+          setCurrentStep(3);
+        }
+      } catch {
+        // Booking loading failed, will show empty form
+      }
+    };
+
+    loadExistingBooking();
+  }, [property?.id, user?.id]);
+
+  useEffect(() => {
+    if (bookingStatus === 'accepted' && !hasHandledNavigation.current && bookingData.reservationId) {
+      hasHandledNavigation.current = true;
+      setTimeout(() => {
+        router.push({
+          pathname: '/payement/PayementScreen',
+          params: {
+            reservationId: bookingData.reservationId!,
+            propertyId: property?.id || '',
+            propertyTitle: property?.title || 'Propriété',
+            amount: calculateTotalAmount().toString()
+          }
+        });
+      }, 2000);
+    }
+  }, [bookingStatus, bookingData.reservationId]);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.surface, justifyContent: 'center', alignItems: 'center' }}>
+        <MaterialCommunityIcons name="loading" size={48} color={theme.primary} />
+        <ThemedText style={{ marginTop: 16, color: theme.onSurface }}>{t('bookingScreen.loading')}</ThemedText>
+      </SafeAreaView>
+    );
+  }
+
+  // Normalize propertyType using the normalizePropertyType function
+  const rawPropertyType = property?.propertyType || property?.type || 'apartment';
+  const propertyType: PropertyType = normalizePropertyType(rawPropertyType);
+  // Normalize actionType (handles 'sell'->'sale', 'location'->'rent', etc.)
+  const rawActionType = property?.actionType || property?.listType || 'rent';
+  const actionType: ActionType = normalizeActionType(rawActionType);
+  const propertyConfig = getPropertyConfig(propertyType, actionType);
+
+  const requiresDocuments = property?.ownerCriteria?.isdocumentRequired || false;
+  const requiresGuarantor = property?.ownerCriteria?.guarantorRequired || false;
 
   const calculateTotalAmount = () => {
     if (!property) return 0;
-    if (isForSale) {
-      return Math.round((property.price || 0) * 1.08); // Price + notary fees
-    }
+    if (actionType === 'sale') return Math.round((property.price || 0) * 1.08);
     return (property.monthlyRent || 0) + (property.depositAmount || 0);
   };
 
-  const renderModeSelector = (color:ThemeColors) => (
-    <MotiView
-      from={{ opacity: 0, translateY: 20 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: 'spring', damping: 15 }}
-      style={{ marginBottom: 24 }}
-    >
-      <ThemedView style={{
-        borderRadius: 20,
-        padding: 20,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 8,
-      }}>
-        <ThemedText type = "normal" intensity = "strong" style={{
-          color: color.onSurface,
-          marginBottom: 16,
-          textAlign: 'center'
-        }}>{isForSale ? 'Comment souhaitez-vous procéder ?' : 'Comment souhaitez-vous procéder ?'}</ThemedText>
-        
-        <ThemedView style={{ flexDirection: 'row', gap: 12 }}>
-          <TouchableOpacity
-            onPress={() => {
-              setBookingMode('direct');
-              setShowBookingForm(true);
-            }}
-            style={{
-              flex: 1,
-              borderRadius: 16,
-              overflow: 'hidden',
-              borderWidth: 2,
-              borderColor: bookingMode === 'direct' ? color.primary : color.outline + '30'
-            }}
-          >
-            <LinearGradient
-              colors={bookingMode === 'direct' ? [theme.primary + '20', theme.primary + '10'] : [theme.surfaceVariant, theme.surface]}
-              style={{ padding: 20, alignItems: 'center' }}
-            >
-              <ThemedView style={{
-                backgroundColor: bookingMode === 'direct' ? color.primary : color.outline + '40',
-                borderRadius: 20,
-                padding: 12,
-                marginBottom: 12
-              }}>
-                <MaterialCommunityIcons 
-                  name="flash" 
-                  size={28} 
-                  color={bookingMode === 'direct' ? 'white' : color.onSurface + '60'} 
-                />
-              </ThemedView>
-              <ThemedText type = "normal" intensity = "strong" style={{
-                color: bookingMode === 'direct' ? color.primary : color.onSurface,
-                marginBottom: 8,
-                textAlign: 'center'
-              }}>{isForSale ? 'Intérêt direct' : 'Réservation directe'}</ThemedText>
-              <ThemedText style={{
-                color: color.onSurface + '70',
-                textAlign: 'center',
-                lineHeight: 16
-              }}>{isForSale ? 'Manifester immédiatement votre intérêt' : 'Réserver immédiatement sans visite'}</ThemedText>
-            </LinearGradient>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            onPress={() => {
-              setBookingMode('visit');
-              setShowBookingForm(false);
-            }}
-            style={{
-              flex: 1,
-              borderRadius: 16,
-              overflow: 'hidden',
-              borderWidth: 2,
-              borderColor: bookingMode === 'visit' ? color.success : color.outline + '30'
-            }}
-          >
-            <LinearGradient
-              colors={bookingMode === 'visit' ? [color.success + '20', color.success + '10'] : [color.surfaceVariant, color.surface]}
-              style={{ padding:22, alignItems: 'center' }}
-            >
-              <ThemedView style={{
-                backgroundColor: bookingMode === 'visit' ? color.success : color.outline + '40',
-                borderRadius: 20,
-                padding: 12,
-                marginBottom: 12
-              }}>
-                <MaterialCommunityIcons 
-                  name="calendar-check" 
-                  size={28} 
-                  color={bookingMode === 'visit' ? 'white' : color.onSurface + '60'} 
-                />
-              </ThemedView>
-              <ThemedText type = "normal" intensity = "strong"  style={{
-                color: bookingMode === 'visit' ? color.surface : color.onSurface,
-                marginBottom: 8,
-                textAlign: 'center'
-              }}>Programmer une visite</ThemedText>
-              <ThemedText style={{
-                color: color.onSurface + '70',
-                textAlign: 'center',
-                lineHeight: 16
-              }}>Visiter avant de réserver</ThemedText>
-            </LinearGradient>
-          </TouchableOpacity>
-        </ThemedView>
-      </ThemedView>
-    </MotiView>
-  );
+  const canShowBookingForm = () => {
+    return showBookingForm || bookingMode === 'direct' || (bookingMode === 'visit' && visit?.status === 'completed');
+  };
 
-  const renderVisitScheduling = () => (
-    <ThemedView className="mb-6">
-      <ThemedText className="text-lg font-semibold mb-4">Programmer votre visite</ThemedText>
-      
-      <ThemedView className="mb-4">
-        <ThemedText className="mb-2 font-medium">Date de visite</ThemedText>
-        <DatePicker
-          date={visitDate}
-          onDateChange={setVisitDate}
-          minimumDate={new Date()}
-        />
-      </ThemedView>
-      
-      <ThemedView className="mb-4">
-        <ThemedText className="mb-2 font-medium">Heure préférée</ThemedText>
-        <ThemedView className="flex-row gap-2">
-          {['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'].map((time) => (
-            <TouchableOpacity
-              key={time}
-              onPress={() => setVisitTime(time)}
-              className={`px-3 py-2 rounded-lg border ${visitTime === time ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
-            >
-              <ThemedText className={visitTime === time ? 'text-blue-600' : 'text-gray-600'}>{time}</ThemedText>
-            </TouchableOpacity>
-          ))}
-        </ThemedView>
-      </ThemedView>
-      
-      <CustomButton
-        title="Demander la visite"
-        onPress={scheduleVisit}
-        loading={loading}
-        type="primary"
-      />
-    </ThemedView>
-  );
+  const getValidationSchema = () => {
+    const schema: any = {};
+    if (actionType === 'sale') {
+      if (propertyConfig.fields.budget?.required) {
+        schema.budget = Yup.number().min(property?.price * 0.8 || 0, 'Budget insuffisant').required('Budget requis');
+      }
+    } else {
+      if (propertyConfig.fields.numberOfOccupants?.required) {
+        schema.numberOfOccupants = Yup.number().min(1, 'Au moins 1 personne').required('Nombre de personnes requis');
+      }
+    }
+    return Yup.object().shape(schema);
+  };
 
-  const renderVisitStatus = () => {
-    if (!visit) return null;
-    
-    const getStatusColor = (status: VisitStatus) => {
-      switch (status) {
-        case 'pending': return 'text-orange-600 bg-orange-50';
-        case 'confirmed': return 'text-green-600 bg-green-50';
-        case 'completed': return 'text-blue-600 bg-blue-50';
-        case 'active': return 'text-purple-600 bg-purple-50';
-        case 'cancelled': return 'text-red-600 bg-red-50';
+  const handleFormSubmit = async (values: any) => {
+    try {
+      if (requiresDocuments && uploadedDocumentIds.length === 0) {
+        Alert.alert(t('bookingScreen.documentsRequiredAlert'), t('bookingScreen.documentsRequiredMsg'));
+        setCurrentStep(2);
+        return;
       }
-    };
-    
-    const getStatusText = (status: VisitStatus) => {
-      switch (status) {
-        case 'pending': return 'En attente de confirmation';
-        case 'confirmed': return 'Confirmée';
-        case 'completed': return 'Terminée';
-        case 'active': return 'Active';
-        case 'cancelled': return 'Annulée';
-        case 'active': return 'Active';
-      }
-    };
-    
+
+      setLoading(true);
+      updateStatus('creating');
+
+      // Extract selected unit info if present (passed from info page)
+      const selectedUnit = (property as any)?._selectedUnit;
+
+      const bookingRequest = {
+        propertyId: property?.id || '',
+        clientId: user?.id || '',
+        startDate: values.startDate.toISOString(),
+        endDate: values.endDate.toISOString(),
+        numberOfOccupants: values.numberOfOccupants,
+        hasGuarantor: values.hasGuarantor,
+        monthlyIncome: values.monthlyIncome,
+        budget: values.budget,
+        financingType: values.financingType,
+        timeframe: values.intendedUse,
+        currentSituation: clientMessage,
+        unitId: selectedUnit?.roomId,
+        unitName: selectedUnit?.roomName,
+        fullName: fullName.trim() || user?.fullName || '',
+        proposedPaymentDays: paymentDelayMode === 'days' && proposedPaymentDays
+          ? parseInt(proposedPaymentDays, 10) || undefined
+          : undefined,
+        proposedPaymentDate: paymentDelayMode === 'date' && proposedPaymentDate
+          ? proposedPaymentDate.toISOString()
+          : undefined,
+      };
+
+      const booking = await bookingService.createBooking(
+        bookingRequest,
+        property?.title || 'Propriété',
+        user?.fullName || 'Client',
+        actionType
+      );
+
+      const reservationId = booking.id;
+
+      addReservation({
+        propertyId: property?.id || 'unknown',
+        propertyTitle: property?.title || 'Propriété',
+        landlordId: property?.ownerId || 'unknown',
+        tenantId: user?.id || '',
+        startDate: bookingRequest.startDate,
+        endDate: bookingRequest.endDate,
+        numberOfOccupants: bookingRequest.numberOfOccupants,
+        hasGuarantor: bookingRequest.hasGuarantor,
+        monthlyIncome: bookingRequest.monthlyIncome,
+        monthlyRent: property?.monthlyRent || 0,
+        status: 'pending',
+        documentsSubmitted: uploadedDocumentIds.length > 0,
+        budget: bookingRequest.budget,
+        financingType: bookingRequest.financingType,
+        timeframe: bookingRequest.timeframe,
+      });
+
+      addActivity({
+        userId: user?.id || '',
+        type: actionType === 'sale' ? 'interest' : 'booking',
+        title: propertyConfig.bookingText.title,
+        description: `${propertyConfig.bookingText.title} pour ${property?.title}`,
+        status: 'pending',
+        propertyId: property?.id,
+        propertyTitle: property?.title,
+        metadata: { reservationId, propertyType, actionType }
+      });
+
+      updateStatus('pending', {
+        reservationId,
+        propertyId: property?.id,
+        propertyTitle: property?.title,
+        ownerId: property?.ownerId,
+        clientId: user?.id || '',
+        createdAt: new Date()
+      });
+
+      addNotification({
+        type: actionType === 'sale' ? 'interest_sent' : 'booking_sent',
+        title: propertyConfig.bookingText.successMessage,
+        message: t('bookingScreen.requestSentMsg', { hours: String(ownerStats.averageResponseTime) }),
+        data: { reservationId, property }
+      });
+
+      setLoading(false);
+      setCurrentStep(3);
+
+      Alert.alert(
+        t('bookingScreen.requestPending'),
+        t('bookingScreen.requestSentSuccess'),
+        [
+          { text: 'OK' }
+        ]
+      );
+
+    } catch (error: any) {
+      setLoading(false);
+      updateStatus('idle');
+      Alert.alert(t('common.error'), error.message || 'Une erreur est survenue.');
+    }
+  };
+
+  if (parseError || !property) {
     return (
-      <ThemedView className="mb-6 p-4 border border-gray-200 rounded-lg">
-        <ThemedText className="text-lg font-semibold mb-3">Statut de votre visite</ThemedText>
-        
-        <ThemedView className="flex-row items-center mb-3">
-          <MaterialCommunityIcons name="calendar" size={20} color="#6B7280" />
-          <ThemedText className="ml-2">{visit.date.toLocaleDateString()} à {visit.time}</ThemedText>
-        </ThemedView>
-        
-        <ThemedView className={`px-3 py-1 rounded-full self-start ${getStatusColor(visit.status)}`}>
-          <ThemedText className="text-sm font-medium">{getStatusText(visit.status)}</ThemedText>
-        </ThemedView>
-        
-        {visit.status === 'pending' && (
-          <ThemedView className="mt-4">
-            <ThemedText className="text-sm text-gray-600 mb-3">Simulation: Confirmer la visite</ThemedText>
-            <CustomButton title="Confirmer la visite" onPress={confirmVisit} type="outline" />
-          </ThemedView>
-        )}
-        
-        {visit.status === 'confirmed' && (
-          <ThemedView className="mt-4">
-            <ThemedText className="text-sm text-gray-600 mb-3">Simulation: Marquer comme terminée</ThemedText>
-            <CustomButton title="Visite terminée" onPress={completeVisit} type="primary" />
-          </ThemedView>
-        )}
-        
-        {visit.status === 'active' && (
-          <ThemedView className="mt-4 p-3 bg-purple-50 rounded-lg">
-            <ThemedText className="text-purple-700 font-medium">✓ Visite active</ThemedText>
-            <ThemedText className="text-purple-600 text-sm mt-1">Vous pouvez maintenant procéder à la réservation</ThemedText>
-          </ThemedView>
-        )}
-        
-        {visit.status === 'completed' && (
-          <ThemedView className="mt-4 p-3 bg-green-50 rounded-lg">
-            <ThemedText className="text-green-700 font-medium">✓ Visite terminée avec succès</ThemedText>
-            <ThemedText className="text-green-600 text-sm mt-1">Vous pouvez maintenant procéder à la réservation</ThemedText>
-          </ThemedView>
-        )}
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.surface, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <MaterialCommunityIcons name="alert-circle" size={64} color={theme.error} />
+        <ThemedText style={{ fontSize: 18, fontWeight: '600', marginTop: 16, textAlign: 'center', color: theme.error }}>{t('bookingScreen.loadError')}</ThemedText>
+        <ThemedText style={{ fontSize: 14, color: theme.onSurface + '70', marginTop: 8, textAlign: 'center' }}>{t('bookingScreen.loadErrorMsg')}</ThemedText>
+        <CustomButton title={t('common.back')} onPress={() => router.back()} className="mt-6" />
+      </SafeAreaView>
+    );
+  }
+
+  // Vérification de la visite - Bloquer l'accès si visite requise mais pas acceptée
+  if (visitStatus === 'loading') {
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <ThemedText style={{ marginTop: 16 }}>{t('bookingScreen.checkingVisit')}</ThemedText>
       </ThemedView>
+    );
+  }
+
+  if (visitStatus === 'none') {
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <MaterialCommunityIcons name="calendar-clock" size={80} color={theme.warning} />
+        <ThemedText type="normaltitle" style={{ color: theme.warning, marginTop: 16, textAlign: 'center' }}>
+          {t('bookingScreen.visitRequired')}
+        </ThemedText>
+        <ThemedText type="normal" style={{ marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
+          {t('bookingScreen.visitRequiredMsg', { type: propertyConfig.displayName })}
+        </ThemedText>
+        <CustomButton
+          title={t('bookingScreen.scheduleVisit')}
+          onPress={() => router.push({
+            pathname: '/booking/VisitScreen',
+            params: { property: JSON.stringify(property) }
+          })}
+          className="mt-6 w-full"
+        />
+        <CustomButton title={t('common.back')} onPress={() => router.back()} type="outline" className="mt-3 w-full" />
+      </ThemedView>
+    );
+  }
+
+  if (visitStatus === 'pending') {
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, paddingTop:0 }}>
+        <MaterialCommunityIcons name="clock-outline" size={80} color={theme.warning} />
+        <ThemedText type="normaltitle" style={{ color: theme.warning, marginTop: 16, textAlign: 'center' }}>
+          {t('bookingScreen.visitPending')}
+        </ThemedText>
+        <ThemedText type="normal" style={{ marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
+          {t('bookingScreen.visitPendingMsg')}
+        </ThemedText>
+        <CustomButton
+          title={t('bookingScreen.viewVisitRequest')}
+          onPress={() => router.push({
+            pathname: '/booking/VisitScreen',
+            params: { property: JSON.stringify(property) }
+          })}
+          className="mt-6 w-full"
+        />
+        <CustomButton title={t('common.back')} onPress={() => router.back()} type="outline" className="mt-3 w-full" />
+      </ThemedView>
+    );
+  }
+
+  if (visitStatus === 'refused') {
+    return (
+      <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <MaterialCommunityIcons name="close-circle" size={80} color={theme.error} />
+        <ThemedText type="normaltitle" style={{ color: theme.error, marginTop: 16, textAlign: 'center' }}>
+          {t('bookingScreen.visitRefused')}
+        </ThemedText>
+        <ThemedText type="normal" style={{ marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
+          {t('bookingScreen.visitRefusedMsg')}
+        </ThemedText>
+        <CustomButton
+          title={t('bookingScreen.requestNewVisit')}
+          onPress={() => router.push({
+            pathname: '/booking/VisitScreen',
+            params: { property: JSON.stringify(property) }
+          })}
+          className="mt-6 w-full"
+        />
+        <CustomButton title={t('common.back')} onPress={() => router.back()} type="outline" className="mt-3 w-full" />
+      </ThemedView>
+    );
+  }
+
+  // Field type definitions for dynamic rendering
+  type FieldKey = keyof typeof propertyConfig.fields;
+
+  const DATE_FIELDS: FieldKey[] = ['startDate', 'endDate', 'checkInDate', 'checkOutDate'];
+  const NUMBER_FIELDS: FieldKey[] = ['numberOfOccupants', 'numberOfGuests', 'numberOfRooms', 'numberOfNights', 'monthlyIncome', 'budget'];
+  const BOOLEAN_FIELDS: FieldKey[] = ['hasGuarantor'];
+  const SELECT_FIELDS: FieldKey[] = ['financingType', 'roomType'];
+  const TEXT_FIELDS: FieldKey[] = ['profession', 'country', 'address'];
+  const MULTILINE_TEXT_FIELDS: FieldKey[] = ['specialRequirements', 'intendedUse', 'constructionPlan'];
+
+  // Map field keys to formik value keys
+  const getFormikKey = (fieldKey: FieldKey): string => {
+    const mapping: Record<string, string> = {
+      checkInDate: 'startDate',
+      checkOutDate: 'endDate',
+      numberOfGuests: 'numberOfOccupants',
+      numberOfRooms: 'numberOfOccupants',
+      numberOfNights: 'numberOfOccupants',
+      constructionPlan: 'intendedUse',
+    };
+    return mapping[fieldKey] || fieldKey;
+  };
+
+  // Render a single field based on its type
+  const renderField = (fieldKey: FieldKey, fieldConfig: any) => {
+    if (!fieldConfig?.show) return null;
+
+    // Check owner requirements for specific fields
+    // hasGuarantor field: only show if owner requires a guarantor
+    if (fieldKey === 'hasGuarantor' && !requiresGuarantor) {
+      return null;
+    }
+
+    // monthlyIncome field: only show if owner requires income proof (linked to guarantor requirement)
+    if (fieldKey === 'monthlyIncome' && !requiresGuarantor) {
+      return null;
+    }
+
+    const formikKey = getFormikKey(fieldKey);
+    const formikValue = (formik.values as any)[formikKey];
+    const formikError = (formik.touched as any)[formikKey] ? (formik.errors as any)[formikKey] : undefined;
+
+    // Date fields
+    if (DATE_FIELDS.includes(fieldKey)) {
+      const isEndDate = fieldKey === 'endDate' || fieldKey === 'checkOutDate';
+      return (
+        <ThemedView key={fieldKey} style={{ marginBottom: 16 }}>
+          <ThemedText type = "body" style={{ marginBottom: 8,}}>
+            {fieldConfig.label} {fieldConfig.required && <ThemedText style={{ color: theme.error }}>*</ThemedText>}
+          </ThemedText>
+          {fieldConfig.helpText && (
+            <ThemedText  type = "body" style={{  marginBottom: 8 }}>
+              {fieldConfig.helpText}
+            </ThemedText>
+          )}
+          <DatePicker
+            date={formikValue || new Date()}
+            onDateChange={(date: Date) => formik.setFieldValue(formikKey, date)}
+            minimumDate={isEndDate ? formik.values.startDate : new Date()}
+          />
+        </ThemedView>
+      );
+    }
+
+    // Number fields
+    if (NUMBER_FIELDS.includes(fieldKey)) {
+      return (
+        <ThemedView key={fieldKey} style={{ marginBottom: 16 }}>
+          <CustomInput
+            label={`${fieldConfig.label}${fieldConfig.required ? ' *' : ''}`}
+            placeholder={fieldConfig.placeholder}
+            keyboardType="numeric"
+            value={formikValue?.toString() || ''}
+            onChangeText={(value) => formik.setFieldValue(formikKey, parseInt(value) || 0)}
+            error={formikError}
+          />
+          {fieldConfig.helpText && (
+            <ThemedText  type = "body" style={{  marginTop: 4 }}>
+              {fieldConfig.helpText}
+            </ThemedText>
+          )}
+        </ThemedView>
+      );
+    }
+
+    // Boolean fields (Yes/No toggle)
+    if (BOOLEAN_FIELDS.includes(fieldKey)) {
+      return (
+        <ThemedView key={fieldKey} style={{ marginBottom: 16 }}>
+          <ThemedText type ="body" style={{  marginBottom: 8, }}>
+            {fieldConfig.label} {fieldConfig.required && <ThemedText style={{ color: theme.error }}>*</ThemedText>}
+          </ThemedText>
+          {fieldConfig.helpText && (
+            <ThemedText style={{ fontSize: 12, color: theme.onSurface + '70', marginBottom: 8 }}>
+              {fieldConfig.helpText}
+            </ThemedText>
+          )}
+          <ThemedView style={{ flexDirection: 'row', gap: 12 }}>
+            {[{ label: t('bookingScreen.yes'), value: true }, { label: t('bookingScreen.no'), value: false }].map((option) => (
+              <TouchableOpacity
+                key={option.label}
+                onPress={() => formik.setFieldValue(formikKey, option.value)}
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  borderWidth: 1.5,
+                  borderColor: formikValue === option.value ? theme.primary : theme.outline + '30',
+                  backgroundColor: formikValue === option.value ? theme.primary + '15' : 'transparent',
+                  alignItems: 'center'
+                }}
+              >
+                <ThemedText style={{
+                  fontWeight: formikValue === option.value ? '600' : '400',
+                  color: formikValue === option.value ? theme.primary : theme.onSurface
+                }}>
+                  {option.label}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </ThemedView>
+        </ThemedView>
+      );
+    }
+
+    // Select fields (chips)
+    if (SELECT_FIELDS.includes(fieldKey)) {
+      const options = fieldKey === 'financingType'
+        ? [t('bookingScreen.financingCredit'), t('bookingScreen.financingCash'), t('bookingScreen.financingMixed')]
+        : [t('bookingScreen.roomStandard'), t('bookingScreen.roomDeluxe'), t('bookingScreen.roomSuite'), t('bookingScreen.roomPremium')];
+      return (
+        <ThemedView key={fieldKey} style={{ marginBottom: 16 }}>
+          <ThemedText type ="body" style={{marginBottom: 12 }}>
+            {fieldConfig.label} {fieldConfig.required && <ThemedText style={{ color: theme.error }}>*</ThemedText>}
+          </ThemedText>
+          {fieldConfig.helpText && (
+            <ThemedText type ="body" style={{ marginBottom: 8 }}>
+              {fieldConfig.helpText}
+            </ThemedText>
+          )}
+          <ThemedView style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            {options.map((option) => (
+              <TouchableOpacity
+                key={option}
+                onPress={() => formik.setFieldValue(formikKey, option)}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  borderRadius: 20,
+                  borderWidth: 1.5,
+                  borderColor: formikValue === option ? theme.primary : theme.outline + '30',
+                  backgroundColor: formikValue === option ? theme.primary + '15' : 'transparent'
+                }}
+              >
+                <ThemedText type ="body" style={{
+                  fontWeight: formikValue === option ? '600' : '400',
+                  color: formikValue === option ? theme.primary : theme.onSurface
+                }}>
+                  {option}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </ThemedView>
+        </ThemedView>
+      );
+    }
+
+    // Multiline text fields (special requirements)
+    if (MULTILINE_TEXT_FIELDS.includes(fieldKey)) {
+      return (
+        <ThemedView key={fieldKey} style={{ marginBottom: 16 }}>
+          <ThemedText type ="body" style={{ marginBottom: 8 }}>
+            {fieldConfig.label} {fieldConfig.required && <ThemedText style={{ color: theme.error }}>*</ThemedText>}
+          </ThemedText>
+          {fieldConfig.helpText && (
+            <ThemedText type ="body" style={{ marginBottom: 8 }}>
+              {fieldConfig.helpText}
+            </ThemedText>
+          )}
+          <TextInput
+            style={{
+              backgroundColor: theme.surface,
+              borderRadius: 12,
+              borderWidth: 1.5,
+              borderColor: theme.outline + '30',
+              padding: 14,
+              minHeight: 80,
+              textAlignVertical: 'top',
+              color: theme.onSurface,
+              fontSize: 14
+            }}
+            placeholder={fieldConfig.placeholder}
+            placeholderTextColor={theme.onSurface + '50'}
+            multiline
+            value={formikValue || ''}
+            onChangeText={(value) => formik.setFieldValue(formikKey, value)}
+          />
+        </ThemedView>
+      );
+    }
+
+    // Text fields (single line)
+    if (TEXT_FIELDS.includes(fieldKey)) {
+      return (
+        <ThemedView key={fieldKey} style={{ marginBottom: 16 }}>
+          <CustomInput
+            label={`${fieldConfig.label}${fieldConfig.required ? ' *' : ''}`}
+            placeholder={fieldConfig.placeholder}
+            value={formikValue || ''}
+            onChangeText={(value) => formik.setFieldValue(formikKey, value)}
+          />
+          {fieldConfig.helpText && (
+            <ThemedText type ="body" style={{ marginTop: 4 }}>
+              {fieldConfig.helpText}
+            </ThemedText>
+          )}
+        </ThemedView>
+      );
+    }
+
+    return null;
+  };
+
+  const renderDynamicFields = () => {
+    const fields = propertyConfig.fields;
+
+    // Get all field keys in the order they are defined in the config
+    const fieldKeys = Object.keys(fields) as FieldKey[];
+
+    return (
+      <>
+        {/* Render each field dynamically in config order */}
+        {fieldKeys.map((fieldKey) => {
+          const fieldConfig = fields[fieldKey];
+          return renderField(fieldKey, fieldConfig);
+        })}
+
+        {/* Nom complet du client */}
+        <ThemedView style={{ marginBottom: 16 }}>
+          <ThemedView style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <MaterialCommunityIcons name="account" size={20} color={theme.primary} style={{ marginRight: 6 }} />
+            <ThemedText type="body">Nom complet <ThemedText style={{ color: theme.error }}>*</ThemedText></ThemedText>
+          </ThemedView>
+          <TextInput
+            style={{
+              backgroundColor: theme.surface,
+              borderRadius: 12,
+              borderWidth: 1.5,
+              borderColor: fullName.trim() ? theme.primary + '60' : theme.outline + '30',
+              padding: 14,
+              color: theme.onSurface,
+              fontSize: 14
+            }}
+            placeholder="Votre nom et prénom"
+            placeholderTextColor={theme.onSurface + '50'}
+            value={fullName}
+            onChangeText={setFullName}
+          />
+        </ThemedView>
+
+        {/* Délai de paiement proposé */}
+        <ThemedView style={{ marginBottom: 16 }}>
+          <ThemedView style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <MaterialCommunityIcons name="clock-outline" size={20} color={theme.primary} style={{ marginRight: 6 }} />
+            <ThemedText type="body">Délai de paiement proposé</ThemedText>
+          </ThemedView>
+          <ThemedText type="caption" style={{ color: theme.onSurface + '70', marginBottom: 10 }}>
+            Indiquez dans quel délai vous pouvez effectuer le paiement après acceptation
+          </ThemedText>
+
+          {/* Toggle jours / date */}
+          <ThemedView style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+            {(['days', 'date'] as const).map((mode) => (
+              <TouchableOpacity
+                key={mode}
+                onPress={() => setPaymentDelayMode(mode)}
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  borderWidth: 1.5,
+                  borderColor: paymentDelayMode === mode ? theme.primary : theme.outline + '30',
+                  backgroundColor: paymentDelayMode === mode ? theme.primary + '15' : 'transparent',
+                  alignItems: 'center'
+                }}
+              >
+                <ThemedText style={{
+                  fontWeight: paymentDelayMode === mode ? '600' : '400',
+                  color: paymentDelayMode === mode ? theme.primary : theme.onSurface,
+                  fontSize: 13
+                }}>
+                  {mode === 'days' ? 'En jours' : 'Date précise'}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </ThemedView>
+
+          {paymentDelayMode === 'days' ? (
+            <TextInput
+              style={{
+                backgroundColor: theme.surface,
+                borderRadius: 12,
+                borderWidth: 1.5,
+                borderColor: theme.outline + '30',
+                padding: 14,
+                color: theme.onSurface,
+                fontSize: 14
+              }}
+              placeholder="Ex: 5 (nombre de jours)"
+              placeholderTextColor={theme.onSurface + '50'}
+              keyboardType="numeric"
+              value={proposedPaymentDays}
+              onChangeText={setProposedPaymentDays}
+            />
+          ) : (
+            <DatePicker
+              date={proposedPaymentDate || new Date(new Date().setDate(new Date().getDate() + 3))}
+              onDateChange={(date: Date) => setProposedPaymentDate(date)}
+              minimumDate={new Date()}
+            />
+          )}
+        </ThemedView>
+
+        {/* Message to owner/seller - always shown */}
+        <ThemedView style={{ marginBottom: 80 }}>
+          <ThemedView style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <MaterialCommunityIcons name="message-text" size={20} color={theme.primary} style={{ marginRight: 6 }} />
+            <ThemedText type ="body">
+              {t('bookingScreen.messageTo', { role: actionType === 'sale' ? t('bookingScreen.seller') : t('bookingScreen.owner') })}
+            </ThemedText>
+          </ThemedView>
+          <TextInput
+            style={{
+              backgroundColor: theme.surface,
+              borderRadius: 12,
+              borderWidth: 1.5,
+              borderColor: theme.outline + '30',
+              padding: 14,
+              minHeight: 120,
+              textAlignVertical: 'top',
+              color: theme.onSurface,
+              fontSize: 14
+            }}
+            placeholder={t('bookingScreen.messagePlaceholder')}
+            placeholderTextColor={theme.onSurface + '50'}
+            multiline
+            value={clientMessage}
+            onChangeText={setClientMessage}
+          />
+        </ThemedView>
+      </>
     );
   };
 
-  const canShowBookingForm = () => {
-    return bookingMode === 'direct' || (bookingMode === 'visit' && visit?.status === 'completed') || showBookingForm;
-  };
-
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.surface }}>
-      {/* <LinearGradient
-        colors={[theme.buttonGradient]}
+    <ThemedView style={{ flex: 1}}>
+      <KeyboardAvoidingView
         style={{ flex: 1 }}
-      > */}
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-          <MotiView
-            from={{ opacity: 0, translateY: -20 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: 'spring', damping: 15 }}
-            style={{ marginBottom: 24, }}
-          >
-            <ThemedView className="flex-row gap-6">
-               <BackButton/>
-            <ThemedText type = "title" intensity ="strong" style={{
-              color: theme.onSurface,
-              textAlign: 'center',
-              marginBottom: 8
-            }}>
-              {isForSale ? 'Manifester votre intérêt' : 'Réserver ce logement'}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16, paddingBottom:insets.bottom + 10, paddingTop:0 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <ThemedView style={{ marginBottom: 10 }}>
+            <ThemedText type ="normaltitle" style={{  textAlign: 'center', marginTop: 8 }}>
+              {propertyConfig.displayName} • {property?.title || 'Propriété sélectionnée'}
             </ThemedText>
-            </ThemedView>
-           
-            <ThemedText style={{
-              fontSize: 16,
-              color: theme.onSurface + '70',
-              textAlign: 'center'
-            }}>
-              {property?.title || 'Propriété sélectionnée'}
-            </ThemedText>
-          </MotiView>
-        
-        {renderModeSelector(theme)}
-        
-        {bookingMode === 'visit' && !visit && renderVisitScheduling()}
-        
-        {visit && renderVisitStatus()}
-        
-        {canShowBookingForm() && (
-          <ThemedView>
-            <ThemedText className="text-lg font-semibold mb-4">{isForSale ? 'Détails de votre intérêt' : 'Détails de la réservation'}</ThemedText>
-          
-          {isForSale ? (
-            // Sale form fields
-            <>
-              <CustomInput
-                label="Budget maximum (€)"
-                placeholder="Votre budget d'achat"
-                keyboardType="numeric"
-                value={formik.values.budget?.toString() || ''}
-                onChangeText={(value) => formik.setFieldValue('budget', parseInt(value) || 0)}
-                error={formik.touched.budget ? formik.errors.budget : undefined}
-              />
-              
-              <ThemedView className="mb-4">
-                <ThemedText className="font-medium mb-2">Type de financement</ThemedText>
-                <ThemedView className="flex-row gap-2 flex-wrap">
-                  {['Crédit', 'Comptant', 'Mixte'].map((type) => (
-                    <TouchableOpacity
-                      key={type}
-                      onPress={() => formik.setFieldValue('financingType', type)}
-                      style={{
-                        paddingHorizontal: 16,
-                        paddingVertical: 8,
-                        borderRadius: 20,
-                        borderWidth: 1,
-                        borderColor: formik.values.financingType === type ? theme.primary : theme.outline + '30',
-                        backgroundColor: formik.values.financingType === type ? theme.primary + '20' : 'transparent'
-                      }}
-                    >
-                      <ThemedText style={{ color: formik.values.financingType === type ? theme.primary : theme.onSurface }}>
-                        {type}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </ThemedView>
-              </ThemedView>
-              
-              <ThemedView className="mb-4">
-                <ThemedText className="font-medium mb-2">Délai d'achat souhaité</ThemedText>
-                <ThemedView className="flex-row gap-2 flex-wrap">
-                  {['Immédiat', '3 mois', '6 mois', '1 an'].map((time) => (
-                    <TouchableOpacity
-                      key={time}
-                      onPress={() => formik.setFieldValue('timeframe', time)}
-                      style={{
-                        paddingHorizontal: 16,
-                        paddingVertical: 8,
-                        borderRadius: 20,
-                        borderWidth: 1,
-                        borderColor: formik.values.timeframe === time ? theme.success : theme.outline + '30',
-                        backgroundColor: formik.values.timeframe === time ? theme.success + '20' : 'transparent'
-                      }}
-                    >
-                      <ThemedText style={{ color: formik.values.timeframe === time ? theme.success : theme.onSurface }}>
-                        {time}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </ThemedView>
-              </ThemedView>
-              
-              <ThemedView className="mb-4">
-                <ThemedText className="font-medium mb-2">Situation actuelle</ThemedText>
-                <ThemedView className="flex-row gap-2 flex-wrap">
-                  {['Premier achat', 'Revente', 'Investissement'].map((situation) => (
-                    <TouchableOpacity
-                      key={situation}
-                      onPress={() => formik.setFieldValue('currentSituation', situation)}
-                      style={{
-                        paddingHorizontal: 16,
-                        paddingVertical: 8,
-                        borderRadius: 20,
-                        borderWidth: 1,
-                        borderColor: formik.values.currentSituation === situation ? theme.warning : theme.outline + '30',
-                        backgroundColor: formik.values.currentSituation === situation ? theme.warning + '20' : 'transparent'
-                      }}
-                    >
-                      <ThemedText style={{ color: formik.values.currentSituation === situation ? theme.warning : theme.onSurface }}>
-                        {situation}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </ThemedView>
-              </ThemedView>
-              
-              <ThemedView className="flex-row items-center mb-4">
-                <ThemedText className="font-medium flex-1">Pré-approuvé par une banque?</ThemedText>
-                <CustomButton
-                  title={formik.values.preApproved ? "Oui" : "Non"}
-                  onPress={() => formik.setFieldValue('preApproved', !formik.values.preApproved)}
-                  type={formik.values.preApproved ? "primary" : "outline"}
-                  className="w-20"
-                />
-              </ThemedView>
-              
-              <ThemedView className="bg-blue-50 p-4 rounded-lg my-4">
-                <ThemedText className="text-lg font-semibold mb-2">Informations sur la propriété</ThemedText>
-                <ThemedView className="flex-row justify-between mb-2">
-                  <ThemedText>Prix de vente</ThemedText>
-                  <ThemedText className="font-bold">{property?.price?.toLocaleString() || 0} €</ThemedText>
-                </ThemedView>
-                <ThemedView className="flex-row justify-between mb-2">
-                  <ThemedText>Frais de notaire (≈8%)</ThemedText>
-                  <ThemedText>{Math.round((property?.price || 0) * 0.08).toLocaleString()} €</ThemedText>
-                </ThemedView>
-                <ThemedView className="flex-row justify-between pt-2 border-t border-blue-200 mt-2">
-                  <ThemedText className="font-bold">Coût total estimé</ThemedText>
-                  <ThemedText className="font-bold">{Math.round((property?.price || 0) * 1.08).toLocaleString()} €</ThemedText>
-                </ThemedView>
-              </ThemedView>
-            </>
-          ) : (
-            // Rent form fields
-            <>
-              <ThemedView className="mb-4">
-                <ThemedText style={{
-                  marginBottom: 8,
-                  color: theme.onSurface
-                }}>Date de début</ThemedText>
-                <ThemedView style={{
-                  backgroundColor: theme.surface,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: theme.outline + '30',
-                  padding: 12
-                }}>
-                  <DatePicker
-                    date={formik.values.startDate}
-                    onDateChange={(date) => formik.setFieldValue('startDate', date)}
-                    minimumDate={new Date()}
-                  />
-                </ThemedView>
-                {formik.errors.startDate && formik.touched.startDate && (
-                  <ThemedText style={{ color: '#ef4444', marginTop: 4 }}>{String(formik.errors.startDate)}</ThemedText>
-                )}
-              </ThemedView>
-              
-              <ThemedView className="mb-4">
-                <ThemedText style={{
-                  marginBottom: 8,
-                  color: theme.onSurface
-                }}>Date de fin</ThemedText>
-                <ThemedView style={{
-                  backgroundColor: theme.surface,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: theme.outline + '30',
-                  padding: 12
-                }}>
-                  <DatePicker
-                    date={formik.values.endDate}
-                    onDateChange={(date) => formik.setFieldValue('endDate', date)}
-                    minimumDate={formik.values.startDate}
-                  />
-                </ThemedView>
-                {formik.errors.endDate && formik.touched.endDate && (
-                  <ThemedText style={{ color: '#ef4444', marginTop: 4 }}>{String(formik.errors.endDate)}</ThemedText>
-                )}
-              </ThemedView>
-              
-              <CustomInput
-                label="Nombre d'occupants"
-                placeholder="Nombre d'occupants"
-                keyboardType="numeric"
-                value={formik.values.numberOfOccupants?.toString() || ''}
-                onChangeText={(value) => formik.setFieldValue('numberOfOccupants', parseInt(value) || 0)}
-                error={formik.touched.numberOfOccupants ? formik.errors.numberOfOccupants : undefined}
-              />
-              
-              <CustomInput
-                label="Revenu mensuel (€)"
-                placeholder="Votre revenu mensuel"
-                keyboardType="numeric"
-                value={formik.values.monthlyIncome?.toString() || ''}
-                onChangeText={(value) => formik.setFieldValue('monthlyIncome', parseInt(value) || 0)}
-                error={formik.touched.monthlyIncome ? formik.errors.monthlyIncome : undefined}
-              />
-              
-              <ThemedView className="flex-row items-center mb-4">
-                <ThemedText className="font-medium flex-1">Avez-vous un garant?</ThemedText>
-                <CustomButton
-                  title={formik.values.hasGuarantor ? "Oui" : "Non"}
-                  onPress={() => formik.setFieldValue('hasGuarantor', !formik.values.hasGuarantor)}
-                  type={formik.values.hasGuarantor ? "primary" : "outline"}
-                  className="w-20"
-                />
-              </ThemedView>
-              
-              <ThemedView className="bg-gray-50 p-4 rounded-lg my-4">
-                <ThemedText className="text-lg font-semibold mb-2">Résumé des coûts</ThemedText>
-                <ThemedView className="flex-row justify-between mb-2">
-                  <ThemedText>Loyer mensuel</ThemedText>
-                  <ThemedText>{property?.monthlyRent || 0} €</ThemedText>
-                </ThemedView>
-                <ThemedView className="flex-row justify-between mb-2">
-                  <ThemedText>Dépôt de garantie</ThemedText>
-                  <ThemedText>{property?.depositAmount || 0} €</ThemedText>
-                </ThemedView>
-                <ThemedView className="flex-row justify-between pt-2 border-t border-gray-200 mt-2">
-                  <ThemedText className="font-bold">Total à payer</ThemedText>
-                  <ThemedText className="font-bold">{calculateTotalAmount()} €</ThemedText>
-                </ThemedView>
-              </ThemedView>
-            </>
-          )}
-          
-            <ThemedText className="mb-4 text-sm text-gray-600">
-              {isForSale ? (
-                bookingMode === 'visit' && visit?.status === 'completed' 
-                  ? 'Suite à votre visite confirmée, vous pouvez maintenant manifester votre intérêt d\'achat.'
-                  : 'En manifestant votre intérêt, le vendeur sera notifié et pourra vous contacter pour organiser une négociation.'
-              ) : (
-                bookingMode === 'visit' && visit?.status === 'completed' 
-                  ? 'Suite à votre visite confirmée, vous pouvez maintenant finaliser votre réservation.'
-                  : 'En cliquant sur "Continuer", vous acceptez de soumettre votre dossier pour vérification. Vous devrez télécharger les documents nécessaires à l\'étape suivante.'
-              )}
-            </ThemedText>
-            
-            <CustomButton
-              title={isForSale ? 
-                (bookingMode === 'visit' && visit?.status === 'completed' ? 'Manifester mon intérêt' : 'Envoyer ma manifestation d\'intérêt') :
-                (bookingMode === 'visit' && visit?.status === 'completed' ? 'Finaliser la réservation' : 'Continuer vers les documents')
-              }
-              onPress={() => {
-                // Create reservation in booking system
-                const reservationId = addReservation({
-                  propertyId: property?.id || 'unknown',
-                  propertyTitle: property?.title || 'Propriété',
-                  landlordId: property?.ownerId || property?.owner?.id || 'unknown',
-                  tenantId: MOCK_USER.uid,
-                  startDate: formik.values.startDate.toISOString(),
-                  endDate: formik.values.endDate.toISOString(),
-                  monthlyRent: property?.monthlyRent || 0,
-                  depositAmount: property?.depositAmount || 0,
-                  numberOfOccupants: formik.values.numberOfOccupants,
-                  hasGuarantor: formik.values.hasGuarantor,
-                  monthlyIncome: formik.values.monthlyIncome,
-                  status: 'pending',
-                  documentsSubmitted: false,
-                  documentsApproved: false,
-                  visitCompleted: visit?.status === 'completed'
-                });
-                
-                // Log reservation activity
-                addActivity({
-                  userId: MOCK_USER.uid,
-                  type: isForSale ? 'interest' : 'reservation',
-                  title: isForSale ? 'Intérêt manifesté' : 'Réservation créée',
-                  description: isForSale ? 
-                    `Manifestation d'intérêt pour ${property?.title} avec un budget de ${formik.values.budget}€` :
-                    `Réservation créée pour ${property?.title} - ${formik.values.numberOfOccupants} occupants`,
-                  status: 'pending',
-                  propertyId: property?.id,
-                  propertyTitle: property?.title,
-                  metadata: isForSale ? {
-                    budget: formik.values.budget,
-                    financingType: formik.values.financingType,
-                    timeframe: formik.values.timeframe
-                  } : {
-                    monthlyRent: property?.monthlyRent,
-                    numberOfOccupants: formik.values.numberOfOccupants,
-                    hasGuarantor: formik.values.hasGuarantor
-                  }
-                });
-                
-                if (isForSale) {
-                  // Send interest notification for sale
-                  addNotification({
-                    type: 'interest_request',
-                    title: 'Nouvelle manifestation d\'intérêt',
-                    message: `${MOCK_USER.fullName} manifeste son intérêt pour ${property?.title || 'votre propriété'}`,
-                    data: { 
-                      reservationId,
-                      property, 
-                      interestDetails: formik.values,
-                      clientName: MOCK_USER.fullName,
-                      budget: formik.values.budget,
-                      financingType: formik.values.financingType
-                    }
-                  });
-                  
-                  Alert.alert(
-                    'Intérêt manifesté !',
-                    'Votre manifestation d\'intérêt a été envoyée au vendeur. Il vous contactera sous 48h pour organiser une négociation.',
-                    [{ text: 'OK', onPress: () => router.back() }]
-                  );
-                } else {
-                  // Send booking notification for rent
-                  addNotification({
-                    type: 'booking_request',
-                    title: 'Nouvelle demande de réservation',
-                    message: `${MOCK_USER.fullName} a soumis une demande de réservation pour ${property?.title || 'votre propriété'}`,
-                    data: { 
-                      reservationId,
-                      property, 
-                      bookingDetails: formik.values,
-                      clientName: MOCK_USER.fullName
-                    }
-                  });
-                  
+          </ThemedView>
+
+          <Timeline currentStep={currentStep} requiresDocuments={requiresDocuments} theme={theme} />
+
+          {bookingStatus !== 'idle' && (
+            <BookingStatusBadge
+              status={bookingStatus}
+              bookingData={bookingData}
+              theme={theme}
+              onPayment={() => {
+                if (!hasHandledNavigation.current && bookingData.reservationId) {
+                  hasHandledNavigation.current = true;
                   router.push({
-                    pathname: '/documentsubmit/DocumentUploadFile',
-                    params: { reservationId, property: JSON.stringify(property) }
+                    pathname: '/payement/PayementScreen',
+                    params: {
+                      reservationId: bookingData.reservationId,
+                      propertyId: property?.id || '',
+                      propertyTitle: property?.title || 'Propriété',
+                      amount: calculateTotalAmount().toString()
+                    }
                   });
                 }
               }}
-              loading={loading}
-              disabled={!formik.isValid || loading}
             />
-          </ThemedView>
-        )}
+          )}
+
+
+          {canShowBookingForm() && bookingStatus === 'idle' && (
+            <ThemedView>
+              {currentStep === 1 && (
+                <ThemedView>
+                  <ThemedText type ="normal" style={{ marginBottom: 10 }}>
+                    {propertyConfig.bookingText.title}
+                  </ThemedText>
+
+                  {/* Owner requirements info banner */}
+                  <ThemedView style={{
+                    borderRadius: 12,
+                    padding: 12,
+                    marginBottom: 16,
+                    borderLeftWidth: 3,
+                    borderLeftColor: theme.primary
+                  }}>
+                    <ThemedView style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                      <MaterialCommunityIcons name="information-outline" size={18} color={theme.primary} />
+                      <ThemedText type="body" style={{ marginLeft: 8, color: theme.primary }}>{t('bookingScreen.ownerRequirements')}</ThemedText>
+                    </ThemedView>
+                    <ThemedView style={{ gap: 8 }}>
+                      <ThemedView style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <MaterialCommunityIcons
+                          name={requiresGuarantor ? 'check-circle' : 'close-circle'}
+                          size={16}
+                          color={requiresGuarantor ? theme.success || '#10B981' : theme.onSurface + '50'}
+                        />
+                        <ThemedText type="caption" style={{ marginLeft: 6 }}>
+                          {requiresGuarantor ? t('bookingScreen.guarantorRequired') : t('bookingScreen.guarantorNotRequired')}
+                        </ThemedText>
+                      </ThemedView>
+                      <ThemedView style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <MaterialCommunityIcons
+                          name={requiresDocuments ? 'check-circle' : 'close-circle'}
+                          size={16}
+                          color={requiresDocuments ? theme.success || '#10B981' : theme.onSurface + '50'}
+                        />
+                        <ThemedText type="caption" style={{ marginLeft: 6 }}>
+                          {requiresDocuments ? t('bookingScreen.documentsRequired') : t('bookingScreen.documentsNotRequired')}
+                        </ThemedText>
+                      </ThemedView>
+                    </ThemedView>
+                  </ThemedView>
+
+                  {renderDynamicFields()}
+
+                  <CustomButton
+                    title={requiresDocuments ? t('bookingScreen.continueToDocuments') : propertyConfig.bookingText.submitButton}
+                    onPress={() => {
+                      if (requiresDocuments) {
+                        setCurrentStep(2);
+                      } else {
+                        handleFormSubmit(formik.values);
+                      }
+                    }}
+                    loading={loading}
+                    disabled={!formik.isValid || loading || isPending()}
+                  />
+                </ThemedView>
+              )}
+
+              {currentStep === 2 && requiresDocuments && (
+                <ThemedView>
+                  <DocumentUploadSection
+                    reservationId="temp-reservation-id"
+                    onDocumentsUploaded={(documentIds) => setUploadedDocumentIds(documentIds)}
+                    onValidationStatusChange={() => {}}
+                    required={requiresDocuments}
+                  />
+                  <ThemedView style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
+                    <CustomButton title={t('common.back')} onPress={() => setCurrentStep(1)} type="outline" style={{ flex: 1 }} />
+                    <CustomButton
+                      title={propertyConfig.bookingText.submitButton}
+                      onPress={() => handleFormSubmit(formik.values)}
+                      loading={loading}
+                      disabled={uploadedDocumentIds.length === 0 || loading}
+                      style={{ flex: 1 }}
+                    />
+                  </ThemedView>
+                </ThemedView>
+              )}
+
+              {currentStep === 3 && (
+                <ThemedView >
+                  <ThemedView style={{ backgroundColor: theme.warning + '10', borderRadius: 20, padding: 24, alignItems: 'center' }}>
+                    <MaterialCommunityIcons name="clock-check-outline" size={80} color={theme.warning} />
+                    <ThemedText type = "title" style={{ color: theme.warning, marginTop: 16, textAlign: 'center' }}>
+                      {t('bookingScreen.pendingTitle')}
+                    </ThemedText>
+                    <ThemedText type ="normal" style={{ marginTop: 12, textAlign: 'center' }}>
+                      {t('bookingScreen.requestSentTo', { role: actionType === 'sale' ? t('bookingScreen.seller') : t('bookingScreen.owner') })}
+                    </ThemedText>
+                  </ThemedView>
+                </ThemedView>
+              )}
+            </ThemedView>
+          )}
         </ScrollView>
-      {/* </LinearGradient> */}
-    </SafeAreaView>
+      </KeyboardAvoidingView>
+    </ThemedView>
   );
 };
 
-
 export default ReservationScreen;
-

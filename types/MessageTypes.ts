@@ -1,13 +1,13 @@
 
 export interface FrontendMessage {
-  msgId: string; // String au lieu d'ObjectId
+  msgId: string; 
   senderId: string;
   sender?: {
     name: string;
     avatar: string;
   };
   conversationId: string;
-  messageType: 'text' | 'image' | 'video' | 'audio' | 'document' | 'location' | 'contact' | 'property' | 'voice_note' | 'ar_preview' | 'virtual_tour';
+  messageType: 'text' | 'image' | 'video' | 'audio' | 'document' | 'location' | 'contact' | 'property' | 'voice_note' | 'ar_preview' | 'virtual_tour' | 'visit_request' | 'reservation_request';
   content: string;
   mediaData?: {
     filename?: string;
@@ -22,11 +22,11 @@ export interface FrontendMessage {
   reactions: {
     userId: string;
     emoji: string;
-    timestamp: string; // ISO string au lieu de Date
+    timestamp: string; 
   }[];
   mentions?: string[];
   status: {
-    sent: string; // ISO string
+    sent: string; 
     delivered: {
       userId: string;
       timestamp: string;
@@ -36,7 +36,14 @@ export interface FrontendMessage {
       timestamp: string;
     }[];
   };
-  replyTo?: string;
+  replyTo?:string| {
+  id: string;
+  content?: string;
+  sender?: {
+    name: string;
+    avatar: string;
+  };
+};
   forwardedFrom?: {
     originalMessageId: string;
     originalSender: string;
@@ -76,7 +83,29 @@ export interface FrontendMessage {
   };
   createdAt: string;
   updatedAt?: string;
-  isBot?: boolean
+  isBot?: boolean,
+  isSent?: boolean; 
+  visitData?: {
+    id: string;
+    date: Date;
+    time: string;
+    status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  };
+  propertyData?: {
+    title: string;
+    address?: string;
+    id?: string;
+    ownerId?: string;
+  };
+  metadata?: {
+    activityId?: string;
+    actionType?: string;
+    propertyId?: string;
+    visitDate?: string;
+    accepted?: boolean;
+    acceptDate?: string;
+  };
+  
 }
 
 export interface FrontendConversation {
@@ -129,9 +158,8 @@ export interface FrontendConversation {
   updatedAt?: string;
 }
 
-// services/MessageService.ts - Service côté frontend
 export interface SendMessageParams {
-  conversationId: string; // String au lieu d'ObjectId
+  conversationId: string; 
   senderId: string;
   messageType: FrontendMessage['messageType'];
   content: string;
@@ -148,7 +176,6 @@ export interface SendMessageResponse {
   message?: FrontendMessage;
   error?: string;
 }
-// components/navigator/RouteType.ts - Correction des types de navigation
 export type RootStackParamList = {
   Home: undefined;
   Profile: undefined;
@@ -157,15 +184,12 @@ export type RootStackParamList = {
     name: string;
     image: string;
     status?: string;
-    // Ajouter userId si nécessaire
     userId?: string;
   };
-  // Ajouter d'autres routes selon vos besoins
   Settings: undefined;
   Notifications: undefined;
 };
 
-// Types pour les props des composants
 export type ChatScreenProps = {
   chatId: string;
   name: string;
@@ -174,12 +198,11 @@ export type ChatScreenProps = {
   userId?: string;
 };
 
-// types/MessageTypes.ts ou components/messages/chat/MessageBody.tsx
 
-// Interface corrigée pour MessageBody/MessageDisplay
 export interface MessageBodyProps {
   message: FrontendMessage;
-  currentUserId: string;
+  currentUserId?: string;
+  isSent?: boolean;       
   onReply?: (message: FrontendMessage) => void;
   onDelete?: (messageId: string) => void;
   onEdit?: (messageId: string, newContent: string) => void;

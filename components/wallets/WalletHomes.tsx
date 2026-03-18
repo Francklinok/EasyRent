@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { TouchableOpacity, ScrollView, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { useTheme } from '@/components/contexts/theme/themehook';
+import { useTheme } from '@/hooks/themehook';
 import { MotiView } from 'moti';
 import {
     ChevronLeft,
@@ -22,9 +22,12 @@ import {
     CreditCard,
     Home,
     Briefcase,
-    Calendar
+    Calendar,
+    ArrowRightLeft,
 } from 'lucide-react-native';
 import { OngoingActivity } from '@/services/api/walletService';
+import { useLanguage } from '@/components/contexts/language';
+import { useRouter } from 'expo-router';
 const { width } = Dimensions.get('window');
 
 interface WalletHomeProps {
@@ -42,6 +45,7 @@ interface WalletHomeProps {
         reservations: number;
         rents: number;
     };
+    investTokensCount?: number;
 }
 
 export const WalletHome: React.FC<WalletHomeProps> = ({
@@ -54,10 +58,13 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
     walletData,
     ongoingActivities = [],
     activitiesLoading = false,
-    activitiesByType = { services: 0, reservations: 0, rents: 0 }
+    activitiesByType = { services: 0, reservations: 0, rents: 0 },
+    investTokensCount = 0,
 }) => {
-    const [activeTab, setActiveTab] = useState<'history' | 'payments' | 'services'>('history');
+    const [activeTab, setActiveTab] = useState<'payments' | 'history' | 'services' | 'tokens'>('payments');
     const { theme } = useTheme();
+    const { t } = useLanguage();
+    const router = useRouter();
 
     // Helper function to get activity icon
     const getActivityIcon = (type: string) => {
@@ -106,7 +113,7 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                     <ThemedView backgroundColor="transparent" style={styles.timeRow}>
                         <Clock size={14} color={theme.text + "70"} />
                         <ThemedText type="caption" size={12} color={theme.text + "70"} style={{ fontWeight: '500' }}>
-                            Today, {timeString}
+                            {t('walletComponents.today')}, {timeString}
                         </ThemedText>
                     </ThemedView>
 
@@ -115,7 +122,7 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                         {formatAmount(balance, currency)}
                     </ThemedText>
                     <ThemedText type="normal" size={14} color={theme.text + "70"} style={styles.availableBalance}>
-                        Available Balance: <ThemedText type="normal" size={14} color={theme.secondary} intensity="strong">{formatAmount(balance - pendingBalance, currency)}</ThemedText>
+                        {t('walletComponents.availableBalance')}: <ThemedText type="normal" size={14} color={theme.secondary} intensity="strong">{formatAmount(balance - pendingBalance, currency)}</ThemedText>
                     </ThemedText>
 
                     <ThemedView  style={styles.actionsRow}>
@@ -124,7 +131,7 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                                 <Send size={20} color={theme.secondary} strokeWidth={2.5} />
                             </ThemedView>
                             <ThemedText type="caption" size={12} color={theme.text} style={{ fontWeight: '600', textAlign: 'center' }}>
-                                Payment
+                                {t('walletComponents.payment')}
                             </ThemedText>
                         </TouchableOpacity>
 
@@ -133,7 +140,7 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                                 <Download size={20} color={theme.secondary} strokeWidth={2.5} />
                             </ThemedView>
                             <ThemedText type="caption" size={12} color={theme.text} style={{ fontWeight: '600', textAlign: 'center' }}>
-                                Receive
+                                {t('walletComponents.receive')}
                             </ThemedText>
                         </TouchableOpacity>
 
@@ -142,7 +149,7 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                                 <Bell size={20} color={theme.secondary} strokeWidth={2.5} />
                             </ThemedView>
                             <ThemedText type="caption" size={12} color={theme.text} style={{ fontWeight: '600', textAlign: 'center' }}>
-                                Activity
+                                {t('walletComponents.activity')}
                             </ThemedText>
                         </TouchableOpacity>
                     </ThemedView>
@@ -154,72 +161,93 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
             <ThemedView backgroundColor="transparent" style={styles.content}>
                 <ThemedView backgroundColor="transparent" style={styles.tabsContainer}>
                     <TouchableOpacity
-                        // style={[styles.tab, activeTab === 'history' && styles.tabActive]}
-                        onPress={() => setActiveTab('history')}
-                        style = {{...styles.tab, borderColor: activeTab === 'history' ? theme.secondary : theme.outline + "20" ,
-                            borderWidth: 1,
-                            borderRadius: 8,
-                            padding: 4,
-                            backgroundColor: activeTab === 'history' ? theme.secondary : theme.surface,}}
-                    >
-                        <ThemedText
-                            type="normal"
-                            size={14}
-                            color={activeTab === 'history' ? 'white' :theme.text + "80"}
-                            style={{ fontWeight: '600' }}
-                        >
-                            History
-                        </ThemedText>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
                         onPress={() => setActiveTab('payments')}
-                         style = {{...styles.tab, borderColor: activeTab === 'payments' ? theme.secondary : theme.outline + "20" ,
-                            borderWidth: 1,
-                            borderRadius: 8,
-                            padding: 4,
-                            backgroundColor: activeTab === 'payments' ? theme.secondary : theme.surface,}}
+                         style = {{...styles.tab ,
+                            borderRadius: 12,
+                            padding: 2,
+
+                            backgroundColor: activeTab === 'payments' ? theme.secondary : theme.surfaceVariant}}
                     >
                         <ThemedView backgroundColor="transparent" style={styles.tabWithBadge}>
                             <ThemedText
                                 type="normal"
-                                size={14}
-                                color={activeTab === 'payments' ? 'white' : theme.text + "80"}
-                                style={{ fontWeight: '600' }}
+                                intensity = "strong"
+                                color={activeTab === 'payments' ? "white" : theme.text}
+                                style={{ paddingHorizontal: 4}}
                             >
-                                Payments
+                                {t('walletComponents.payments')}
                             </ThemedText>
                             {ongoingActivities.length > 0 && (
                                 <ThemedView
-                                    backgroundColor={activeTab === 'payments' ? theme.secondary :theme.secondary + '80'}
-                                    style={styles.badge}
+                                    style={{...styles.badge, backgroundColor:"transparent"}}
                                 >
-                                    <ThemedText type="caption" size={10} color= {theme.surface} intensity="strong">
+                                    <ThemedText type="caption" size={10} intensity="strong" style ={{color: "white"}} >
                                         {ongoingActivities.length}
                                     </ThemedText>
                                 </ThemedView>
                             )}
                         </ThemedView>
                     </TouchableOpacity>
-
-                    <TouchableOpacity
-                        // style={[styles.tab, activeTab === 'services' && styles.tabActive]}
-                        onPress={() => setActiveTab('services')}
-                         style = {{...styles.tab, borderColor: activeTab === 'services' ? theme.secondary : theme.outline + "20" ,
-                            borderWidth: 1,
+                     <TouchableOpacity
+                        // style={[styles.tab, activeTab === 'history' && styles.tabActive]}
+                        onPress={() => setActiveTab('history')}
+                        style = {{...styles.tab ,
                             borderRadius: 8,
                             padding: 4,
-                            backgroundColor: activeTab === 'services' ? theme.secondary : theme.surface,}}
-                        
+                            backgroundColor: activeTab === 'history' ? theme.secondary : theme.surfaceVariant,}}
                     >
                         <ThemedText
                             type="normal"
                             size={14}
-                            color={activeTab === 'services' ? "white": theme.text + "80"}
-                            style={{ fontWeight: '600' }}
+                            intensity = "strong"
+                            color={activeTab === 'history' ? 'white' :theme.text}
                         >
-                            Services
+                            {t('walletComponents.history')}
                         </ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        onPress={() => setActiveTab('services')}
+                         style = {{...styles.tab,
+                            borderRadius: 8,
+                            padding: 4,
+                            backgroundColor: activeTab === 'services' ? theme.secondary : theme.surfaceVariant,}}
+
+                    >
+                        <ThemedText
+                            type="normal"
+                            intensity = "strong"
+                            size={14}
+                            color={activeTab === 'services' ? "white": theme.text}
+                        >
+                            {t('walletComponents.services')}
+                        </ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        onPress={() => setActiveTab('tokens')}
+                        style={{...styles.tab,
+                            borderRadius: 8,
+                            padding: 4,
+                            backgroundColor: activeTab === 'tokens' ? theme.secondary : theme.surfaceVariant,}}
+                    >
+                        <ThemedView backgroundColor="transparent" style={styles.tabWithBadge}>
+                            <ThemedText
+                                type="normal"
+                                intensity="strong"
+                                size={14}
+                                color={activeTab === 'tokens' ? 'white' : theme.text}
+                            >
+                                Tokens
+                            </ThemedText>
+                            {investTokensCount > 0 && (
+                                <ThemedView style={{...styles.badge, backgroundColor: 'transparent'}}>
+                                    <ThemedText type="caption" size={10} intensity="strong" style={{color: 'white'}}>
+                                        {investTokensCount}
+                                    </ThemedText>
+                                </ThemedView>
+                            )}
+                        </ThemedView>
                     </TouchableOpacity>
                 </ThemedView>
 
@@ -233,8 +261,8 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                                 <ThemedText type="title" size={20} color={theme.text} intensity="strong">
                                     {activitiesByType.services}
                                 </ThemedText>
-                                <ThemedText type="caption" size={11} color={theme.text + "80"} style={{ fontWeight: '500' }}>
-                                    Services
+                                <ThemedText type="caption" intensity = "strong" size={11} color={theme.text + "80"}>
+                                    {t('walletComponents.services')}
                                 </ThemedText>
                             </ThemedView>
                             <ThemedView backgroundColor={theme.star + '15'} style={styles.summaryCard}>
@@ -242,8 +270,8 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                                 <ThemedText type="title" size={20} color={theme.text} intensity="strong">
                                     {activitiesByType.reservations}
                                 </ThemedText>
-                                <ThemedText type="caption" size={11} color={theme.text + "80"} style={{ fontWeight: '500' }}>
-                                    Réservations
+                                <ThemedText type="caption" intensity = "strong" size={11} color={theme.text + "80"}>
+                                    {t('walletComponents.reservations')}
                                 </ThemedText>
                             </ThemedView>
                             <ThemedView backgroundColor={theme.error + '15'} style={styles.summaryCard}>
@@ -251,8 +279,8 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                                 <ThemedText type="title" size={20} color={theme.text} intensity="strong">
                                     {activitiesByType.rents}
                                 </ThemedText>
-                                <ThemedText type="caption" size={11} color={theme.text + "80"} style={{ fontWeight: '500' }}>
-                                    Loyers
+                                <ThemedText type="caption" intensity = "strong" size={11} color={theme.text + "80"}>
+                                    {t('walletComponents.rents')}
                                 </ThemedText>
                             </ThemedView>
                         </ThemedView>
@@ -262,7 +290,7 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                             <ThemedView backgroundColor="transparent" style={styles.loadingContainer}>
                                 <ActivityIndicator size="large" color={theme.secondary} />
                                 <ThemedText type="normal" size={14} color={theme.text + "80"} style={{ marginTop: 12 }}>
-                                    Chargement...
+                                    {t('walletComponents.loadingText')}
                                 </ThemedText>
                             </ThemedView>
                         )}
@@ -297,26 +325,31 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                                             {getActivityIcon(activity.type)}
                                         </ThemedView>
                                         <ThemedView backgroundColor="transparent" style={styles.activityDetails}>
-                                            <ThemedText type="normal" size={14} color={theme.text} style={{ fontWeight: '600', marginBottom: 2 }} numberOfLines={1}>
+                                                <ThemedView style = {{flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 4}  }>
+                                                     <ThemedText type="normal" size={15} color={theme.text} style={{ fontWeight: '600', marginBottom: 2 }} numberOfLines={1}>
                                                 {activity.title}
-                                            </ThemedText>
-                                            <ThemedText type="caption" size={12} color={theme.text + "80"} style={{ marginBottom: 4 }} numberOfLines={1}>
-                                                {activity.description || activity.type.charAt(0).toUpperCase() + activity.type.slice(1)}
-                                            </ThemedText>
-                                            <ThemedView backgroundColor="transparent" style={styles.activityMeta}>
+                                                 </ThemedText>
+                                                  <ThemedView backgroundColor="transparent" style={styles.activityMeta}>
                                                 <ThemedView backgroundColor={getStatusColor(activity.paymentStatus) + '20'} style={styles.statusBadge}>
                                                     <ThemedText type="caption" size={10} color={getStatusColor(activity.paymentStatus)} style={{ fontWeight: '600' }}>
-                                                        {activity.paymentStatus === 'unpaid' ? 'À payer' :
-                                                         activity.paymentStatus === 'pending' ? 'En attente' :
-                                                         activity.paymentStatus === 'paid' ? 'Payé' : activity.paymentStatus}
+                                                        {activity.paymentStatus === 'unpaid' ? t('walletComponents.toPay') :
+                                                         activity.paymentStatus === 'pending' ? t('walletComponents.pending') :
+                                                         activity.paymentStatus === 'paid' ? t('walletComponents.paid') : activity.paymentStatus}
                                                     </ThemedText>
                                                 </ThemedView>
                                             </ThemedView>
+
+                                                </ThemedView>
+                                           
+                                            <ThemedText type="caption" color={theme.text} style={{ marginBottom: 4 }} numberOfLines={1}>
+                                                {activity.description || activity.type.charAt(0).toUpperCase() + activity.type.slice(1)}
+                                            </ThemedText>
+                                           
                                         </ThemedView>
                                     </ThemedView>
                                     <ThemedView backgroundColor="transparent" style={styles.activityRight}>
                                         <ThemedText type="normal" size={14} color={theme.text} intensity="strong">
-                                            {formatAmount(activity.amount, activity.currency)}
+                                            {activity.amount.toLocaleString('fr-FR')} {activity.currency}
                                         </ThemedText>
                                         <ChevronRight size={18} color={theme.text + "80"} />
                                     </ThemedView>
@@ -329,10 +362,10 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                             <ThemedView backgroundColor="transparent" style={styles.emptyState}>
                                 <CreditCard size={48} color={theme.text + "80"} opacity={0.3} />
                                 <ThemedText type="normal" size={14} color={theme.text + "80"} style={{ marginTop: 12 }}>
-                                    Aucun paiement en cours
+                                    {t('walletComponents.noOngoingPayments')}
                                 </ThemedText>
                                 <ThemedText type="caption" size={12} color={theme.text} style={{ marginTop: 4, textAlign: 'center', paddingHorizontal: 32 }}>
-                                    Vos services, réservations et loyers apparaîtront ici
+                                    {t('walletComponents.servicesReservationsRentsHere')}
                                 </ThemedText>
                             </ThemedView>
                         )}
@@ -343,12 +376,12 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                 {activeTab === 'services' && (
                     <ThemedView backgroundColor="transparent" style={styles.servicesGrid}>
                         {[
-                            { id: 'rent', name: 'Loyer', icon: 'home', color: '#FF3B30' },
-                            { id: 'electricity', name: 'Électricité', icon: 'zap', color: '#FFCC00' },
-                            { id: 'internet', name: 'Internet', icon: 'wifi', color: '#007AFF' },
-                            { id: 'water', name: 'Eau', icon: 'droplet', color: '#5AC8FA' },
-                            { id: 'shopping', name: 'Achats', icon: 'shopping-bag', color: '#FF2D55' },
-                            { id: 'services', name: 'Services', icon: 'building', color: '#34C759' }
+                            { id: 'rent', name: t('walletComponents.rent'), icon: 'home', color: '#FF3B30' },
+                            { id: 'electricity', name: t('walletComponents.electricity'), icon: 'zap', color: '#FFCC00' },
+                            { id: 'internet', name: t('walletComponents.internet'), icon: 'wifi', color: '#007AFF' },
+                            { id: 'water', name: t('walletComponents.water'), icon: 'droplet', color: '#5AC8FA' },
+                            { id: 'shopping', name: t('walletComponents.shopping'), icon: 'shopping-bag', color: '#FF2D55' },
+                            { id: 'services', name: t('walletComponents.services'), icon: 'building', color: '#34C759' }
                         ].map((service, index) => (
                             <MotiView
                                 key={service.id}
@@ -379,6 +412,97 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                     </ThemedView>
                 )}
 
+                {/* Tokens d'investissement RST + SPV */}
+                {activeTab === 'tokens' && (
+                    <ThemedView backgroundColor="transparent" style={{ paddingHorizontal: 16 }}>
+                        <TouchableOpacity
+                            onPress={() => onNavigate('invest-tokens')}
+                            style={{
+                                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                                padding: 16, borderRadius: 14, borderWidth: 1,
+                                borderColor: theme.secondary + '30',
+                                backgroundColor: theme.secondary + '08',
+                                marginBottom: 12,
+                            }}
+                        >
+                            <ThemedView backgroundColor="transparent" style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                <ThemedView style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: theme.secondary + '18', justifyContent: 'center', alignItems: 'center' }}>
+                                    <TrendingUp size={20} color={theme.secondary} />
+                                </ThemedView>
+                                <ThemedView backgroundColor="transparent">
+                                    <ThemedText type="normal" style={{ fontWeight: '700', color: theme.text }}>
+                                        Mes tokens d'investissement
+                                    </ThemedText>
+                                    <ThemedText type="caption" style={{ color: theme.onSurface + '60', marginTop: 2 }}>
+                                        RST Revenue Share · Parts SPV
+                                    </ThemedText>
+                                </ThemedView>
+                            </ThemedView>
+                            <ChevronRight size={20} color={theme.secondary} />
+                        </TouchableOpacity>
+
+                        {/* Borrow REC entry */}
+                        <TouchableOpacity
+                            onPress={() => router.push('/rec' as any)}
+                            style={{
+                                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                                padding: 14, borderRadius: 14, borderWidth: 1,
+                                borderColor: '#7c3aed' + '30',
+                                backgroundColor: '#7c3aed' + '08',
+                                marginBottom: 12,
+                            }}
+                        >
+                            <ThemedView backgroundColor="transparent" style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                <ThemedView style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: '#7c3aed' + '18', justifyContent: 'center', alignItems: 'center' }}>
+                                    <ArrowRightLeft size={20} color="#7c3aed" />
+                                </ThemedView>
+                                <ThemedView backgroundColor="transparent">
+                                    <ThemedText type="normal" style={{ fontWeight: '700', color: '#7c3aed' }}>
+                                        Emprunter des REC
+                                    </ThemedText>
+                                    <ThemedText type="caption" style={{ color: theme.onSurface + '60', marginTop: 2 }}>
+                                        Collatéral RST/SPV · 70% LTV · Stablecoin
+                                    </ThemedText>
+                                </ThemedView>
+                            </ThemedView>
+                            <ChevronRight size={20} color="#7c3aed" />
+                        </TouchableOpacity>
+
+                        <ThemedView style={{ flexDirection: 'row', gap: 8 }}>
+                            <TouchableOpacity
+                                style={{
+                                    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                                    gap: 6, height: 44, borderRadius: 22,
+                                    backgroundColor: (theme as any).success ?? '#10b981',
+                                }}
+                                onPress={() => onNavigate('invest-rst')}
+                            >
+                                <ThemedText style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>+ RST</ThemedText>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={{
+                                    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                                    gap: 6, height: 44, borderRadius: 22,
+                                    backgroundColor: theme.secondary,
+                                }}
+                                onPress={() => onNavigate('invest-spv')}
+                            >
+                                <ThemedText style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>+ SPV</ThemedText>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={{
+                                    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                                    gap: 6, height: 44, borderRadius: 22,
+                                    backgroundColor: '#7c3aed',
+                                }}
+                                onPress={() => router.push('/rec/open' as any)}
+                            >
+                                <ThemedText style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>Vault REC</ThemedText>
+                            </TouchableOpacity>
+                        </ThemedView>
+                    </ThemedView>
+                )}
+
                 {/* Liste des transactions */}
                 {activeTab === 'history' && (
                     <ThemedView backgroundColor="transparent" style={styles.transactionsList}>
@@ -390,7 +514,7 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                                 transition={{ type: 'timing', delay: index * 50 }}
                             >
                                 <TouchableOpacity
-                                    style={styles.transactionItem}
+                                    style={{...styles.transactionItem, borderWidth:1, borderColor: theme.outline }}
                                     onPress={() => onNavigate(`transaction-detail-${transaction.id}`)}
                                 >
                                     <ThemedView backgroundColor="transparent" style={styles.txLeft}>
@@ -398,15 +522,18 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                                             <CheckCircle2 size={18} color={theme.success} strokeWidth={2} />
                                         </ThemedView>
                                         <ThemedView backgroundColor="transparent" style={styles.txDetails}>
-                                            <ThemedText type="normal" size={13} color={theme.text} style={{ fontWeight: '600', marginBottom: 3 }}>
+                                            <ThemedText type="normal" color={theme.text} style={{ fontWeight: '600', marginBottom: 3 }}>
                                                 {transaction.status === 'pending' ? 'Mined for Available Balance' : transaction.description}
                                             </ThemedText>
-                                            <ThemedText type="caption" size={11} color={theme.text + "80"}>
+                                            <ThemedView style = {{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                            <ThemedText type="caption" color={theme.text } >
                                                 {transaction.type || 'Txn ID: '}
-                                                <ThemedText type="caption" size={11} color={theme.text} style={{ fontFamily: 'monospace' }}>
-                                                    {transaction.id.substring(0, 6)}...
-                                                </ThemedText>
                                             </ThemedText>
+                                             <ThemedText type="caption" size={11} color={theme.text} style={{ fontFamily: 'monospace' }}>
+                                                    {transaction.id.substring(0, 6)}...
+                                            </ThemedText>
+                                            </ThemedView>
+                                            
                                         </ThemedView>
                                     </ThemedView>
 
@@ -419,7 +546,7 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                             <ThemedView backgroundColor="transparent" style={styles.emptyState}>
                                 <WalletIcon size={48} color={theme.text + "80"} opacity={0.3} />
                                 <ThemedText type="normal" size={14} color={theme.text + "80"} style={{ marginTop: 12 }}>
-                                    No transactions yet
+                                    {t('walletComponents.noTransactionsYet')}
                                 </ThemedText>
                             </ThemedView>
                         )}
@@ -430,7 +557,7 @@ export const WalletHome: React.FC<WalletHomeProps> = ({
                 {activeTab === 'history' && transactions.length > 5 && (
                     <TouchableOpacity style={styles.showMoreButton} onPress={() => onNavigate('transactions')}>
                         <ThemedText type="normal" size={13} color={theme.secondary} style={{ fontWeight: '600' }}>
-                            Show more
+                            {t('walletComponents.showMore')}
                         </ThemedText>
                     </TouchableOpacity>
                 )}
@@ -487,7 +614,7 @@ const styles = StyleSheet.create({
         letterSpacing: -0.5,
     },
     availableBalance: {
-        marginBottom: 20,
+        marginBottom: 10,
     },
     actionsRow: {
         flexDirection: 'row',
@@ -499,8 +626,8 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     actionCircle: {
-        width: 60,
-        height: 60,
+        width: 50,
+        height: 50,
         borderRadius: 30,
         justifyContent: 'center',
         alignItems: 'center',
@@ -508,19 +635,19 @@ const styles = StyleSheet.create({
         
     },
     content: {
-        paddingTop: 8,
+        paddingTop: 12,
     },
     tabsContainer: {
         display: 'flex',
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        gap: 20,
+        paddingHorizontal: 8,
+        gap: 6,
         marginBottom: 12,
     },
     tab: {
         flex: 1,
-        paddingVertical: 12,
+        paddingVertical: 10,
         backgroundColor: 'white',
         borderRadius: 12,
         alignItems: 'center',
@@ -528,6 +655,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 4,
         elevation: 0.5,
+        
     },
    
     transactionsList: {
@@ -537,16 +665,10 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: 'white',
         paddingVertical: 16,
         paddingHorizontal: 16,
         borderRadius: 12,
         marginBottom: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-        elevation: 1,
     },
     txLeft: {
         flexDirection: 'row',
@@ -581,13 +703,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         paddingHorizontal: 16,
-        gap: 12,
-        marginBottom: 16,
+        gap: 16,
+        marginBottom: 12,
     },
     serviceCard: {
-        width: (width - 56) / 3,
-        backgroundColor: 'white',
-        padding: 16,
+        width: (width - 66) / 3,
+        padding: 8,
         borderRadius: 16,
         alignItems: 'center',
     },
@@ -602,13 +723,15 @@ const styles = StyleSheet.create({
     tabWithBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: 1,
+
+        
     },
     badge: {
         borderRadius: 10,
-        paddingHorizontal: 6,
+        paddingHorizontal:2,
         paddingVertical: 2,
-        minWidth: 20,
+        minWidth: 5,
         alignItems: 'center',
     },
     paymentsList: {

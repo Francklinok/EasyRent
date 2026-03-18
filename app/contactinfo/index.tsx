@@ -17,9 +17,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { BackButton } from '@/components/ui/BackButton';
-import { useTheme } from '@/components/contexts/theme/themehook';
+import { useTheme } from '@/hooks/themehook';
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { usePrivacy } from '@/components/contexts/privacy/PrivacyContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -40,6 +41,7 @@ type ContactData = {
 const ContactInfo = () => {
   const { name, image, status, chatId, phone } = useLocalSearchParams();
   const { theme } = useTheme();
+  const { canShowPhone, canShowOnlineStatus, canShowLastActive } = usePrivacy();
   const scrollY = useRef(new Animated.Value(0)).current;
   
   // États locaux
@@ -70,7 +72,6 @@ const ContactInfo = () => {
     extrapolate: 'clamp',
   });
 
-  // Fonctions d'action
   const handleCall = async () => {
     try {
       const url = `tel:${contactData.phone}`;
@@ -413,7 +414,7 @@ const ContactInfo = () => {
                 backgroundColor: theme.surfaceVariant,
               }}
             />
-            {contactData.isOnline && (
+            {canShowOnlineStatus() && contactData.isOnline && (
               <ThemedView
                 style={{
                   position: 'absolute',
@@ -439,23 +440,31 @@ const ContactInfo = () => {
             {contactData.name}
           </ThemedText>
 
-          <ThemedText
-            style={{
-              color: theme.typography.caption,
-              marginBottom: 8,
-            }}
-          >
-            {contactData.phone}
-          </ThemedText>
+          {canShowPhone() && (
+            <ThemedText
+              style={{
+                color: theme.typography.caption,
+                marginBottom: 8,
+              }}
+            >
+              {contactData.phone}
+            </ThemedText>
+          )}
 
-          <ThemedText
-            style={{
-              color: theme.typography.caption,
-              textAlign: 'center',
-            }}
-          >
-            {contactData.isOnline ? 'En ligne' : `Vu ${contactData.lastSeen}`}
-          </ThemedText>
+          {(canShowOnlineStatus() || canShowLastActive()) && (
+            <ThemedText
+              style={{
+                color: theme.typography.caption,
+                textAlign: 'center',
+              }}
+            >
+              {canShowOnlineStatus() && contactData.isOnline
+                ? 'En ligne'
+                : canShowLastActive()
+                  ? `Vu ${contactData.lastSeen}`
+                  : ''}
+            </ThemedText>
+          )}
 
           {/* Actions rapides */}
           <ThemedView
@@ -495,12 +504,14 @@ const ContactInfo = () => {
               subtitle={`${new Date().toLocaleDateString()} à ${new Date().toLocaleTimeString()}`}
               showArrow={false}
             />
-            <InfoItem
-              icon="phone"
-              title={contactData.phone}
-              subtitle="Mobile"
-              onPress={handleCall}
-            />
+            {canShowPhone() && (
+              <InfoItem
+                icon="phone"
+                title={contactData.phone}
+                subtitle="Mobile"
+                onPress={handleCall}
+              />
+            )}
           </InfoSection>
         )}
 

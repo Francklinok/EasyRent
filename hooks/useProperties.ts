@@ -1,11 +1,34 @@
-import { useState, useEffect, useCallback } from 'react';
-import { getPropertyService, Property, PropertyFilters, PaginationInput, PropertyConnection } from '@/services/api/propertyService';
+/**
+ * useProperties - Hook migré vers la nouvelle architecture offline-first
+ *
+ * Utilise:
+ * - useCachedQuery pour le pattern SWR (Stale-While-Revalidate)
+ * - useInfiniteQuery pour la pagination
+ * - Réactivité automatique avec invalidation de cache
+ * - Support offline complet
+ */
+
+import { useState, useCallback, useMemo } from 'react';
+import { useCachedQuery, useInfiniteQuery } from './offline/useCachedQuery';
+import { useMutation } from './offline/useMutation';
+import {
+  getPropertyService,
+  Property,
+  PropertyFilters,
+  PaginationInput,
+  PropertyConnection,
+} from '@/services/api/propertyService';
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 interface UsePropertiesResult {
   properties: Property[];
   loading: boolean;
   error: string | null;
   totalCount: number;
+  availableCount: number;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
   refresh: () => Promise<void>;
@@ -20,232 +43,200 @@ interface UsePropertiesOptions {
   autoLoad?: boolean;
 }
 
-/**
- * Hook personnalisé pour gérer les propriétés
- */
+// ============================================================================
+// USE PROPERTIES HOOK (LIST)
+// ============================================================================
+
 export function useProperties(options: UsePropertiesOptions = {}): UsePropertiesResult {
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { filters: initialFilters, pagination: initialPagination, autoLoad = true } = options;
+
+  const [currentFilters, setCurrentFilters] = useState<PropertyFilters>(initialFilters || {});
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [totalCount, setTotalCount] = useState(0);
-  const [hasNextPage, setHasNextPage] = useState(false);
-  const [hasPreviousPage, setHasPreviousPage] = useState(false);
-  const [currentFilters, setCurrentFilters] = useState<PropertyFilters>(options.filters || {});
-  const [currentPagination, setCurrentPagination] = useState<PaginationInput>(
-    options.pagination || { page: 1, limit: 20 }
+  const [availableCount, setAvailableCount] = useState(0);
+
+  const propertyService = useMemo(() => getPropertyService(), []);
+
+  // Build unique query key based on filters and search
+  const queryKey = useMemo(
+    () => ['properties', JSON.stringify(currentFilters), searchQuery],
+    [currentFilters, searchQuery]
   );
 
-  const propertyService = getPropertyService();
+  // Use infinite query for paginated data with SWR pattern
+  const {
+    data: properties,
+    loading,
+    error,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    refetch,
+  } = useInfiniteQuery<Property>({
+    queryKey,
+    queryFn: async (page: number) => {
+      const pagination: PaginationInput = {
+        ...initialPagination,
+        page: page + 1,
+        limit: initialPagination?.limit || 20,
+      };
 
-  const loadProperties = useCallback(async (
-    filters: PropertyFilters = currentFilters,
-    pagination: PaginationInput = currentPagination,
-    append: boolean = false
-  ) => {
-    try {
-      setLoading(true);
-      setError(null);
+      let result: PropertyConnection;
 
-      const result: PropertyConnection = await propertyService.getProperties(filters, pagination);
-
-      const newProperties = result.edges.map(edge => edge.node);
-
-      if (append) {
-        setProperties(prev => [...prev, ...newProperties]);
+      if (searchQuery.trim()) {
+        result = await propertyService.searchProperties(searchQuery, currentFilters, pagination);
       } else {
-        setProperties(newProperties);
+        result = await propertyService.getProperties(currentFilters, pagination);
       }
 
+      // Update metadata
       setTotalCount(result.totalCount);
-      setHasNextPage(result.pageInfo.hasNextPage);
-      setHasPreviousPage(result.pageInfo.hasPreviousPage);
-    } catch (err) {
-      console.error('Error loading properties:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load properties');
-    } finally {
-      setLoading(false);
-    }
-  }, [propertyService, currentFilters, currentPagination]);
+      setAvailableCount(result.availableCount);
+
+      return {
+        items: result.edges.map((edge) => edge.node),
+        hasNextPage: result.pageInfo.hasNextPage,
+      };
+    },
+    enabled: autoLoad,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   const refresh = useCallback(async () => {
-    setCurrentPagination(prev => ({ ...prev, page: 1 }));
-    await loadProperties(currentFilters, { ...currentPagination, page: 1 }, false);
-  }, [loadProperties, currentFilters, currentPagination]);
+    await refetch();
+  }, [refetch]);
 
   const loadMore = useCallback(async () => {
-    if (!hasNextPage || loading) return;
-
-    const nextPage = (currentPagination.page || 1) + 1;
-    const newPagination = { ...currentPagination, page: nextPage };
-    setCurrentPagination(newPagination);
-    await loadProperties(currentFilters, newPagination, true);
-  }, [hasNextPage, loading, currentFilters, currentPagination, loadProperties]);
+    if (!hasNextPage || isFetchingNextPage) return;
+    await fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const search = useCallback(async (query: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const pagination = { ...currentPagination, page: 1 };
-      const result: PropertyConnection = await propertyService.searchProperties(
-        query,
-        currentFilters,
-        pagination
-      );
-
-      const newProperties = result.edges.map(edge => edge.node);
-      setProperties(newProperties);
-      setTotalCount(result.totalCount);
-      setHasNextPage(result.pageInfo.hasNextPage);
-      setHasPreviousPage(result.pageInfo.hasPreviousPage);
-      setCurrentPagination(pagination);
-    } catch (err) {
-      console.error('Error searching properties:', err);
-      setError(err instanceof Error ? err.message : 'Failed to search properties');
-    } finally {
-      setLoading(false);
-    }
-  }, [propertyService, currentFilters, currentPagination]);
+    setSearchQuery(query);
+    // The queryKey change will trigger automatic refetch
+  }, []);
 
   const applyFilters = useCallback(async (filters: PropertyFilters) => {
     setCurrentFilters(filters);
-    const pagination = { ...currentPagination, page: 1 };
-    setCurrentPagination(pagination);
-    await loadProperties(filters, pagination, false);
-  }, [loadProperties, currentPagination]);
-
-  // Chargement initial
-  useEffect(() => {
-    if (options.autoLoad !== false) {
-      loadProperties();
-    }
+    // The queryKey change will trigger automatic refetch
   }, []);
 
   return {
-    properties,
+    properties: properties || [],
     loading,
-    error,
+    error: error?.message || null,
     totalCount,
+    availableCount,
     hasNextPage,
-    hasPreviousPage,
+    hasPreviousPage: false,
     refresh,
     loadMore,
     search,
-    applyFilters
+    applyFilters,
   };
 }
 
-/**
- * Hook pour récupérer une propriété spécifique
- */
+// ============================================================================
+// USE PROPERTY HOOK (SINGLE)
+// ============================================================================
+
 export function useProperty(id: string) {
-  const [property, setProperty] = useState<Property | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const propertyService = useMemo(() => getPropertyService(), []);
 
-  const propertyService = getPropertyService();
-
-  const loadProperty = useCallback(async () => {
-    if (!id) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const result = await propertyService.getProperty(id);
-      setProperty(result);
-    } catch (err) {
-      console.error('Error loading property:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load property');
-    } finally {
-      setLoading(false);
-    }
-  }, [id, propertyService]);
-
-  useEffect(() => {
-    loadProperty();
-  }, [loadProperty]);
+  const { data, loading, error, refetch, isStale } = useCachedQuery<Property | null>({
+    queryKey: ['property', id],
+    queryFn: async () => {
+      if (!id) {
+        return null;
+      }
+      return propertyService.getProperty(id);
+    },
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+  });
 
   return {
-    property,
+    property: data,
     loading,
-    error,
-    reload: loadProperty
+    error: error?.message || null,
+    isStale,
+    reload: refetch,
   };
 }
 
-/**
- * Hook pour récupérer les propriétés similaires
- */
+// ============================================================================
+// USE SIMILAR PROPERTIES HOOK
+// ============================================================================
+
 export function useSimilarProperties(propertyId: string, limit: number = 5) {
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const propertyService = useMemo(() => getPropertyService(), []);
 
-  const propertyService = getPropertyService();
-
-  const loadSimilarProperties = useCallback(async () => {
-    if (!propertyId) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const result = await propertyService.getSimilarProperties(propertyId, limit);
-      setProperties(result);
-    } catch (err) {
-      console.error('Error loading similar properties:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load similar properties');
-    } finally {
-      setLoading(false);
-    }
-  }, [propertyId, limit, propertyService]);
-
-  useEffect(() => {
-    loadSimilarProperties();
-  }, [loadSimilarProperties]);
+  const { data, loading, error, refetch } = useCachedQuery<Property[]>({
+    queryKey: ['properties', 'similar', propertyId, String(limit)],
+    queryFn: async () => {
+      if (!propertyId) return [];
+      return propertyService.getSimilarProperties(propertyId, limit);
+    },
+    enabled: !!propertyId,
+    staleTime: 10 * 60 * 1000, // 10 minutes for similar properties
+  });
 
   return {
-    properties,
+    properties: data || [],
     loading,
-    error,
-    reload: loadSimilarProperties
+    error: error?.message || null,
+    reload: refetch,
   };
 }
 
-/**
- * Hook pour récupérer les statistiques des propriétés
- */
+// ============================================================================
+// USE PROPERTY STATS HOOK
+// ============================================================================
+
 export function usePropertyStats() {
-  const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const propertyService = useMemo(() => getPropertyService(), []);
 
-  const propertyService = getPropertyService();
-
-  const loadStats = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const result = await propertyService.getPropertyStats();
-      setStats(result);
-    } catch (err) {
-      console.error('Error loading property stats:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load property stats');
-    } finally {
-      setLoading(false);
-    }
-  }, [propertyService]);
-
-  useEffect(() => {
-    loadStats();
-  }, [loadStats]);
+  const { data, loading, error, refetch } = useCachedQuery<any>({
+    queryKey: ['properties', 'stats'],
+    queryFn: () => propertyService.getPropertyStats(),
+    staleTime: 2 * 60 * 1000, // 2 minutes for stats
+  });
 
   return {
-    stats,
+    stats: data,
     loading,
-    error,
-    reload: loadStats
+    error: error?.message || null,
+    reload: refetch,
   };
+}
+
+// ============================================================================
+// USE PROPERTY MUTATIONS
+// ============================================================================
+
+export function useCreateProperty() {
+  const propertyService = useMemo(() => getPropertyService(), []);
+
+  return useMutation<Property, Partial<Property>>({
+    mutationFn: (data) => propertyService.createProperty(data),
+    invalidateQueries: [['properties']],
+  });
+}
+
+export function useUpdateProperty() {
+  const propertyService = useMemo(() => getPropertyService(), []);
+
+  return useMutation<Property, { id: string; data: Partial<Property> }>({
+    mutationFn: ({ id, data }) => propertyService.updateProperty(id, data),
+    invalidateQueries: [['properties']],
+  });
+}
+
+export function useDeleteProperty() {
+  const propertyService = useMemo(() => getPropertyService(), []);
+
+  return useMutation<boolean, string>({
+    mutationFn: (id) => propertyService.deleteProperty(id),
+    invalidateQueries: [['properties']],
+  });
 }

@@ -1,18 +1,21 @@
-import React from 'react'
-import { View, ScrollView } from 'react-native'
-import { ThemedView } from '@/components/ui/ThemedView'
-import ProfileComponent from '@/components/profile/ProfileComponent'
-
+import React from 'react';
+import { ScrollView } from 'react-native';
+import { ThemedView } from '@/components/ui/ThemedView';
+import ProfileComponent from '@/components/profile/ProfileComponent';
 const Profile = () => {
+
   return (
     <ThemedView style={{ flex: 1 }}>
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 px-4 ">
-        <View className="mb-6">
+      <ThemedView style={{ flex: 1 }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 100 }}
+        >
           <ProfileComponent />
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </ThemedView>
     </ThemedView>
-  )
-}
+  );
+};
 
-export default Profile
+export default Profile;

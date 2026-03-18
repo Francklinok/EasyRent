@@ -1,6 +1,6 @@
 import React from "react";
 import { View, ViewProps } from "react-native";
-import { useTheme, useThemeTransition } from "../contexts/theme/themehook";
+import { useTheme, useThemeTransition } from "../../hooks/themehook";
 
 // Type for themed component base props
 type ThemedComponentProps = {

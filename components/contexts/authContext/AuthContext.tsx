@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { Alert, AppState, AppStateStatus } from 'react-native';
-import { authService, User, RegisterData, TwoFactorSetup } from "@/components/services/authService";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authService as restAuthService, User, RegisterData, TwoFactorSetup } from "@/services/restApiService/authService";;
+import { unifiedAuthService } from "@/services/auth/unifiedAuthService";
+import { cleanupOfflineServices } from "@/services/offline";
 
 export interface AuthState {
   user: User | null;
@@ -36,13 +39,20 @@ export interface AuthError {
   field?: string;
 }
 
+type ActiveMode = 'client' | 'owner';
+
 type AuthContextType = AuthState & AuthActions & {
   error: AuthError | null;
+  isOwner: boolean;
+  setIsOwner: (value: boolean) => void;
+  activeMode: ActiveMode;
+  setActiveMode: (mode: ActiveMode) => void;
 };
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
-const SESSION_TIMEOUT = 30 * 60 * 1000;
+// Session persistante - pas d'expiration automatique
+const SESSION_TIMEOUT = null;
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>({
@@ -56,8 +66,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   
   const [error, setError] = useState<AuthError | null>(null);
+  const [activeMode, setActiveModeState] = useState<ActiveMode>('client');
   const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+
+  const isOwner = state.user?.isOwner ?? false;
+
+  const setIsOwner = useCallback((value: boolean) => {
+    setState(prev => {
+      if (!prev.user) return prev;
+      const updatedUser = { ...prev.user, isOwner: value };
+      AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      return { ...prev, user: updatedUser };
+    });
+  }, []);
+
+  const setActiveMode = useCallback((mode: ActiveMode) => {
+    setActiveModeState(mode);
+    AsyncStorage.setItem('activeMode', mode);
+  }, []);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -80,9 +107,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkSession = useCallback(async (): Promise<boolean> => {
     try {
-      if (!authService.isAuthenticated()) return false;
-      
-      const user = await authService.getProfile();
+      if (!unifiedAuthService.isAuthenticated()) return false;
+
+      const user = await unifiedAuthService.getProfile();
       setState(prev => ({ ...prev, user }));
       return true;
     } catch (error) {
@@ -93,10 +120,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = useCallback(async (): Promise<void> => {
     try {
+      console.log('🚪 [AuthContext] Logout initiated...');
       setState(prev => ({ ...prev, loading: true }));
-      
-      await authService.logout();
-      
+
+      // Utiliser le service unifié qui nettoie TOUS les tokens
+      await unifiedAuthService.logout();
+
+      // Nettoyer les services offline (cache, database, sync)
+      await cleanupOfflineServices();
+      console.log('✅ [AuthContext] Offline services cleaned up');
+
+      // Reset complet du state
       setState({
         user: null,
         loading: false,
@@ -106,11 +140,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sessionExpired: false,
         lastActivity: Date.now()
       });
-      
+
       clearError();
       clearSessionTimer();
+
+      console.log('✅ [AuthContext] Logout completed - user state cleared');
     } catch (error: any) {
-      console.error('Logout error:', error);
+      console.error('❌ [AuthContext] Logout error:', error);
+      // Même en cas d'erreur, on nettoie le state local
       setState({
         user: null,
         loading: false,
@@ -122,6 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       clearError();
       clearSessionTimer();
+      console.log('⚠️ [AuthContext] Logout completed with errors - user state cleared anyway');
     }
   }, [clearError, clearSessionTimer]);
 
@@ -135,17 +173,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [logout]);
 
   const startSessionTimer = useCallback(() => {
+    // Session persistante - pas de timer d'expiration
     clearSessionTimer();
-    const timeUntilExpiry = SESSION_TIMEOUT - (Date.now() - state.lastActivity);
-    
-    if (timeUntilExpiry > 0) {
-      sessionTimeoutRef.current = setTimeout(() => {
-        handleSessionExpired();
-      }, timeUntilExpiry);
-    } else {
-      handleSessionExpired();
-    }
-  }, [state.lastActivity, handleSessionExpired, clearSessionTimer]);
+  }, [clearSessionTimer]);
 
   const setupAppStateListener = useCallback(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
@@ -164,20 +194,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const initializeAuth = useCallback(async () => {
     try {
       setState(prev => ({ ...prev, initializing: true }));
-      
-      await authService.initialize();
-      const storedUser = await authService.getUser();
-      
-      if (storedUser && authService.isAuthenticated()) {
-        const isValidSession = await checkSession();
-        if (isValidSession) {
+
+      await unifiedAuthService.initialize();
+
+      // Restore persisted activeMode
+      const savedMode = await AsyncStorage.getItem('activeMode');
+      if (savedMode === 'owner' || savedMode === 'client') {
+        setActiveModeState(savedMode);
+      }
+
+      if (unifiedAuthService.isAuthenticated()) {
+        try {
+          // Charger le profil frais depuis le backend
+          const freshProfile = await unifiedAuthService.getProfile();
+          console.log('✅ [AuthContext] Fresh profile loaded on init:');
+          console.log('   - Email:', freshProfile.email);
+          console.log('   - FirstName:', freshProfile.firstName);
+          console.log('   - LastName:', freshProfile.lastName);
+          console.log('   - FullName:', freshProfile.fullName);
+          console.log('   - ID:', freshProfile.id);
+          
           setState(prev => ({
             ...prev,
-            user: storedUser,
+            user: freshProfile,
             isAuthenticated: true,
             lastActivity: Date.now()
           }));
+          
+          console.log('✅ [AuthContext] User state updated');
+        } catch (error) {
+          console.error('⚠️ [AuthContext] Failed to load profile, clearing session:', error);
+          await unifiedAuthService.logout();
         }
+      } else {
+        console.log('ℹ️ [AuthContext] User not authenticated');
       }
     } catch (error: any) {
       console.error('Auth initialization failed:', error);
@@ -185,7 +235,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setState(prev => ({ ...prev, initializing: false }));
     }
-  }, [checkSession, handleError]);
+  }, [handleError]);
 
   useEffect(() => {
     initializeAuth();
@@ -206,33 +256,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = useCallback(async (email: string, password: string) => {
     try {
+      console.log('🔐 [AuthContext] Login attempt for:', email);
       setState(prev => ({ ...prev, loading: true }));
       clearError();
-      
-      const response = await authService.login(email, password);
-      console.log("user response  for the  first  attempt  for  login is  ",  response)
-      
+
+      const response = await unifiedAuthService.login(email, password);
+      console.log("✅ [AuthContext] Login response:", response);
+
       if (response.requireTwoFactor) {
-        setState(prev => ({ 
-          ...prev, 
+        setState(prev => ({
+          ...prev,
           requireTwoFactor: true,
-          loading: false 
+          loading: false
         }));
         return { success: true, requireTwoFactor: true };
       }
-      
+
+      // Récupérer le profil frais depuis le backend pour éviter les données cached
+      const freshProfile = await unifiedAuthService.getProfile();
+      console.log('🔄 [AuthContext] Fresh profile loaded after login:');
+      console.log('   - Email:', freshProfile.email);
+      console.log('   - FirstName:', freshProfile.firstName);
+      console.log('   - LastName:', freshProfile.lastName);
+      console.log('   - FullName:', freshProfile.fullName);
+      console.log('   - ID:', freshProfile.id);
+
       setState(prev => ({
         ...prev,
-        user: response.data.user,
+        user: freshProfile,
         isAuthenticated: true,
         requireTwoFactor: false,
         loading: false,
         lastActivity: Date.now()
       }));
-      
+
       updateActivity();
       return { success: true };
     } catch (error: any) {
+      console.error('❌ [AuthContext] Login error:', error);
       setState(prev => ({ ...prev, loading: false }));
       handleError('LOGIN_ERROR', error.message);
       throw error;
@@ -241,22 +302,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = useCallback(async (data: RegisterData) => {
     try {
+      console.log('📝 [AuthContext] Registration attempt for:', data.email);
       setState(prev => ({ ...prev, loading: true }));
       clearError();
-      
-      const response:any = await authService.register(data);
-      
+
+      const response:any = await unifiedAuthService.register(data);
+
       setState(prev => ({ ...prev, loading: false }));
-      
-      if (response.verificationRequired) {
+
+      if (response.verificationRequired || response.verificationTokenGenerated) {
         Alert.alert(
-          'Registration Successful', 
-          'Please check your email to verify your account.'
+          'Inscription réussie',
+          'Veuillez vérifier votre email pour activer votre compte.'
         );
       }
-      
-      return { success: true, verificationRequired: response.verificationRequired };
+
+      return { success: true, verificationRequired: response.verificationRequired || response.verificationTokenGenerated };
     } catch (error: any) {
+      console.error('❌ [AuthContext] Registration error:', error);
       setState(prev => ({ ...prev, loading: false }));
       handleError('REGISTER_ERROR', error.message);
       throw error;
@@ -267,9 +330,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setState(prev => ({ ...prev, loading: true }));
       clearError();
-      
-      const response = await authService.verifyAccount(email, code);
-      
+
+      const response = await unifiedAuthService.verifyAccount(email, code);
+
       if (response.autoLogin) {
         setState(prev => ({
           ...prev,
@@ -278,13 +341,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           loading: false,
           lastActivity: Date.now()
         }));
-        
-        Alert.alert('Account Verified', 'Welcome! You have been automatically logged in.');
+
+        Alert.alert('Compte vérifié', 'Bienvenue! Vous êtes automatiquement connecté.');
         return { success: true, autoLogin: true };
       }
-      
+
       setState(prev => ({ ...prev, loading: false }));
-      Alert.alert('Account Verified', 'Your account has been successfully activated.');
+      Alert.alert('Compte vérifié', 'Votre compte a été activé avec succès.');
       return { success: true };
     } catch (error: any) {
       setState(prev => ({ ...prev, loading: false }));
@@ -296,12 +359,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resendVerification = useCallback(async (email: string) => {
     try {
       clearError();
-      const response:any = await authService.resendVerification(email);
-      
+      const response:any = await unifiedAuthService.resendVerification(email);
+
       if (response.sent) {
-        Alert.alert('Verification Sent', 'A new verification code has been sent to your email.');
+        Alert.alert('Code envoyé', 'Un nouveau code de vérification a été envoyé à votre email.');
       }
-      
+
       return { success: response.sent };
     } catch (error: any) {
       handleError('RESEND_ERROR', error.message);
@@ -312,15 +375,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const forgotPassword = useCallback(async (email: string) => {
     try {
       clearError();
-      const response:any = await authService.forgotPassword(email);
-      
+      const response:any = await unifiedAuthService.forgotPassword(email);
+
       if (response.resetTokenSent) {
         Alert.alert(
-          'Reset Email Sent', 
-          'Please check your email for password reset instructions.'
+          'Email envoyé',
+          'Consultez votre email pour les instructions de réinitialisation.'
         );
       }
-      
+
       return { success: response.resetTokenSent };
     } catch (error: any) {
       handleError('FORGOT_PASSWORD_ERROR', error.message);
@@ -331,12 +394,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resetPassword = useCallback(async (token: string, newPassword: string) => {
     try {
       clearError();
-      const response:any = await authService.resetPassword(token, newPassword);
-      
+      const response:any = await unifiedAuthService.resetPassword(token, newPassword);
+
       if (response.success) {
-        Alert.alert('Password Reset', 'Your password has been successfully changed.');
+        Alert.alert('Mot de passe réinitialisé', 'Votre mot de passe a été changé avec succès.');
       }
-      
+
       return { success: response.success };
     } catch (error: any) {
       handleError('RESET_PASSWORD_ERROR', error.message);
@@ -347,13 +410,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
     try {
       clearError();
-      const response:any= await authService.changePassword(currentPassword, newPassword);
-      
+      const response:any= await unifiedAuthService.changePassword(currentPassword, newPassword);
+
       if (response.success) {
-        Alert.alert('Password Changed', 'Your password has been updated successfully.');
+        Alert.alert('Mot de passe changé', 'Votre mot de passe a été mis à jour avec succès.');
         updateActivity();
       }
-      
+
       return { success: response.success };
     } catch (error: any) {
       handleError('CHANGE_PASSWORD_ERROR', error.message);
@@ -364,7 +427,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setupTwoFactor = useCallback(async (): Promise<TwoFactorSetup> => {
     try {
       clearError();
-      const setup = await authService.setupTwoFactor();
+      const setup = await restAuthService.setupTwoFactor();
       updateActivity();
       return setup;
     } catch (error: any) {
@@ -377,18 +440,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setState(prev => ({ ...prev, loading: true }));
       clearError();
-      
-      const response = await authService.verifyTwoFactor(code);
-      
+
+      const response = await unifiedAuthService.verifyTwoFactor(code);
+
+      // Récupérer le profil frais depuis le backend pour éviter les données cached
+      const freshProfile = await unifiedAuthService.getProfile();
+      console.log('🔄 [AuthContext] Fresh profile loaded after 2FA:', freshProfile.email);
+
       setState(prev => ({
         ...prev,
-        user: response.data.user,
+        user: freshProfile,
         isAuthenticated: true,
         requiresTwoFactor: false,
         loading: false,
         lastActivity: Date.now()
       }));
-      
+
       updateActivity();
       return { success: true };
     } catch (error: any) {
@@ -401,18 +468,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const disableTwoFactor = useCallback(async (password: string) => {
     try {
       clearError();
-      const response:any = await authService.disableTwoFactor(password);
-      
+      const response:any = await restAuthService.disableTwoFactor(password);
+
       if (response.success && state.user) {
         setState(prev => ({
           ...prev,
           user: { ...prev.user!, twoFactorEnabled: false }
         }));
-        
-        Alert.alert('2FA Disabled', 'Two-factor authentication has been disabled.');
+
+        Alert.alert('2FA désactivé', 'L\'authentification à deux facteurs a été désactivée.');
         updateActivity();
       }
-      
+
       return { success: response.success };
     } catch (error: any) {
       handleError('2FA_DISABLE_ERROR', error.message);
@@ -424,15 +491,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setState(prev => ({ ...prev, loading: true }));
       clearError();
-      
-      const updatedUser = await authService.updateProfile(data);
-      
+
+      const updatedUser = await unifiedAuthService.updateProfile(data);
+
       setState(prev => ({
         ...prev,
         user: updatedUser,
         loading: false
       }));
-      
+
       updateActivity();
       return { success: true, user: updatedUser };
     } catch (error: any) {
@@ -445,8 +512,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshProfile = useCallback(async (): Promise<void> => {
     try {
       if (!state.isAuthenticated) return;
-      
-      const updatedUser = await authService.getProfile();
+
+      const updatedUser = await unifiedAuthService.getProfile();
       setState(prev => ({ ...prev, user: updatedUser }));
       updateActivity();
     } catch (error: any) {
@@ -458,6 +525,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const contextValue: AuthContextType = {
     ...state,
     error,
+    isOwner,
+    setIsOwner,
+    activeMode,
+    setActiveMode,
     login,
     register,
     logout,

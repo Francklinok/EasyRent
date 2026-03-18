@@ -7,3 +7,4 @@ export { default as CustomButton } from './CustomButton';
 export { default as CustomInput } from './CustomInput';
 export { default as DatePicker } from './DatePicker';
 export { default as PropertyCard } from './PropertyCard';
+export { RateLimitIndicator } from './RateLimitIndicator';

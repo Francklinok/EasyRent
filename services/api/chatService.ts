@@ -98,8 +98,16 @@ export interface Message {
     status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   };
   propertyData?: {
+    id?: string;
     title: string;
     address?: string;
+    ownerId?: string;
+  };
+  metadata?: {
+    activityId?: string;
+    actionType?: string;
+    propertyId?: string;
+    visitDate?: string;
   };
 }
 
@@ -171,7 +179,8 @@ export interface MessageEdit {
 export enum ConversationType {
   DIRECT = 'DIRECT',
   GROUP = 'GROUP',
-  PROPERTY_DISCUSSION = 'PROPERTY_DISCUSSION'
+  PROPERTY_DISCUSSION = 'PROPERTY_DISCUSSION',
+  PROPERTY_INQUIRY =  'PROPERTY_INQUIRY'
 }
 
 export enum MessageType {
@@ -185,7 +194,8 @@ export enum MessageType {
   PROPERTY = 'PROPERTY',
   VOICE_NOTE = 'VOICE_NOTE',
   AR_PREVIEW = 'AR_PREVIEW',
-  VIRTUAL_TOUR = 'VIRTUAL_TOUR'
+  VIRTUAL_TOUR = 'VIRTUAL_TOUR',
+  VISIT_REQUEST = 'VISIT_REQUEST'
 }
 
 export enum MessagePriority {
@@ -203,7 +213,7 @@ export enum SentimentLabel {
 
 export enum PresenceStatus {
   ONLINE = 'ONLINE',
-  OFFLINE = 'OFFLINE',
+  OFFLINE = 'offline',
   AWAY = 'AWAY',
   BUSY = 'BUSY'
 }
@@ -425,6 +435,8 @@ export class ChatService {
    * Récupère les conversations de l'utilisateur
    */
   async getConversations(pagination?: PaginationInput): Promise<ConversationConnection> {
+    console.log('[ChatService] 🔍 Fetching conversations with pagination:', pagination);
+
     const query = `
       query GetConversations($pagination: PaginationInput) {
         conversations(pagination: $pagination) {
@@ -478,6 +490,8 @@ export class ChatService {
       query,
       { pagination }
     );
+
+    console.log('[ChatService] ✅ Received conversations:', result.conversations.edges.length);
     return result.conversations;
   }
 
@@ -529,7 +543,7 @@ export class ChatService {
     limit = 50,
     offset = 0,
     filters?: MessageFilters
-  ): Promise<Message[]> {
+  ): Promise<{ edges: { node: Message }[]; pageInfo: { hasNextPage: boolean; hasPreviousPage: boolean } }> {
     const query = `
       query GetMessages(
         $conversationId: ID!
@@ -623,6 +637,24 @@ export class ChatService {
           isDeleted
           deletedAt
           deletedBy
+          visitData {
+            id
+            date
+            time
+            status
+          }
+          propertyData {
+            id
+            title
+            address
+            ownerId
+          }
+          metadata {
+            activityId
+            actionType
+            propertyId
+            visitDate
+          }
         }
       }
     `;
@@ -631,7 +663,16 @@ export class ChatService {
       query,
       { conversationId, limit, offset, filters }
     );
-    return result.getMessages;
+
+    // Adapter le format pour correspondre à l'ancienne interface (edges/pageInfo)
+    const messages = result.getMessages || [];
+    return {
+      edges: messages.map(msg => ({ node: msg })),
+      pageInfo: {
+        hasNextPage: messages.length === (limit || 50),
+        hasPreviousPage: (offset || 0) > 0
+      }
+    };
   }
 
   /**
@@ -710,7 +751,7 @@ export class ChatService {
   /**
    * Envoie un message
    */
-  async sendMessage(input: SendMessageInput): Promise<Message> {
+  async sendMessage(input: SendMessageInput & { visitData?: any; propertyData?: any }): Promise<Message> {
     const mutation = `
       mutation SendMessage($input: SendMessageInput!) {
         sendMessage(input: $input) {
@@ -763,6 +804,18 @@ export class ChatService {
           }
           createdAt
           updatedAt
+          visitData {
+            id
+            date
+            time
+            status
+          }
+          propertyData {
+            id
+            title
+            address
+            ownerId
+          }
         }
       }
     `;
@@ -772,9 +825,32 @@ export class ChatService {
   }
 
   /**
-   * Crée ou récupère une conversation
+   * Crée ou récupère une conversation (avec vérification de doublons)
    */
   async createOrGetConversation(input: ConversationInput): Promise<Conversation> {
+    // D'abord, vérifier s'il existe déjà une conversation pour cette propriété
+    if (input.propertyId && input.participantId) {
+      try {
+        const existingConversations = await this.getConversations({ first: 100 });
+        
+        // Chercher une conversation existante pour cette propriété et ce participant
+        const existingConv = existingConversations.edges.find(edge => {
+          const conv = edge.node;
+          return conv.propertyId?.id === input.propertyId &&
+                 conv.participants.some(p => p.id === input.participantId) &&
+                 conv.type === input.type;
+        });
+
+        if (existingConv) {
+          console.log('✅ Conversation existante trouvée:', existingConv.node.id);
+          return existingConv.node;
+        }
+      } catch (error) {
+        console.warn('Erreur lors de la vérification des conversations existantes:', error);
+        // Continuer avec la création si la vérification échoue
+      }
+    }
+
     const mutation = `
       mutation CreateOrGetConversation($input: ConversationInput!) {
         createOrGetConversation(input: $input) {
@@ -808,6 +884,8 @@ export class ChatService {
       mutation,
       { input }
     );
+    
+    console.log('✨ Conversation créée/récupérée:', result.createOrGetConversation.id);
     return result.createOrGetConversation;
   }
 
@@ -1021,6 +1099,13 @@ export class ChatService {
       { conversationId }
     );
     return result.markConversationAsRead;
+  }
+
+  /**
+   * Alias pour markConversationAsRead pour compatibilité avec offlineFirstChatService
+   */
+  async markAsRead(conversationId: string): Promise<boolean> {
+    return this.markConversationAsRead(conversationId);
   }
 
   /**

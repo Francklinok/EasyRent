@@ -20,7 +20,7 @@ import {
   useThemeTransition,
   useThemeInfo,
   useThemedStyles 
-} from '@/components/contexts/theme/themehook';
+} from '@/hooks/themehook';
 import { 
   ChevronRight, 
   Check, 
@@ -43,10 +43,11 @@ import {
 import Slider from '@react-native-community/slider';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { ThemeColors } from '@/components/contexts/theme/themeTypes';
+import { ThemeColors } from '@/types/themeTypes';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/components/ui/BackButton';
-// Configuration des animations pour Android
+import { useLanguage } from '@/components/contexts/language';
+
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -70,11 +71,9 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ color, onColorChange, title }
 
   return (
     <ThemedView style={{ marginBottom: 16 }}>
-      <ThemedText style={{ 
+      <ThemedText type = "normal" intensity = "strong" style={{ 
         color: theme.text, 
-        fontWeight: 'bold', 
         marginBottom: 8,
-        fontSize: 14
       }}>
         {title}
       </ThemedText>
@@ -105,6 +104,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ color, onColorChange, title }
 const ThemeSwitcher = () => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
   
 
   const { 
@@ -159,7 +159,6 @@ const ThemeSwitcher = () => {
   const [favoriteThemes, setFavoriteThemes] = useState<Set<string>>(new Set());
   const scrollViewRef = useRef<ScrollView>(null);
   
-  // Animation de transition lors du changement de thème
   useEffect(() => {
     if (isAnimatingTheme) {
       Animated.sequence([
@@ -175,7 +174,6 @@ const ThemeSwitcher = () => {
         })
       ]).start();
       
-      // Animation de pulsation
       Animated.sequence([
         Animated.timing(scaleAnim, {
           toValue: 1.05,
@@ -218,18 +216,10 @@ const ThemeSwitcher = () => {
               padding: 8,
               marginVertical: 4,
               borderRadius: 12,
-              borderWidth: 2,
-              elevation: isActive ? 4 : 1,
-              shadowColor: '#000',
-              shadowOffset: {
-                width: 0,
-                height: isActive ? 2 : 1,
-              },
-              shadowOpacity: isActive ? 0.25 : 0.1,
-              shadowRadius: isActive ? 3.84 : 2,
+              borderWidth: 1,
+            
             },
             isActive ? {
-              backgroundColor: theme.states.pressed,
               borderColor: theme.primary
             } : {
               backgroundColor: theme.surface,
@@ -266,7 +256,7 @@ const ThemeSwitcher = () => {
               borderRadius: 20,
               marginRight: 12,
               overflow: 'hidden',
-              borderWidth: 2,
+              borderWidth: 1,
               borderColor: theme.outline
             }}
           >
@@ -296,7 +286,7 @@ const ThemeSwitcher = () => {
           
           <ThemedView style={{ flex: 1 }}>
             <ThemedView style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <ThemedText style={{ 
+              <ThemedText type = "normal" style={{ 
                 fontWeight: isActive ? 'bold' : '600',
                 color: theme.text,
               }}>
@@ -312,7 +302,7 @@ const ThemeSwitcher = () => {
               )}
             </ThemedView>
             {isActive && (
-              <ThemedText style={{ 
+              <ThemedText type= "normal" style={{ 
                 color: theme.primary, 
                 marginTop: 2,
                 fontWeight: '500'
@@ -320,7 +310,7 @@ const ThemeSwitcher = () => {
                 Thème actuel
               </ThemedText>
             )}
-            <ThemedText style={{ 
+            <ThemedText type= "normal" style={{ 
               color: theme.subtext, 
               marginTop: 1
             }}>
@@ -336,7 +326,7 @@ const ThemeSwitcher = () => {
                   marginTop: 4,
                   padding: 4,
                   borderRadius: 4,
-                  backgroundColor: theme.surfaceVariant
+                  // backgroundColor: theme.surfaceVariant
                 }}
                 onPress={() => editCustomTheme(themeName)}
               >
@@ -383,7 +373,6 @@ const ThemeSwitcher = () => {
   };
   
   const editCustomTheme = (themeName: string) => {
-    // Ouvre l'éditeur de thème personnalisé
     setIsCreatingTheme(true);
     const existingTheme = customThemes[themeName];
     if (existingTheme) {
@@ -429,112 +418,20 @@ const ThemeSwitcher = () => {
       favoriteThemes: Array.from(favoriteThemes)
     };
     
-    // Ici vous pouvez ajouter la logique d'export
     console.log('Exporting theme settings:', settings);
     Alert.alert('Export', 'Paramètres du thème exportés avec succès!');
   };
   
   const importThemeSettings = () => {
-    // A ajouter la logique d'import
     Alert.alert('Import', 'Fonctionnalité d\'import à implémenter');
   };
-  
-  const renderQuickActions = () => (
-    <ThemedView style={{
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      padding: 16,
-      backgroundColor: theme.surface,
-      borderRadius: 12,
-      marginBottom: 16,
-      elevation: 2,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.1,
-      shadowRadius: 2,
-    }}>
-      <TouchableOpacity
-        style={{
-          alignItems: 'center',
-          padding: 8,
-          borderRadius: 8,
-          backgroundColor: theme.surfaceVariant
-        }}
-        onPress={toggleTheme}
-      >
-        <RefreshCw size={20} color={theme.primary} />
-        <ThemedText style={{ 
-          color: theme.text, 
-          marginTop: 4,
-        }}>
-          Basculer
-        </ThemedText>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={{
-          alignItems: 'center',
-          padding: 8,
-          borderRadius: 8,
-          backgroundColor: theme.surfaceVariant
-        }}
-        onPress={() => setIsCreatingTheme(true)}
-      >
-        <Plus size={20} color={theme.secondary} />
-        <ThemedText style={{ 
-          color: theme.text, 
-          marginTop: 4,
-        }}>
-          Créer
-        </ThemedText>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={{
-          alignItems: 'center',
-          padding: 8,
-          borderRadius: 8,
-          backgroundColor: theme.surfaceVariant
-        }}
-        onPress={exportThemeSettings}
-      >
-        <Download size={20} color={theme.accent} />
-        <ThemedText style={{ 
-          color: theme.text, 
-          marginTop: 4,
-        }}>
-          Exporter
-        </ThemedText>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={{
-          alignItems: 'center',
-          padding: 8,
-          borderRadius: 8,
-          backgroundColor: theme.surfaceVariant
-        }}
-        onPress={importThemeSettings}
-      >
-        <Upload size={20} color={theme.info} />
-        <ThemedText style={{ 
-          color: theme.text, 
-          marginTop: 4,
-        }}>
-          Importer
-        </ThemedText>
-      </TouchableOpacity>
-    </ThemedView>
-  );
   
   return (
     <ScrollView 
       ref={scrollViewRef}
       style={[themedStyles.container]}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 100,  paddingTop: insets.top + 4 }}
     >
-      {/* Animation d'arrière-plan */}
       <Animated.View 
         style={{
           position: 'absolute',
@@ -550,29 +447,12 @@ const ThemeSwitcher = () => {
         }}
       />
       <ThemedView style={{ padding: 16 }}>
-        <ThemedView  className='flex-row  gap-6'>
-      <BackButton />
+       
 
-        <ThemedText  intensity = 'strong' type = "title"  style={{ 
-          marginBottom: 8,
-          color: theme.text,
-          marginTop:8
-        }}>
-          Paramètres d'apparence
-        </ThemedText>
-        </ThemedView>
-{/*         
-        <ThemedText style={{ 
-          color: theme.subtext,
-          marginBottom: 24
-        }}>
-          Thème actuel: {themeDisplayName} {isDark ? '(Sombre)' : '(Clair)'}
-        </ThemedText> */}
         
-        {/* Actions rapides */}
-        {renderQuickActions()}
+       
         
-        {/* Section Apparence */}
+        {/* Apparence section */}
         <TouchableOpacity 
           style={[
             themedStyles.surface,
@@ -584,18 +464,14 @@ const ThemeSwitcher = () => {
               marginBottom: 12,
               borderWidth: 1,
               borderColor: theme.outline,
-              elevation: 2,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.1,
-              shadowRadius: 2,
+             
             }
           ]}
           onPress={() => toggleSection('appearance')}
           activeOpacity={0.7}
         >
           <PaintBucket size={24} color={theme.primary} style={{ marginRight: 12 }} />
-          <ThemedText intensity = 'strong'  style={{ 
+          <ThemedText type ="normal"style={{ 
             flex: 1, 
             color: theme.text,
           }}>
@@ -612,7 +488,6 @@ const ThemeSwitcher = () => {
         
         {isExpanded.appearance && (
           <ThemedView style={[
-            // themedStyles.surface,
             {
               borderRadius: 12,
               padding: 16,
@@ -640,9 +515,9 @@ const ThemeSwitcher = () => {
                 }}
                 onPress={() => setLightTheme()}
               >
-                <Sun size={24} color={!isDark && !isSystemTheme ? theme.onSurface : theme.text} />
+                <Sun size={24} color={!isDark && !isSystemTheme ? theme.surface : theme.text} />
                 <ThemedText style={{ 
-                  color: !isDark && !isSystemTheme ? theme.onSurface : theme.text,
+                  color: !isDark && !isSystemTheme ? theme.surface : theme.text,
                   marginTop: 8,
                   fontWeight: !isDark && !isSystemTheme ? 'bold' : '500'
                 }}>
@@ -663,9 +538,9 @@ const ThemeSwitcher = () => {
                 }}
                 onPress={() => setDarkTheme()}
               >
-                <Moon size={24} color={isDark && !isSystemTheme ? theme.onSurface : theme.text} />
+                <Moon size={24} color={isDark && !isSystemTheme ? theme.surface : theme.text} />
                 <ThemedText style={{ 
-                  color: isDark && !isSystemTheme ? theme.onSurface : theme.text,
+                  color: isDark && !isSystemTheme ? theme.surface : theme.text,
                   marginTop: 8,
                   fontWeight: isDark && !isSystemTheme ? 'bold' : '500'
                 }}>
@@ -686,9 +561,9 @@ const ThemeSwitcher = () => {
                 }}
                 onPress={() => setSystemTheme()}
               >
-                <Monitor size={24} color={isSystemTheme ? theme.onSurface : theme.text} />
+                <Monitor size={24} color={isSystemTheme ? theme.surface : theme.text} />
                 <ThemedText style={{ 
-                  color: isSystemTheme ? theme.onSurface : theme.text,
+                  color: isSystemTheme ? theme.surface : theme.text,
                   marginTop: 8,
                   fontWeight: isSystemTheme ? 'bold' : '500'
                 }}>
@@ -710,7 +585,7 @@ const ThemeSwitcher = () => {
               onPress={toggleTheme}
             >
               <RefreshCw size={20} color={theme.primary} style={{ marginRight: 12 }} />
-              <ThemedText style={{ 
+              <ThemedText type = "normal" style={{ 
                 color: theme.text, 
                 flex: 1,
               }}>
@@ -720,7 +595,7 @@ const ThemeSwitcher = () => {
           </ThemedView>
         )}
         
-        {/* Section Thèmes */}
+        {/* Themed Section */}
         <TouchableOpacity 
           style={[
             themedStyles.surface,
@@ -732,18 +607,14 @@ const ThemeSwitcher = () => {
               marginBottom: 12,
               borderWidth: 1,
               borderColor: theme.outline,
-              elevation: 2,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.1,
-              shadowRadius: 2,
+             
             }
           ]}
           onPress={() => toggleSection('themes')}
           activeOpacity={0.7}
         >
           <Palette size={24} color={theme.secondary} style={{ marginRight: 12 }} />
-          <ThemedText intensity='strong' style={{ 
+          <ThemedText type = "normal" style={{ 
             flex: 1, 
             color: theme.text,
           }}>
@@ -775,7 +646,7 @@ const ThemeSwitcher = () => {
           </ThemedView>
         )}
         
-        {/* Section Thèmes Personnalisés */}
+        {/* Custom Section */}
         <TouchableOpacity 
           style={[
             themedStyles.surface,
@@ -787,18 +658,13 @@ const ThemeSwitcher = () => {
               marginBottom: 12,
               borderWidth: 1,
               borderColor: theme.outline,
-              elevation: 2,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.1,
-              shadowRadius: 2,
             }
           ]}
           onPress={() => toggleSection('customThemes')}
           activeOpacity={0.7}
         >
           <PaintBucket size={24} color={theme.accent} style={{ marginRight: 12 }} />
-          <ThemedText intensity='strong' style={{ 
+          <ThemedText type = "normal" style={{ 
             flex: 1, 
             color: theme.text,
           }}>
@@ -848,16 +714,16 @@ const ThemeSwitcher = () => {
                 alignItems: 'center', 
                 padding: 32 
               }}>
-                <PaintBucket size={48} color={theme.subtext} style={{ marginBottom: 16 }} />
-                <ThemedText type = 'subtitle' style={{ 
-                  color: theme.subtext,
+                <PaintBucket size={48} color={theme.text} style={{ marginBottom: 16 }} />
+                <ThemedText type = 'normal' style={{ 
+                  color: theme.text,
                   textAlign: 'center',
                   marginBottom: 8
                 }}>
                   Aucun thème personnalisé
                 </ThemedText>
-                <ThemedText style={{ 
-                  color: theme.subtext,
+                <ThemedText type= "caption" intensity = "light" style={{ 
+                  color: theme.text,
                   textAlign: 'center',
                 }}>
                   Créez votre premier thème personnalisé
@@ -874,16 +740,12 @@ const ThemeSwitcher = () => {
                 backgroundColor: theme.primary,
                 borderRadius: 12,
                 marginTop: 16,
-                elevation: 2,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.2,
-                shadowRadius: 2,
+                
               }}
               onPress={createSampleCustomTheme}
             >
               <Plus size={20} color={theme.surface} style={{ marginRight: 8 }} />
-              <ThemedText  type = 'normal' style={{ 
+              <ThemedText  type = 'normal' intensity = "strong" style={{ 
                 color: theme.surface, 
               }}>
                 Créer un thème personnalisé
@@ -892,7 +754,7 @@ const ThemeSwitcher = () => {
           </ThemedView>
         )}
         
-        {/* Section Paramètres avancés */}
+        {/* Advance params section */}
         <TouchableOpacity 
           style={[
             themedStyles.surface,
@@ -901,21 +763,17 @@ const ThemeSwitcher = () => {
               alignItems: 'center',
               padding: 16,
               borderRadius: 12,
-              marginBottom: 12,
+              marginBottom: 8,
               borderWidth: 1,
               borderColor: theme.outline,
-              elevation: 2,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.1,
-              shadowRadius: 2,
+            
             }
           ]}
           onPress={() => toggleSection('settings')}
           activeOpacity={0.7}
         >
           <Settings size={24} color={theme.info} style={{ marginRight: 12 }} />
-          <ThemedText intensity = 'strong' style={{ 
+          <ThemedText type ="normal" style={{ 
             flex: 1, 
             color: theme.text,
           }}>
@@ -945,9 +803,10 @@ const ThemeSwitcher = () => {
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              paddingVertical: 2
+              paddingVertical: 2,
+
             }}>
-              <ThemedText style={{ 
+              <ThemedText type = "normal" style={{ 
                 color: theme.text,
                 
               }}>
@@ -966,10 +825,10 @@ const ThemeSwitcher = () => {
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              marginBottom: 14,
+              marginBottom: 9,
               paddingVertical: 2
             }}>
-              <ThemedText style={{ 
+              <ThemedText type ="normal" style={{ 
                 color: theme.text,
                
               }}>
@@ -984,8 +843,8 @@ const ThemeSwitcher = () => {
               />
             </ThemedView>
             
-            <ThemedView style={{ marginBottom: 16 }}>
-              <ThemedText style={{ 
+            <ThemedView style={{ marginBottom: 8 }}>
+              <ThemedText type = "normal" style={{ 
                 color: theme.text,
              
                 marginBottom: 8
@@ -1013,7 +872,7 @@ const ThemeSwitcher = () => {
               marginBottom: 8,
               paddingVertical: 2
             }}>
-              <ThemedText style={{ 
+              <ThemedText type ="normal" style={{ 
                 color: theme.text,
               
               }}>
@@ -1028,9 +887,7 @@ const ThemeSwitcher = () => {
               />
             </ThemedView>
             
-            <ThemedText style={{ 
-              color: theme.subtext,
-              fontSize: 12,
+            <ThemedText type ="caption" intensity ="light" style={{ 
               fontStyle: 'italic',
               textAlign: 'center',
             }}>
@@ -1039,7 +896,6 @@ const ThemeSwitcher = () => {
           </ThemedView>
         )}
         
-        {/* Section Aperçu */}
         <TouchableOpacity 
           style={[
             themedStyles.surface,
@@ -1051,18 +907,14 @@ const ThemeSwitcher = () => {
               marginBottom: 12,
               borderWidth: 1,
               borderColor: theme.outline,
-              elevation: 2,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.1,
-              shadowRadius: 2,
+          
             }
           ]}
           onPress={() => toggleSection('preview')}
           activeOpacity={0.7}
         >
           <Eye size={24} color={theme.success} style={{ marginRight: 12 }} />
-          <ThemedText intensity='strong' style={{ 
+          <ThemedText type= "normal" style={{ 
             flex: 1, 
             color: theme.text,
           }}>
@@ -1121,8 +973,7 @@ const ThemeSwitcher = () => {
                     borderRadius: 10,
                     backgroundColor: color,
                     marginRight: 8,
-                    borderWidth: 1,
-                    borderColor: theme.outline
+                    
                   }} />
                   <ThemedText style={{
                     color: theme.text,
@@ -1139,14 +990,13 @@ const ThemeSwitcher = () => {
               padding: 16,
               marginTop: 16
             }}>
-              <ThemedText intensity='strong' type = 'normal'  style={{
+              <ThemedText type = 'normal'  style={{
                 color: theme.text,
                 marginBottom: 8
               }}>
                 Exemple d'interface
               </ThemedText>
-              <ThemedText style={{
-                color: theme.subtext,
+              <ThemedText intensity ="light" style={{
                 marginBottom: 12
               }}>
                 Voici un aperçu de l'interface avec le thème actuel
@@ -1161,7 +1011,8 @@ const ThemeSwitcher = () => {
                   paddingHorizontal: 16,
                   paddingVertical: 8,
                   borderRadius: 8,
-                  flex: 1
+                  flex: 1,
+                  alignItems: 'center'
                 }}>
                   <ThemedText style={{
                     color: theme.surface,
@@ -1185,148 +1036,14 @@ const ThemeSwitcher = () => {
                   </ThemedText>
                 </TouchableOpacity>
               </ThemedView>
-              <ThemedView style={{
-                backgroundColor: theme.surface,
-                borderRadius: 8,
-                padding: 12,
-                borderWidth: 1,
-                borderColor: theme.outline
-              }}>
-                <ThemedText style={{
-                  color: theme.text,
-                  fontWeight: '500'
-                }}>
-                  Carte d'exemple
-                </ThemedText>
-                <ThemedText style={{
-                  color: theme.subtext,
-                  marginTop: 4
-                }}>
-                  Contenu de la carte avec le thème appliqué
-                </ThemedText>
-              </ThemedView>
             </ThemedView>
           </ThemedView>
         )}
         
-        {/* Section Export/Import */}
-        <TouchableOpacity 
-          style={[
-            themedStyles.surface,
-            {
-              flexDirection: 'row',
-              alignItems: 'center',
-              padding: 16,
-              borderRadius: 12,
-              marginBottom: 12,
-              borderWidth: 1,
-              borderColor: theme.outline,
-              elevation: 2,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.1,
-              shadowRadius: 2,
-            }
-          ]}
-          onPress={() => toggleSection('export')}
-          activeOpacity={0.7}
-        >
-          <Download size={24} color={theme.warning} style={{ marginRight: 12 }} />
-          <ThemedText intensity = 'strong' style={{ 
-            flex: 1, 
-            color: theme.text,
-          }}>
-            Export/Import
-          </ThemedText>
-          <Animated.View style={{
-            transform: [{ 
-              rotate: isExpanded.export ? '90deg' : '0deg' 
-            }]
-          }}>
-            <ChevronRight size={20} color={theme.text} />
-          </Animated.View>
-        </TouchableOpacity>
-        
-        {isExpanded.export && (
-          <ThemedView style={[
-            themedStyles.surface,
-            {
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 16,
-              borderWidth: 1,
-              borderColor: theme.outline
-            }
-          ]}>
-            <ThemedView style={{
-              flexDirection: 'row',
-              gap: 12,
-              marginBottom: 16
-            }}>
-              <TouchableOpacity
-                style={{
-                  flex: 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: theme.success,
-                  padding: 12,
-                  borderRadius: 8,
-                  elevation: 2,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 2,
-                }}
-                onPress={exportThemeSettings}
-              >
-                <Download size={18} color={theme.onSurface} style={{ marginRight: 8 }} />
-                <ThemedText style={{
-                  color: theme.onSurface,
-                  fontWeight: '500'
-                }}>
-                  Exporter
-                </ThemedText>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={{
-                  flex: 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: theme.info,
-                  padding: 12,
-                  borderRadius: 8,
-                  elevation: 2,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 2,
-                }}
-                onPress={importThemeSettings}
-              >
-                <Upload size={18} color={theme.onSurface} style={{ marginRight: 8 }} />
-                <ThemedText style={{
-                  color: theme.onSurface,
-                }}>
-                  Importer
-                </ThemedText>
-              </TouchableOpacity>
-            </ThemedView>
-            
-            <ThemedText style={{
-              color: theme.subtext,
-              textAlign: 'center',
-              fontStyle: 'italic'
-            }}>
-              Sauvegardez et restaurez vos paramètres de thème
-            </ThemedText>
-          </ThemedView>
-        )}
+      
       </ThemedView>
       
-      {/* Modal de création de thème personnalisé */}
+      {/* Modal for creating a new theme */}
       {isCreatingTheme && (
         <ThemedView style={{
           position: 'absolute',

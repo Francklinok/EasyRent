@@ -7,7 +7,8 @@ import {
   Pressable,
   StyleSheet,
 } from "react-native";
-import { SafeAreaView, StatusBar } from "react-native";
+import { StatusBar } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -16,19 +17,24 @@ import { ReactNode } from "react";
 import { ThemedView } from "./ThemedView";
 import { ThemedText } from "./ThemedText";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "@/components/contexts/theme/themehook";
+import { useTheme } from "@/hooks/themehook";
 import { MotiView, AnimatePresence } from "moti";
 import { useNotifications } from "@/components/contexts/notifications/NotificationContext";
 import NotificationSystem from "@/components/notifications/NotificationSystem";
+import ActivityHeader from "@/components/activity/ActivityHeader";
+import { Activity } from "@/services/api/activityService";
 
 export type HeaderProps = {
   leftElement?: ReactNode;
   rightElement?: ReactNode;
-  style?: any;
+  style?: object;
   onTransactionSelect?: (type: "VENTE" | "LOCATION") => void;
   showStatusBar?: boolean;
   statusBarStyle?: "default" | "dark-content" | "light-content";
   backgroundColor?: string;
+  userId?: string;
+  onActivityPress?: (activity: Activity) => void;
+  showActivityIndicator?: boolean;
 };
 
 const Header = memo(({
@@ -39,6 +45,9 @@ const Header = memo(({
   showStatusBar = true,
   statusBarStyle = "dark-content",
   backgroundColor,
+  userId = "user123", // Default user ID, should come from auth context
+  onActivityPress,
+  showActivityIndicator = true,
 }: HeaderProps) => {
   const { theme } = useTheme();
   const { notifications, unreadCount, addNotification, markAsRead } = useNotifications();
@@ -57,7 +66,7 @@ const Header = memo(({
 
   const insets = useSafeAreaInsets();
 
-  const toggleMenu = () => setMenuOpen((prev) => !prev);
+  // const toggleMenu = () => setMenuOpen((prev) => !prev);
 
   const handleSelect = (transaction: "VENTE" | "LOCATION") => {
     setSelectedTransaction(transaction);
@@ -73,13 +82,14 @@ const Header = memo(({
       transition={{ type: "spring", damping: 15, stiffness: 300 }}
       style={styles.logoContainer}
     >
-      <LinearGradient
-        colors={[theme.primary, theme.secondary || theme.primary]}
+
+      {/* <LinearGradient
+        colors={[theme.primary, theme.outline || theme.outline]}
         style={styles.logoGradient}
       >
-        <MaterialCommunityIcons name="home-variant" size={20} color="white" />
-      </LinearGradient>
-      <ThemedText style={[styles.logoText, { color: theme.primary }]}>
+        <MaterialCommunityIcons name="home-variant" size={16} color="white" /> */}
+      {/* </LinearGradient> */}
+      <ThemedText type ="title" intensity="strong" variant = "primary">
         EasyRent
       </ThemedText>
     </MotiView>
@@ -88,11 +98,11 @@ const Header = memo(({
   // Élément par défaut à droite optimisé
   const defaultRightElement = (
     <ThemedView style={[styles.rightContainer, { backgroundColor: "transparent" }]}>
-      {/* Notification avec badge animé */}
+      {/* Single Notification Icon */}
       <MotiView
         from={{ opacity: 0, scale: 0 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 200, type: "spring", stiffness: 400 }}
+        transition={{ delay: 100, type: "spring", stiffness: 400 }}
       >
         <TouchableOpacity
           onPress={() => setShowNotifications(true)}
@@ -110,7 +120,7 @@ const Header = memo(({
             <MotiView
               from={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ delay: 400, type: "spring", stiffness: 600 }}
+              transition={{ delay: 200, type: "spring", stiffness: 600 }}
               style={[styles.badge, { backgroundColor: theme.error }]}
             >
               <ThemedText style={styles.badgeText}>
@@ -120,98 +130,6 @@ const Header = memo(({
           )}
         </TouchableOpacity>
       </MotiView>
-
-      {/* Menu transaction avec z-index optimisé */}
-      <ThemedView style={{backgroundColor: theme.surfaceVariant }}>
-        <MotiView
-          from={{ opacity: 0, translateX: 20 }}
-          animate={{ opacity: 1, translateX: 0 }}
-          transition={{ delay: 300, type: "spring", stiffness: 300 }}
-        >
-          <TouchableOpacity
-            onPress={toggleMenu}
-            style={[
-              styles.menuButton,
-              {
-                backgroundColor: theme.primary,
-                shadowColor: theme.primary,
-              },
-            ]}
-            activeOpacity={0.9}
-          >
-            <ThemedText style={styles.menuButtonText}>
-              {selectedTransaction === "VENTE" ? "Vente" : "Location"}
-            </ThemedText>
-            <MotiView
-              animate={{ rotate: menuOpen ? "180deg" : "0deg" }}
-              transition={{ type: "timing", duration: 200 }}
-            >
-              <Ionicons name="chevron-down" size={16} color="white" />
-            </MotiView>
-          </TouchableOpacity>
-        </MotiView>
-
-        {/* Menu popup amélioré */}
-        <AnimatePresence>
-          {menuOpen && (
-            <>
-              <Pressable
-                onPress={() => setMenuOpen(false)}
-                style={styles.overlay}
-              />
-
-              <MotiView
-                from={{ opacity: 0, scale: 0.9, translateY: -10 }}
-                animate={{ opacity: 1, scale: 1, translateY: 0 }}
-                exit={{ opacity: 0, scale: 0.9, translateY: -10 }}
-                transition={{ type: "timing", duration: 200 }}
-                style={[
-                  styles.popupMenu,
-                  {
-                    backgroundColor: theme.surface,
-                    shadowColor: theme.shadowColor || "#000",
-                    borderColor: theme.outline + "20",
-                  },
-                ]}
-              >
-                {["VENTE", "LOCATION"].map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    onPress={() => handleSelect(type as "VENTE" | "LOCATION")}
-                    style={[
-                      styles.menuItem,
-                      selectedTransaction === type && {
-                        backgroundColor: theme.primary + "10",
-                      },
-                    ]}
-                    activeOpacity={0.7}
-                  >
-                    <ThemedText
-                      style={{
-                        color:
-                          selectedTransaction === type
-                            ? theme.primary
-                            : theme.typography.body,
-                        fontWeight: selectedTransaction === type ? "700" : "500",
-                      }}
-                    >
-                      {type === "VENTE" ? "Vente" : "Location"}
-                    </ThemedText>
-                    {selectedTransaction === type && (
-                      <Ionicons
-                        name="checkmark"
-                        size={16}
-                        color={theme.primary}
-                        style={{ marginLeft: 8 }}
-                      />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </MotiView>
-            </>
-          )}
-        </AnimatePresence>
-      </ThemedView>
     </ThemedView>
   );
 
@@ -246,7 +164,7 @@ const Header = memo(({
               style={[
                 styles.headerContent,
                 {
-                  paddingTop: insets.top + 8, // Respect de la StatusBar
+                  paddingTop: Platform.OS === 'android' ? 8 : Math.max(insets.top - 10, 0),
                   borderBottomColor: theme.outline + "25",
                 },
                 style,
@@ -276,57 +194,60 @@ const styles = StyleSheet.create({
   safeArea: {
     backgroundColor: "transparent",
     zIndex: 1000,
+    height: 60
   },
   blurContainer: {
     borderRadius: 0,
+
   },
   headerContent: {
-    paddingBottom: 12,
-    paddingHorizontal: 16,
+    paddingBottom: 8,
+    paddingHorizontal: 12,
     borderBottomWidth: 0.5,
+    minHeight: 60
   },
   headerInner: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "transparent",
-    minHeight: 44, // Hauteur minimum pour faciliter les interactions
+    minHeight: 44,
   },
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
   },
   logoGradient: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 15,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 8,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    marginRight: 6,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
   logoText: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "800",
     letterSpacing: -0.5,
   },
   rightContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
   },
   notificationButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 17,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 2,
     elevation: 1,
   },
@@ -334,9 +255,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -2,
     right: -2,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
@@ -344,7 +265,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: "white",
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "bold",
   },
   // menuContainer: {
@@ -353,19 +274,19 @@ const styles = StyleSheet.create({
   menuButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
   },
   menuButtonText: {
     color: "white",
     fontWeight: "700",
-    fontSize: 13,
-    marginRight: 4,
+    fontSize: 12,
+    marginRight: 3,
   },
   overlay: {
     position: "absolute",
@@ -401,32 +322,6 @@ const styles = StyleSheet.create({
   },
 });
 
-
-// export const HeaderExample = () => {
-//   const handleTransactionSelect = (type: "VENTE" | "LOCATION") => {
-//     console.log("Transaction sélectionnée:", type);
-//   };
-
-//   return (
-//     <View style={{ flex: 1, backgroundColor: "#f5f5f5" }}>
-//       <Header
-//         onTransactionSelect={handleTransactionSelect}
-//         showStatusBar={true}
-//         statusBarStyle="dark-content"
-//       />
-      
-//       {/* Contenu de votre app */}
-//       <View style={{ flex: 1, padding: 20 }}>
-//         <ThemedText style={{ fontSize: 18, textAlign: "center", marginTop: 50 }}>
-//           Votre contenu d'application ici...
-//         </ThemedText>
-//         <ThemedText style={{ textAlign: "center", marginTop: 20, opacity: 0.7 }}>
-//           La StatusBar est maintenant visible avec les indicateurs système !
-//         </ThemedText>
-//       </View>
-//     </View>
-//   );
-// };
 
 Header.displayName = "Header";
 

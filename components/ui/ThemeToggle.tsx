@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { TouchableOpacity, Animated, Easing, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '../contexts/theme/themehook';
+import { useTheme } from '../../hooks/themehook';
 
 const ThemeToggle = () => {
   const { toggleTheme, isDark } = useTheme();

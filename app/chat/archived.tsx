@@ -6,8 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
-import { useTheme } from '@/components/contexts/theme/themehook';
-import Header from '@/components/ui/header';
+import { useTheme } from '@/hooks/themehook';
 import chatListData from '@/assets/data/chatListData';
 import { ChatListItem } from '@/types/ChatListTypes';
 
@@ -29,12 +28,7 @@ export default function ArchivedChats() {
 
  
   const renderArchivedChat = ({ item, index }: { item: ChatListItem; index: number }) => (
-    <MotiView
-      from={{ opacity: 0, translateX: -50 }}
-      animate={{ opacity: 1, translateX: 0 }}
-      transition={{ delay: index * 100, type: 'spring' }}
-      style={{ marginBottom: 12 }}
-    >
+    <ThemedView style={{ marginBottom: 12 }}>
       <ThemedView style={{
         backgroundColor: theme.surface,
         borderRadius: 12,
@@ -91,7 +85,7 @@ export default function ArchivedChats() {
           </TouchableOpacity>
         </ThemedView>
       </ThemedView>
-    </MotiView>
+    </ThemedView>
   );
 
   return (

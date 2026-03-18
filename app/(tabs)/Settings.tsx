@@ -14,7 +14,6 @@ import { useAuth } from '@/components/contexts/authContext/AuthContext';
 import { useProfile, useTrustScore } from '@/hooks/useProfile';
 import { useLanguage } from '@/components/contexts/language';
 import { StatusBar } from 'react-native';
-
 interface AppSettings {
   notifications: {
     push: boolean;
@@ -36,7 +35,7 @@ interface AppSettings {
 }
 
 const SettingsScreen = () => {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const { logout, user } = useAuth();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
@@ -499,7 +498,7 @@ const SettingsScreen = () => {
     <ThemedView style={{ flex: 1 }}>
       {renderHeader()}
         <StatusBar 
-              barStyle={theme.dark ? 'light-content' : 'dark-content'} 
+              barStyle={isDark ? 'light-content' : 'dark-content'} 
             />
       <ThemedScrollView style={{ flex: 1 }}>
         {/* User Settings */}
@@ -578,6 +577,60 @@ const SettingsScreen = () => {
               icon="heart"
               iconColor={theme.star}
               onPress={() => router.push('/favoris/Favoris')}
+            />
+          </>
+        ))}
+
+        {/* Finance & Investissement */}
+        {renderSettingsSection('Finance & Investissement', (
+          <>
+            <SettingsItem
+              showArrow="on"
+              label={t('kyc.title')}
+              description={t('kyc.subtitle')}
+              icon="shield-check"
+              iconColor="#22c55e"
+              onPress={() => router.push('/kyc' as any)}
+            />
+            <SettingsItem
+              showArrow="on"
+              label="Investir (RST)"
+              description="Revenue Share Tokens — percevez des loyers"
+              icon="trending-up"
+              iconColor="#22c55e"
+              onPress={() => router.push('/invest' as any)}
+            />
+            <SettingsItem
+              showArrow="on"
+              label="Mon Portfolio RST"
+              description="Vos tokens & distributions reçues"
+              icon="chart-pie"
+              iconColor="#8b5cf6"
+              onPress={() => router.push('/invest/portfolio' as any)}
+            />
+            <SettingsItem
+              showArrow="on"
+              label="Trading AMM"
+              description="Échanger des Property Tokens ↔ REC"
+              icon="swap-horizontal"
+              iconColor="#3b82f6"
+              onPress={() => router.push('/trade' as any)}
+            />
+            <SettingsItem
+              showArrow="on"
+              label="RealEstateCoin (REC)"
+              description="Stablecoin — minter du REC avec vos tokens"
+              icon="bank"
+              iconColor="#f59e0b"
+              onPress={() => router.push('/rec' as any)}
+            />
+            <SettingsItem
+              showArrow="on"
+              label="AI Fund"
+              description="Fonds IA autonome + gouvernance DAO"
+              icon="robot"
+              iconColor={theme.primary}
+              onPress={() => router.push('/fund' as any)}
             />
           </>
         ))}

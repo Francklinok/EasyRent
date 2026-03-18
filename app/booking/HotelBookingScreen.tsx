@@ -24,6 +24,7 @@ import { fr } from "date-fns/locale";
 import { ThemedView } from "@/components/ui/ThemedView";
 import { ThemedText } from "@/components/ui/ThemedText";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLanguage } from "@/components/contexts/language";
 
 
 const { width } = Dimensions.get("window");
@@ -67,20 +68,23 @@ interface RoomType {
 }
 
 // --- ROOM CATEGORY CONFIG ---
-const ROOM_CATEGORIES: Record<string, { label: string; icon: string; color: string }> = {
-  classic: { label: "Standard", icon: "bed", color: "#6366F1" },
-  family: { label: "Famille", icon: "account-group", color: "#10B981" },
-  premium: { label: "Premium", icon: "star-circle", color: "#F59E0B" },
-  accessible: { label: "Accessible", icon: "wheelchair-accessibility", color: "#3B82F6" },
-  other: { label: "Chambre", icon: "door", color: "#6B7280" },
-};
+// Note: This will be moved inside component to access t() function
 
 export default function HotelBookingScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+
+  const ROOM_CATEGORIES: Record<string, { label: string; icon: string; color: string }> = {
+    classic: { label: t('hotelBooking.standard'), icon: "bed", color: "#6366F1" },
+    family: { label: t('hotelBooking.family'), icon: "account-group", color: "#10B981" },
+    premium: { label: t('hotelBooking.premium'), icon: "star-circle", color: "#F59E0B" },
+    accessible: { label: t('hotelBooking.accessible'), icon: "wheelchair-accessibility", color: "#3B82F6" },
+    other: { label: t('hotelBooking.room'), icon: "door", color: "#6B7280" },
+  };
 
   // Parse property data from JSON params (same pattern as VisitScreen)
   const parsedProperty = useMemo<any>(() => {
@@ -111,6 +115,11 @@ export default function HotelBookingScreen() {
     return parsedProperty;
   }, [parsedProperty, fetchedProperty]);
 
+  // Pre-selected room from info page
+  const preSelectedHotelRoom = useMemo(() => {
+    return parsedProperty?._selectedHotelRoom || null;
+  }, [parsedProperty]);
+
   // States
   const [checkInDate, setCheckInDate] = useState<string>("");
   const [checkOutDate, setCheckOutDate] = useState<string>("");
@@ -120,7 +129,7 @@ export default function HotelBookingScreen() {
     children: 0,
     infants: 0,
   });
-  const [selectedRoomType, setSelectedRoomType] = useState<string>("");
+  const [selectedRoomType, setSelectedRoomType] = useState<string>(preSelectedHotelRoom?.roomTypeId || "");
   const [roomCount, setRoomCount] = useState(1);
   const [specialRequests, setSpecialRequests] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -151,7 +160,7 @@ export default function HotelBookingScreen() {
     }));
   }, [property]);
 
-  const [selectedRoomId, setSelectedRoomId] = useState<string>("");
+  const [selectedRoomId, setSelectedRoomId] = useState<string>(preSelectedHotelRoom?.roomId || "");
 
   // Calculate nights and total
   const nights = useMemo(() => {
@@ -232,18 +241,18 @@ export default function HotelBookingScreen() {
 
   const handleSubmitBooking = async () => {
     if (!checkInDate || !checkOutDate) {
-      Alert.alert("Dates requises", "Veuillez sélectionner vos dates d'arrivée et de départ.");
+      Alert.alert(t('hotelBooking.datesRequired'), t('hotelBooking.datesRequiredMsg'));
       return;
     }
 
     if (!selectedRoomType) {
-      Alert.alert("Chambre requise", "Veuillez sélectionner un type de chambre.");
+      Alert.alert(t('hotelBooking.roomRequired'), t('hotelBooking.roomRequiredMsg'));
       return;
     }
 
     // If room type has individual rooms, require one to be selected
     if (selectedRoom && selectedRoom.rooms.length > 0 && !selectedRoomId) {
-      Alert.alert("Chambre requise", "Veuillez choisir une chambre spécifique.");
+      Alert.alert(t('hotelBooking.roomRequired'), t('hotelBooking.specificRoomRequired'));
       return;
     }
 
@@ -280,17 +289,17 @@ export default function HotelBookingScreen() {
       );
 
       Alert.alert(
-        "Réservation envoyée !",
-        `Votre demande au ${property?.title || "l'hôtel"} pour ${nights} nuit(s) a été envoyée.\n\n${room?.name} × ${roomCount} chambre(s)\nTotal : ${totalPrice.toLocaleString()} ${currency}`,
-        [{ text: "Payer maintenant", onPress: () => router.push('/wallet/Wallet') }]
+        t('hotelBooking.bookingSuccess'),
+        t('hotelBooking.bookingSuccessMsg', { hotel: property?.title || t('hotelBooking.dataNotFound'), nights: String(nights) }) + `\n\n${room?.name} × ${roomCount} ${roomCount > 1 ? t('hotelBooking.rooms') : t('hotelBooking.room')}\n${t('hotelBooking.total')} : ${totalPrice.toLocaleString()} ${currency}`,
+        [{ text: t('hotelBooking.payNow'), onPress: () => router.push('/wallet/Wallet') }]
       );
     } catch (error: any) {
       console.error("Booking error:", error);
       const msg = error?.message || "";
       if (msg.includes("own property")) {
-        Alert.alert("Action impossible", "Vous ne pouvez pas réserver votre propre propriété.");
+        Alert.alert(t('hotelBooking.impossibleAction'), t('hotelBooking.cannotBookOwnProperty'));
       } else {
-        Alert.alert("Erreur", "Impossible de créer la réservation. Veuillez réessayer.");
+        Alert.alert(t('common.error'), t('hotelBooking.bookingError'));
       }
     } finally {
       setIsSubmitting(false);
@@ -303,16 +312,16 @@ export default function HotelBookingScreen() {
       <ThemedView style={[styles.container, { justifyContent: "center", alignItems: "center", padding: 24 }]}>
         <MaterialCommunityIcons name="alert-circle-outline" size={64} color={theme.error as string} />
         <ThemedText type="subtitle" style={{ marginTop: 16, textAlign: "center" }}>
-          Données introuvables
+          {t('hotelBooking.dataNotFound')}
         </ThemedText>
         <ThemedText type="body" intensity="light" style={{ marginTop: 8, textAlign: "center" }}>
-          Impossible de charger les informations de l'hôtel.
+          {t('hotelBooking.dataNotFoundMsg')}
         </ThemedText>
         <TouchableOpacity
           style={{ marginTop: 24, backgroundColor: theme.primary as string, paddingVertical: 12, paddingHorizontal: 32, borderRadius: 12 }}
           onPress={() => router.back()}
         >
-          <ThemedText type="normal" color="white">Retour</ThemedText>
+          <ThemedText type="normal" color="white">{t('common.back')}</ThemedText>
         </TouchableOpacity>
       </ThemedView>
     );
@@ -449,8 +458,35 @@ export default function HotelBookingScreen() {
         <ThemedView style={[styles.section, { borderWidth: 1, borderColor: theme.outline as string }]}>
           <ThemedView style={styles.sectionHeader}>
             <MaterialCommunityIcons name="door" size={22} color={theme.primary as string} />
-            <ThemedText type="normaltitle" intensity="strong">Choisir une chambre</ThemedText>
+            <ThemedText type="normaltitle" intensity="strong">
+              {preSelectedHotelRoom ? 'Chambre sélectionnée' : 'Choisir une chambre'}
+            </ThemedText>
           </ThemedView>
+
+          {/* Pre-selection banner */}
+          {preSelectedHotelRoom && (
+            <ThemedView style={{
+              backgroundColor: (theme.success as string) + '10',
+              borderRadius: 10,
+              padding: 12,
+              marginBottom: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              borderWidth: 1,
+              borderColor: (theme.success as string) + '30',
+            }}>
+              <MaterialCommunityIcons name="check-circle" size={18} color={theme.success as string} />
+              <ThemedView style={{ flex: 1 }}>
+                <ThemedText type="caption" style={{ color: theme.success as string, fontWeight: '600' }}>
+                  {preSelectedHotelRoom.roomTypeName} - {preSelectedHotelRoom.roomName}
+                </ThemedText>
+                <ThemedText type="caption" intensity="light" style={{ marginTop: 2 }}>
+                  Sélectionnée depuis la page du bien. Vous pouvez modifier ci-dessous.
+                </ThemedText>
+              </ThemedView>
+            </ThemedView>
+          )}
 
           {roomTypes.length > 0 ? (
             <ThemedView style={{ gap: 10 }}>

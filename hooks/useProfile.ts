@@ -23,18 +23,21 @@ export function useProfile(userId: string): UseProfileResult {
   const [error, setError] = useState<string | null>(null);
 
   const loadProfile = useCallback(async () => {
+    if (!userId) return;
+    
     try {
       setLoading(true);
       setError(null);
 
       const [profileData, statsData] = await Promise.all([
         profileService.getProfile(userId),
-        profileService.getProfileStats(userId)
+        profileService.getProfileStats()
       ]);
 
       setProfile(profileData);
       setStats(statsData);
     } catch (err) {
+      console.error('Error loading profile:', err);
       setError(err instanceof Error ? err.message : 'Failed to load profile');
     } finally {
       setLoading(false);
@@ -58,7 +61,7 @@ export function useProfile(userId: string): UseProfileResult {
       setError(null);
       const success = await profileService.upgradeToPremuim(userId, planId, paymentMethod);
       if (success) {
-        await loadProfile(); // Refresh profile to get updated premium status
+        await loadProfile(); 
       }
       return success;
     } catch (err) {
