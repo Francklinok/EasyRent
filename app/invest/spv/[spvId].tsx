@@ -10,17 +10,20 @@ import { useTheme } from '@/hooks/themehook';
 import { getMicroservicesApi, SPVProject } from '@/services/api/microservicesApi';
 import  { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
-const TABS = ['Aperçu', 'Société', 'Rendement'];
+import { useLanguage } from '@/components/contexts/language/LanguageContext';
 
 export default function SPVDetail() {
   const { theme } = useTheme();
   const router = useRouter();
   const { spvId } = useLocalSearchParams<{ spvId: string }>();
+  const { t } = useLanguage();
   const api = getMicroservicesApi();
 
   const [project, setProject] = useState<SPVProject | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(0);
+
+  const TABS = [t('invest.spvDetailTab0'), t('invest.spvDetailTab1'), t('invest.spvDetailTab2')];
 
   useEffect(() => {
     if (!spvId) return;
@@ -45,7 +48,7 @@ export default function SPVDetail() {
   const totalRaised = soldShares * project.sharePrice;
 
   return (
-    <SafeAreaView style={{ flex: 1}}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.surface }}>
       <StatusBar barStyle="light-content" />
 
       <ThemedView style={[s.header, { borderBottomColor: theme.outline + '20' }]}>
@@ -60,9 +63,9 @@ export default function SPVDetail() {
 
       {/* Onglets */}
       <ThemedView style={[s.tabs, { borderBottomColor: theme.outline + '20' }]}>
-        {TABS.map((t, i) => (
-          <TouchableOpacity key={t} onPress={() => setTab(i)} style={[s.tab, i === tab && s.tabActive]}>
-            <ThemedText type= "body" style={[s.tabText, { color: i === tab ? theme.secondary : theme.onSurface + '60' }]}>{t}</ThemedText>
+        {TABS.map((tabLabel, i) => (
+          <TouchableOpacity key={i} onPress={() => setTab(i)} style={[s.tab, i === tab && s.tabActive]}>
+            <ThemedText type= "body" style={[s.tabText, { color: i === tab ? theme.secondary : theme.onSurface + '60' }]}>{tabLabel}</ThemedText>
             {i === tab && <View style={[s.tabIndicator, { backgroundColor: theme.secondary }]} />}
           </TouchableOpacity>
         ))}
@@ -77,11 +80,11 @@ export default function SPVDetail() {
             <ThemedView style={[s.card, { backgroundColor: theme.surface, borderColor: theme.outline + '20' }]}>
               <ThemedView style={s.cardTitleRow}>
                 <MaterialCommunityIcons name="chart-donut" size={16} color= {theme.secondary} />
-                <ThemedText type ="normal" style={[s.cardTitle, { color: theme.text }]}>Souscription en cours</ThemedText>
+                <ThemedText type ="normal" style={[s.cardTitle, { color: theme.text }]}>{t('invest.spvDetailSubscriptionTitle')}</ThemedText>
               </ThemedView>
               <ThemedView style={s.progressHeaderRow}>
                 <ThemedText type = "caption" style={ { color: theme.onSurface + '60' }}>
-                  {soldShares.toLocaleString()} parts vendues
+                  {soldShares.toLocaleString()} {t('invest.spvDetailSharesSold')}
                 </ThemedText>
                 <ThemedText type= "caption" style={[s.progressPct, { color:theme.secondary }]}>{pct.toFixed(1)}%</ThemedText>
               </ThemedView>
@@ -90,25 +93,25 @@ export default function SPVDetail() {
               </ThemedView>
               <ThemedView style={s.progressFooter}>
                 <ThemedText style={[s.progressSub, { color: theme.onSurface + '50' }]}>
-                  ${totalRaised.toLocaleString()} levés / ${project.totalValue.toLocaleString()} objectif
+                  ${totalRaised.toLocaleString()} {t('invest.spvDetailRaisedGoal')} ${project.totalValue.toLocaleString()}
                 </ThemedText>
                 <ThemedText style={[s.progressSub, { color: theme.onSurface + '50' }]}>
-                  {project.currentInvestors} / {project.maxInvestors} investisseurs
+                  {project.currentInvestors} / {project.maxInvestors} {t('invest.spvDetailInvestors')}
                 </ThemedText>
               </ThemedView>
             </ThemedView>
 
             {/* Métriques clés */}
-            <ThemedView style={[s.card, { backgroundColor: theme.surface, borderColor: theme.outline + '20' }]}>
-              <ThemedText type ="normal" style={[s.cardTitle, { color: theme.text }]}>Métriques clés</ThemedText>
+            <ThemedView style={[s.card, { borderColor: theme.outline + '60' }]}>
+              <ThemedText type ="normal" style={s.cardTitle}>{t('invest.spvDetailKeyMetrics')}</ThemedText>
               <ThemedView style={s.metricsGrid}>
                 {[
-                  { label: 'Valorisation totale', value: `$${(project.totalValue / 1e6).toFixed(2)}M`, icon: 'office-building' },
-                  { label: 'Prix / part', value: `$${project.sharePrice}`, icon: 'tag' },
-                  { label: 'Parts disponibles', value: project.availableShares.toLocaleString(), icon: 'ticket-percent' },
-                  { label: 'Invest. minimum', value: `$${project.minimumInvestment}`, icon: 'cash-minus' },
-                  { label: 'Rendement annuel', value: `${project.annualYieldPct.toFixed(1)}%`, icon: 'trending-up' },
-                  { label: 'Taux d\'occupation', value: `${project.occupancyRate}%`, icon: 'home-account' },
+                  { label: t('invest.spvDetailTotalValuation'), value: `$${(project.totalValue / 1e6).toFixed(2)}M`, icon: 'office-building' },
+                  { label: t('invest.spvDetailSharePrice'), value: `$${project.sharePrice}`, icon: 'tag' },
+                  { label: t('invest.spvDetailAvailableShares'), value: project.availableShares.toLocaleString(), icon: 'ticket-percent' },
+                  { label: t('invest.spvDetailMinInvest'), value: `$${project.minimumInvestment}`, icon: 'cash-minus' },
+                  { label: t('invest.spvDetailAnnualYield'), value: `${project.annualYieldPct.toFixed(1)}%`, icon: 'trending-up' },
+                  { label: t('invest.spvDetailOccupancy'), value: `${project.occupancyRate}%`, icon: 'home-account' },
                 ].map((m, i) => (
                   <ThemedView key={i} style={[s.metricBox, { borderColor: theme.outline + '15' }]}>
                     <MaterialCommunityIcons name={m.icon as any} size={16} color={ theme.secondary} />
@@ -123,13 +126,13 @@ export default function SPVDetail() {
             <ThemedView style={[s.card, { backgroundColor: theme.surface, borderColor: theme.outline + '20' }]}>
               <ThemedView style={s.cardTitleRow}>
                 <MaterialCommunityIcons name="shield-check" size={16} color={theme.secondary} />
-                <ThemedText type ="normal" style={[s.cardTitle, { color: theme.text }]}>Conformité & Token</ThemedText>
+                <ThemedText type ="normal" style={[s.cardTitle, { color: theme.text }]}>{t('invest.spvDetailComplianceTitle')}</ThemedText>
               </ThemedView>
               {[
-                ['Standard token', project.tokenStandard, 'shield-account'],
-                ['Juridiction', project.jurisdiction, 'earth'],
-                ['KYC requis', 'Oui — vérification identité', 'card-account-details'],
-                ['Transferts', 'Whitelist uniquement (ERC-3643)', 'swap-horizontal'],
+                [t('invest.spvDetailTokenStandard'), project.tokenStandard, 'shield-account'],
+                [t('invest.spvDetailJurisdiction'), project.jurisdiction, 'earth'],
+                [t('invest.spvDetailKyc'), t('invest.spvDetailKycValue'), 'card-account-details'],
+                [t('invest.spvDetailTransfers'), t('invest.spvDetailTransfersValue'), 'swap-horizontal'],
               ].map(([label, value, icon], i) => (
                 <ThemedView key={i} style={[s.infoRow, { borderBottomColor: theme.outline + '10' }]}>
                   <MaterialCommunityIcons name={icon as any} size={14} color={theme.onSurface + '50'} />
@@ -146,7 +149,7 @@ export default function SPVDetail() {
                 onPress={() => router.push({ pathname: '/invest/spv/subscribe', params: { spvId: project.spvId } } as any)}
               >
                 <MaterialCommunityIcons name="bank-plus" size={20} color="#fff" />
-                <ThemedText type= "normal" style={s.ctaBtnText}>Acheter des parts de {project.companyName}</ThemedText>
+                <ThemedText type= "normal" style={s.ctaBtnText}>{t('invest.spvDetailCtaBtn')} {project.companyName}</ThemedText>
               </TouchableOpacity>
             )}
           </>
@@ -158,20 +161,19 @@ export default function SPVDetail() {
             <ThemedView style={[s.card, { backgroundColor: theme.surface, borderColor: theme.outline + '20' }]}>
               <ThemedView style={s.cardTitleRow}>
                 <MaterialCommunityIcons name="domain" size={16} color= {theme.secondary} />
-                <ThemedText type ="normal" style={[s.cardTitle, { color: theme.text }]}>Structure légale SPV</ThemedText>
+                <ThemedText type ="normal" style={[s.cardTitle, { color: theme.text }]}>{t('invest.spvDetailLegalStructure')}</ThemedText>
               </ThemedView>
               <ThemedView style={[s.spvInfoBox, { backgroundColor: theme.secondary + '08', borderColor:theme.secondary + '20' }]}>
                 <ThemedText type= "body" style={[s.spvInfoText, { color: theme.onSurface + '80' }]}>
-                  Cette propriété est détenue par une <Text style={{ fontWeight: '800' }}>Société à Vocation Spéciale (SPV)</Text> enregistrée légalement.
-                  Les parts que vous achetez correspondent à des <Text style={{ fontWeight: '800' }}>actions tokenisées de cette société</Text>, vous conférant des droits réels sur le bien.
+                  {t('invest.spvDetailLegalDesc')}
                 </ThemedText>
               </ThemedView>
               {[
-                ['Raison sociale', project.companyName, 'office-building'],
-                ['Immatriculation', project.companyRegistration, 'file-document'],
-                ['Pays d\'enregistrement', project.jurisdiction, 'earth'],
-                ['Standard token', `${project.tokenStandard} (sécurité token)`, 'shield-check'],
-                ['Investisseurs max', `${project.maxInvestors} actionnaires`, 'account-group'],
+                [t('invest.spvDetailCompanyName'), project.companyName, 'office-building'],
+                [t('invest.spvDetailRegistration'), project.companyRegistration, 'file-document'],
+                [t('invest.spvDetailCountry'), project.jurisdiction, 'earth'],
+                [t('invest.spvDetailTokenStandard'), `${project.tokenStandard} (sécurité token)`, 'shield-check'],
+                [t('invest.spvDetailMaxInvestors'), `${project.maxInvestors} ${t('invest.spvDetailMaxInvestorsSuffix')}`, 'account-group'],
               ].map(([label, value, icon], i) => (
                 <ThemedView key={i} style={[s.infoRow, { borderBottomColor: theme.outline + '10' }]}>
                   <MaterialCommunityIcons name={icon as any} size={14} color={theme.onSurface + '50'} />
@@ -184,18 +186,18 @@ export default function SPVDetail() {
             <ThemedView style={[s.card, { backgroundColor: theme.surface, borderColor: theme.outline + '20' }]}>
               <ThemedView style={s.cardTitleRow}>
                 <MaterialCommunityIcons name="scale-balance" size={16} color={theme.secondary} />
-                <ThemedText type ="normal" style={[s.cardTitle, { color: theme.text }]}>Droits des actionnaires</ThemedText>
+                <ThemedText type ="normal" style={[s.cardTitle, { color: theme.text }]}>{t('invest.spvDetailShareholderRights')}</ThemedText>
               </ThemedView>
               {[
-                { icon: 'cash-multiple', text: 'Revenus locatifs proportionnels à vos parts' },
-                { icon: 'trending-up', text: 'Plus-value potentielle à la revente du bien' },
-                { icon: 'vote', text: 'Droit de vote aux assemblées générales de la société' },
-                { icon: 'swap-horizontal', text: 'Transfert de parts sur le marché secondaire (whitelist)' },
-                { icon: 'file-document-outline', text: 'Accès aux rapports financiers annuels' },
+                { icon: 'cash-multiple', key: 'spvDetailRight1' },
+                { icon: 'trending-up', key: 'spvDetailRight2' },
+                { icon: 'vote', key: 'spvDetailRight3' },
+                { icon: 'swap-horizontal', key: 'spvDetailRight4' },
+                { icon: 'file-document-outline', key: 'spvDetailRight5' },
               ].map((d, i) => (
                 <ThemedView key={i} style={s.rightRow}>
                   <MaterialCommunityIcons name={d.icon as any} size={16} color={theme.secondary} />
-                  <ThemedText type ="caption" style={[s.rightText, { color: theme.onSurface + '80' }]}>{d.text}</ThemedText>
+                  <ThemedText type ="caption" style={[s.rightText, { color: theme.onSurface + '80' }]}>{t(`invest.${d.key}` as any)}</ThemedText>
                 </ThemedView>
               ))}
             </ThemedView>
@@ -208,13 +210,13 @@ export default function SPVDetail() {
             <ThemedView style={[s.card, { backgroundColor: theme.surface, borderColor: theme.outline + '20' }]}>
               <ThemedView style={s.cardTitleRow}>
                 <MaterialCommunityIcons name="chart-line" size={16} color={theme.secondary} />
-                <ThemedText type ="normal" style={[s.cardTitle, { color: theme.text }]}>Performances & rendement</ThemedText>
+                <ThemedText type ="normal" style={[s.cardTitle, { color: theme.text }]}>{t('invest.spvDetailPerfTitle')}</ThemedText>
               </ThemedView>
               {[
-                ['Rendement locatif annuel', `${project.annualYieldPct.toFixed(1)}%`, theme.success],
-                ['Taux d\'occupation actuel', `${project.occupancyRate}%`, project.occupancyRate >= 90 ? '#22c55e' : '#f59e0b'],
-                ['Score ESG', project.esgScore ? `${project.esgScore}/100` : 'N/A', theme.secondary],
-                ['Valorisation du bien', `$${(project.totalValue / 1e6).toFixed(2)}M`, theme.text],
+                [t('invest.spvDetailPerfYield'), `${project.annualYieldPct.toFixed(1)}%`, theme.success],
+                [t('invest.spvDetailPerfOccupancy'), `${project.occupancyRate}%`, project.occupancyRate >= 90 ? '#22c55e' : '#f59e0b'],
+                [t('invest.spvDetailPerfEsg'), project.esgScore ? `${project.esgScore}/100` : 'N/A', theme.secondary],
+                [t('invest.spvDetailPerfValuation'), `$${(project.totalValue / 1e6).toFixed(2)}M`, theme.text],
               ].map(([label, value, color], i) => (
                 <ThemedView key={i} style={[s.perfRow, { borderBottomColor: theme.outline + '10' }]}>
                   <ThemedText type ="body" style={{ color: theme.onSurface + '65' }}>{label}</ThemedText>
@@ -226,7 +228,7 @@ export default function SPVDetail() {
             <ThemedView style={[s.card, { backgroundColor: theme.surface, borderColor: theme.outline + '20' }]}>
               <ThemedView style={s.cardTitleRow}>
                 <MaterialCommunityIcons name="calculator" size={16} color= {theme.secondary} />
-                <ThemedText type ="normal" style={[s.cardTitle, { color: theme.text }]}>Simulation (pour $1 000 investis)</ThemedText>
+                <ThemedText type ="normal" style={[s.cardTitle, { color: theme.text }]}>{t('invest.spvDetailSimTitle')}</ThemedText>
               </ThemedView>
               {(() => {
                 const invested = 1000;
@@ -236,10 +238,10 @@ export default function SPVDetail() {
                 return (
                   <ThemedView style={[s.simBox, { backgroundColor:theme.secondary + '08', borderColor:theme.secondary + '20' }]}>
                     {[
-                      [`Parts achetées`, `${shares} parts`],
-                      [`% de la société`, `${pctOwned.toFixed(4)}%`],
-                      [`Revenu annuel estimé`, `$${annualIncome.toFixed(2)}`],
-                      [`Revenu mensuel estimé`, `$${(annualIncome / 12).toFixed(2)}`],
+                      [t('invest.spvDetailSimShares'), `${shares} ${t('invest.spvDetailSharesSold')}`],
+                      [t('invest.spvDetailSimPctOwned'), `${pctOwned.toFixed(4)}%`],
+                      [t('invest.spvDetailSimAnnualIncome'), `$${annualIncome.toFixed(2)}`],
+                      [t('invest.spvDetailSimMonthlyIncome'), `$${(annualIncome / 12).toFixed(2)}`],
                     ].map(([label, value], i) => (
                       <ThemedView key={i} style={s.simRow}>
                         <ThemedText type ="body" style={ { color: theme.onSurface + '60' }}>{label}</ThemedText>
@@ -250,7 +252,7 @@ export default function SPVDetail() {
                 );
               })()}
               <ThemedText type ="caption" style={[s.disclaimer, { color: theme.onSurface + '45' }]}>
-                * Simulation basée sur les données actuelles. Les rendements passés ne préjugent pas des rendements futurs.
+                {t('invest.spvDetailSimDisclaimer')}
               </ThemedText>
             </ThemedView>
           </>
@@ -286,7 +288,7 @@ const s = StyleSheet.create({
   tabActive: {},
   tabText: { fontWeight: '700' },
   tabIndicator: { position: 'absolute', bottom: 0, left: 16, right: 16, height: 2, borderRadius: 1 },
-  card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 12 },
+  card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 8 },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   cardTitle: { fontWeight: '800' },
   progressHeaderRow: { flexDirection: 'row', justifyContent: 'space-between' },
@@ -296,7 +298,7 @@ const s = StyleSheet.create({
   progressFooter: { flexDirection: 'row', justifyContent: 'space-between' },
   progressSub: { fontSize: 10 },
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  metricBox: { width: '47%', borderRadius: 10, borderWidth: 1, padding: 10, gap: 4, alignItems: 'center' },
+  metricBox: { width: '30%', borderRadius: 10, borderWidth: 1, padding: 8, gap: 2, alignItems: 'center' },
   metricVal: { fontWeight: '800' },
   metricLabel: { fontSize: 10, textAlign: 'center' },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 9, borderBottomWidth: 1 },
