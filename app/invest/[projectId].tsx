@@ -27,8 +27,8 @@ const DEMO_PROJECT: RSTProject = {
 };
 
 const DEMO_DISTRIBUTIONS: RSTDistribution[] = [
-  { distributionId: 'd1', projectId: 'rst-001', periodLabel: 'Février 2026', rentCollectedUsd: 3200, platformFeePct: 3, netDistributedUsd: 3104, perTokenUsd: 0.0218, totalHolders: 84, txHash: '0xabc', distributedAt: '2026-03-01' },
-  { distributionId: 'd2', projectId: 'rst-001', periodLabel: 'Janvier 2026', rentCollectedUsd: 3200, platformFeePct: 3, netDistributedUsd: 3104, perTokenUsd: 0.0218, totalHolders: 84, txHash: '0xdef', distributedAt: '2026-02-01' },
+  { id: 'd1', distributionId: 'd1', projectId: 'rst-001', periodMonth: 'Février 2026', grossRentCollected: 3200, occupancyRate: 95, platformFee: 3, distributionFee: 1, performanceFee: 1, insuranceReserve: 91, netDistributable: 3104, perTokenAmount: 0.0218, totalHolders: 84, distributedAt: '2026-03-01' },
+  { id: 'd2', distributionId: 'd2', projectId: 'rst-001', periodMonth: 'Janvier 2026', grossRentCollected: 3200, occupancyRate: 95, platformFee: 3, distributionFee: 1, performanceFee: 1, insuranceReserve: 91, netDistributable: 3104, perTokenAmount: 0.0218, totalHolders: 84, distributedAt: '2026-02-01' },
 ];
 
 type Tab = 'overview' | 'distributions' | 'ai';
@@ -63,9 +63,27 @@ export default function ProjectDetail() {
     })();
   }, [projectId]);
 
+  const handleInveste = () =>{
+    Alert.alert(
+      'Investissement', `Vous allez investir dans le projet`,
+      [
+        {
+          text: 'Annuler',
+          onPress: () => console.log('Cancel Pressed'),
+          style: 'cancel',
+        },
+        {
+          text: 'Confirmer',
+          onPress: () => router.push({ pathname: '/invest/rst/subscribe', params: { projectId } } as any),
+          style: 'cancel',
+        },
+      ]
+    )
+  }
+
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.surface, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" color={theme.primary} />
       </SafeAreaView>
     );
@@ -81,7 +99,7 @@ export default function ProjectDetail() {
   ];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.surface }}>
       {/* Header */}
       <ThemedView style={[s.header, { borderBottomColor: theme.outline + '20' }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
@@ -112,11 +130,11 @@ export default function ProjectDetail() {
         ))}
       </ThemedView>
 
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingTop:4 }}>
         {activeTab === 'overview' && (
           <>
             {/* Financing progress */}
-            <ThemedView style={[s.card, { backgroundColor: theme.surface }]}>
+            <ThemedView style={s.card}>
               <ThemedText type="normaltitle" style={[s.sectionTitle, { color: theme.text }]}>{t('invest.financing')}</ThemedText>
               <ThemedView style={{ gap: 6 }}>
                 <ThemedView style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -129,18 +147,18 @@ export default function ProjectDetail() {
                   <ThemedView style={[s.fill, { width: `${progress}%` as any, backgroundColor: theme.primary }]} />
                 </ThemedView>
                 <ThemedText type="body" style={{ color: theme.onSurface + '50', fontSize: 12 }}>
-                  {project.totalInvestors} {t('invest.investorCount')} · {project.totalRstIssued.toLocaleString()} {t('invest.rstIssued')}
+                  {project.totalInvestors} {t('invest.investorCount')} · {project?.totalRstIssued?.toLocaleString()} {t('invest.rstIssued')}
                 </ThemedText>
               </ThemedView>
             </ThemedView>
 
             {/* Key Metrics */}
-            <ThemedView style={[s.card, { backgroundColor: theme.surface }]}>
-              <ThemedText type="normaltitle" style={[s.sectionTitle, { color: theme.text }]}>{t('invest.keyMetrics')}</ThemedText>
+            <ThemedView style={s.card}>
+              <ThemedText type="normaltitle" style={s.sectionTitle}>{t('invest.keyMetrics')}</ThemedText>
               {[
                 { label: t('invest.targetYield'), value: `${project.targetAnnualYield}%` },
                 { label: t('invest.rentShare'), value: `${project.revenueSharePct}%` },
-                { label: t('invest.baseRent'), value: `$${project.baseMonthlyRent.toLocaleString()}/mois` },
+                { label: t('invest.baseRent'), value: `$${project?.baseMonthlyRent?.toLocaleString()}/mois` },
                 { label: t('invest.duration'), value: `${project.durationMonths} mois` },
                 { label: t('invest.maxReturn'), value: `${project.maxReturnPct}%` },
                 { label: t('invest.minInvest'), value: `$${project.minInvestmentUsd.toLocaleString()}` },
@@ -157,9 +175,9 @@ export default function ProjectDetail() {
             <ThemedView style={[s.card, { backgroundColor: theme.surface }]}>
               <ThemedText type="normaltitle" style={[s.sectionTitle, { color: theme.text }]}>{t('invest.fees')}</ThemedText>
               {[
-                { label: t('invest.platformFee'), value: `${project.platformFeeBps / 100}%` },
-                { label: t('invest.distributionFee'), value: `${project.distributionFeeBps / 100}%` },
-                { label: t('invest.performanceFee'), value: `${project.performanceFeeBps / 100}%` },
+                { label: t('invest.platformFee'), value: `${project.platformFeeBps??0/ 100}%` },
+                { label: t('invest.distributionFee'), value: `${project.distributionFeeBps??0 / 100}%` },
+                { label: t('invest.performanceFee'), value: `${project.performanceFeeBps??0 / 100}%` },
               ].map((row, i) => (
                 <ThemedView key={i} style={[s.metricsRow, { borderBottomColor: theme.outline + '15', borderBottomWidth: i < 2 ? 1 : 0 }]}>
                   <ThemedText type="body" style={{ color: theme.onSurface + '70', fontSize: 13 }}>{row.label}</ThemedText>
@@ -184,7 +202,10 @@ export default function ProjectDetail() {
 
             {/* Invest CTA */}
             {project.status === 'active' && (
-              <TouchableOpacity style={[s.cta, { backgroundColor: theme.primary }]}>
+              <TouchableOpacity 
+              style={[s.cta, { backgroundColor: theme.primary }]}
+              onPress={() => Alert.alert('Investissement', `Vous allez investir dans le projet ${project.projectId}`)}
+              >
                 <ThemedText type="normaltitle" style={{ color: '#fff', fontWeight: '800' }}>{t('invest.investInProject')}</ThemedText>
                 <Ionicons name="arrow-forward" size={18} color="#fff" />
               </TouchableOpacity>
@@ -204,14 +225,14 @@ export default function ProjectDetail() {
               distributions.map(d => (
                 <ThemedView key={d.distributionId} style={[s.card, { backgroundColor: theme.surface }]}>
                   <ThemedView style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <ThemedText type="normaltitle" style={{ color: theme.text, fontWeight: '700' }}>{d.periodLabel}</ThemedText>
+                    <ThemedText type="normaltitle" style={{ color: theme.text, fontWeight: '700' }}>{d?.periodMonth}</ThemedText>
                     <ThemedText type="body" style={{ color: '#10B981', fontWeight: '700' }}>
-                      ${d.netDistributedUsd.toLocaleString()}
+                      ${d?.netDistributable?.toLocaleString()}
                     </ThemedText>
                   </ThemedView>
                   {[
-                    { label: t('invest.rentCollected'), value: `$${d.rentCollectedUsd.toLocaleString()}` },
-                    { label: t('invest.perRstToken'), value: `$${d.perTokenUsd}` },
+                    { label: t('invest.rentCollected'), value: `$${d?.grossRentCollected?.toLocaleString()}` },
+                    { label: t('invest.perRstToken'), value: `$${d?.perTokenAmount}` },
                     { label: t('invest.holderCount'), value: `${d.totalHolders}` },
                   ].map((row, i) => (
                     <ThemedView key={i} style={[s.metricsRow, { borderBottomColor: theme.outline + '10', borderBottomWidth: i < 2 ? 1 : 0 }]}>
@@ -231,7 +252,7 @@ export default function ProjectDetail() {
             <ThemedView style={[s.card, { backgroundColor: theme.surface }]}>
               {[
                 { label: 'ESG Score', value: `${project.esgScore}/100`, color: '#10B981' },
-                { label: 'AI Risk Score', value: `${project.aiRiskScore}`, color: project.aiRiskScore < 0.3 ? '#10B981' : '#F59E0B' },
+                { label: 'AI Risk Score', value: `${project.aiRiskScore}`, color: project?.aiRiskScore < 0.3 ? '#10B981' : '#F59E0B' },
                 { label: 'AI Recommended Share', value: `${project.aiRecommendedShare}%`, color: theme.primary },
               ].map((row, i) => (
                 <ThemedView key={i} style={[s.metricsRow, { borderBottomColor: theme.outline + '15', borderBottomWidth: i < 2 ? 1 : 0 }]}>
@@ -260,7 +281,7 @@ const s = StyleSheet.create({
   backBtn: { padding: 4 },
   tabBar: { flexDirection: 'row', borderBottomWidth: 1 },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 12 },
-  card: { borderRadius: 12, padding: 14, gap: 10 },
+  card: { borderRadius: 12, padding: 10, gap: 6 },
   sectionTitle: { fontWeight: '800' },
   metricsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 9 },
   track: { height: 8, borderRadius: 4, overflow: 'hidden' },
