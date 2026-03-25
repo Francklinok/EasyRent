@@ -12,30 +12,34 @@ import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/themehook';
 import { getMicroservicesApi, DAOProposal } from '@/services/api/microservicesApi';
 import { useAuth } from '@/components/contexts/authContext/AuthContext';
-
-const STATUS_MAP: Record<string, { color: string; label: string }> = {
-  active: { color: '#22c55e', label: 'Vote en cours' },
-  pending: { color: '#f59e0b', label: 'En attente' },
-  passed: { color: '#3b82f6', label: 'Adopté' },
-  rejected: { color: '#ef4444', label: 'Rejeté' },
-  executed: { color: '#8b5cf6', label: 'Exécuté' },
-  cancelled: { color: '#6b7280', label: 'Annulé' },
-};
-
-const TYPE_MAP: Record<string, string> = {
-  buy: 'Acheter un actif',
-  sell: 'Vendre un actif',
-  rebalance: 'Rééquilibrer',
-  strategy_change: 'Changer stratégie',
-  fee_update: 'Modifier frais',
-};
+import { ThemedView } from '@/components/ui/ThemedView';
+import { ThemedText } from '@/components/ui/ThemedText';
+import { useLanguage } from '@/hooks/useLanguage';
 
 export default function DAOProposals() {
   const { theme } = useTheme();
   const router = useRouter();
   const { portfolioId } = useLocalSearchParams<{ portfolioId?: string }>();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const api = getMicroservicesApi();
+
+  const STATUS_MAP: Record<string, { color: string; label: string }> = {
+    active: { color: '#22c55e', label: t('dao.statusActive') },
+    pending: { color: '#f59e0b', label: t('dao.statusPending') },
+    passed: { color: '#3b82f6', label: t('dao.statusPassed') },
+    rejected: { color: '#ef4444', label: t('dao.statusRejected') },
+    executed: { color: '#8b5cf6', label: t('dao.statusExecuted') },
+    cancelled: { color: '#6b7280', label: t('dao.statusCancelled') },
+  };
+
+  const TYPE_MAP: Record<string, string> = {
+    buy: t('dao.typeBuy'),
+    sell: t('dao.typeSell'),
+    rebalance: t('dao.typeRebalance'),
+    strategy_change: t('dao.typeStrategyChange'),
+    fee_update: t('dao.typeFeeUpdate'),
+  };
 
   const [proposals, setProposals] = useState<DAOProposal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,10 +71,10 @@ export default function DAOProposals() {
         vote,
         votingPower: 1,
       });
-      Alert.alert('Vote enregistré', `Votre vote "${vote}" a été soumis.`);
+      Alert.alert(t('dao.voteRegistered'), t('dao.voteRegisteredMsg').replace('{vote}', vote));
       load();
     } catch {
-      Alert.alert('Erreur', 'Vote impossible. Vérifiez votre connexion.');
+      Alert.alert(t('dao.voteError'), t('dao.voteErrorMsg'));
     } finally {
       setVoting(null);
     }
@@ -87,18 +91,18 @@ export default function DAOProposals() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.surface }}>
       <StatusBar barStyle="light-content" />
 
-      <View style={[dp.header, { borderBottomColor: theme.outline + '20' }]}>
+      <ThemedView style={[dp.header, { borderBottomColor: theme.outline + '20' }]}>
         <TouchableOpacity onPress={() => router.back()} style={[dp.backBtn, { backgroundColor: theme.surface }]}>
           <Ionicons name="arrow-back" size={20} color={theme.text} />
         </TouchableOpacity>
-        <View>
-          <Text style={[dp.headerTitle, { color: theme.text }]}>Gouvernance DAO</Text>
-          <Text style={[dp.headerSub, { color: theme.onSurface + '70' }]}>Propositions & votes</Text>
-        </View>
-      </View>
+        <ThemedView>
+          <ThemedText style={[dp.headerTitle, { color: theme.text }]}>{t('dao.title')}</ThemedText>
+          <ThemedText style={[dp.headerSub, { color: theme.onSurface + '70' }]}>{t('dao.subtitle')}</ThemedText>
+        </ThemedView>
+      </ThemedView>
 
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={theme.primary} />}
@@ -113,81 +117,81 @@ export default function DAOProposals() {
             const quorumReached = total >= p.quorumRequired;
 
             return (
-              <View key={p.proposalId} style={[dp.card, { backgroundColor: theme.surface, borderColor: theme.outline + '25' }]}>
+              <ThemedView key={p.proposalId} style={[dp.card, { backgroundColor: theme.surface, borderColor: theme.outline + '25' }]}>
                 {/* Header */}
-                <View style={dp.propHeader}>
-                  <View style={[dp.typeBadge, { backgroundColor: theme.primary + '15' }]}>
-                    <Text style={[dp.typeText, { color: theme.primary }]}>{TYPE_MAP[p.proposalType] || p.proposalType}</Text>
-                  </View>
-                  <View style={[dp.statusBadge, { backgroundColor: s.color + '20' }]}>
-                    <Text style={[dp.statusText, { color: s.color }]}>{s.label}</Text>
-                  </View>
-                </View>
+                <ThemedView style={dp.propHeader}>
+                  <ThemedView style={[dp.typeBadge, { backgroundColor: theme.primary + '15' }]}>
+                    <ThemedText style={[dp.typeText, { color: theme.primary }]}>{TYPE_MAP[p.proposalType] || p.proposalType}</ThemedText>
+                  </ThemedView>
+                  <ThemedView style={[dp.statusBadge, { backgroundColor: s.color + '20' }]}>
+                    <ThemedText style={[dp.statusText, { color: s.color }]}>{s.label}</ThemedText>
+                  </ThemedView>
+                </ThemedView>
 
-                <Text style={[dp.title, { color: theme.text }]}>{p.title}</Text>
-                <Text style={[dp.desc, { color: theme.onSurface + '70' }]} numberOfLines={3}>
+                <ThemedText style={dp.title}>{p.title}</ThemedText>
+                <ThemedText type="body" style={[dp.desc, { color: theme.onSurface + '70' }]} numberOfLines={3}>
                   {p.description}
-                </Text>
+                </ThemedText>
 
                 {/* AI Recommendation */}
                 {p.aiRecommendation && (
-                  <View style={[dp.aiBox, { backgroundColor: theme.primary + '10', borderColor: theme.primary + '30' }]}>
-                    <View style={dp.aiHeader}>
+                  <ThemedView style={[dp.aiBox, { backgroundColor: theme.primary + '10', borderColor: theme.primary + '30' }]}>
+                    <ThemedView style={dp.aiHeader}>
                       <MaterialCommunityIcons name="robot" size={16} color={theme.primary} />
-                      <Text style={[dp.aiTitle, { color: theme.primary }]}>
-                        Recommandation IA — Confiance {(p.aiRecommendation.confidence * 100).toFixed(0)}%
-                      </Text>
-                    </View>
-                    <Text style={[dp.aiText, { color: theme.text }]} numberOfLines={2}>
+                      <ThemedText style={[dp.aiTitle, { color: theme.primary }]}>
+                        {t('dao.aiRecommendation').replace('{confidence}', (p.aiRecommendation.confidence * 100).toFixed(0))}
+                      </ThemedText>
+                    </ThemedView>
+                    <ThemedText style={dp.aiText} numberOfLines={2}>
                       {p.aiRecommendation.rationale}
-                    </Text>
-                    <View style={dp.aiStats}>
-                      <Text style={[dp.aiStat, { color: '#22c55e' }]}>
-                        Retour attendu : +{p.aiRecommendation.expectedReturn.toFixed(1)}%
-                      </Text>
-                      <Text style={[dp.aiStat, { color: '#f59e0b' }]}>
-                        Risque : {(p.aiRecommendation.riskScore * 100).toFixed(0)}%
-                      </Text>
-                    </View>
+                    </ThemedText>
+                    <ThemedView style={dp.aiStats}>
+                      <ThemedText style={[dp.aiStat, { color: theme.success }]}>
+                        {t('dao.expectedReturn').replace('{value}', p.aiRecommendation.expectedReturn.toFixed(1))}
+                      </ThemedText>
+                      <ThemedText style={[dp.aiStat, { color: theme.star}]}>
+                        {t('dao.riskScore').replace('{value}', (p.aiRecommendation.riskScore * 100).toFixed(0))}
+                      </ThemedText>
+                    </ThemedView>
                     {/* Market signals */}
-                    <View style={dp.signalsRow}>
+                    <ThemedView style={dp.signalsRow}>
                       {p.aiRecommendation.marketSignals.slice(0, 3).map((sig, i) => (
-                        <View key={i} style={[dp.signal, {
+                        <ThemedView key={i} style={[dp.signal, {
                           backgroundColor: sig.direction === 'bullish' ? '#22c55e20' : sig.direction === 'bearish' ? '#ef444420' : '#f59e0b20'
                         }]}>
-                          <Text style={{ fontSize: 10, color: sig.direction === 'bullish' ? '#22c55e' : sig.direction === 'bearish' ? '#ef4444' : '#f59e0b', fontWeight: '600' }}>
+                          <ThemedText style={{ fontSize: 10, color: sig.direction === 'bullish' ?  theme.success: sig.direction === 'bearish' ? theme.error : theme.star, fontWeight: '600' }}>
                             {sig.direction === 'bullish' ? '▲' : sig.direction === 'bearish' ? '▼' : '—'} {sig.signalType}
-                          </Text>
-                        </View>
+                          </ThemedText>
+                        </ThemedView>
                       ))}
-                    </View>
-                  </View>
+                    </ThemedView>
+                  </ThemedView>
                 )}
 
                 {/* Vote bars */}
-                <View style={{ gap: 6 }}>
-                  <View style={dp.voteRow}>
-                    <Text style={[dp.voteLabel, { color: '#22c55e' }]}>Pour {p.votesFor}</Text>
-                    <Text style={[dp.voteLabel, { color: theme.onSurface + '60' }]}>{total} votes</Text>
-                    <Text style={[dp.voteLabel, { color: '#ef4444' }]}>Contre {p.votesAgainst}</Text>
-                  </View>
-                  <View style={[dp.voteTrack, { backgroundColor: theme.outline + '30' }]}>
-                    <View style={[dp.voteFillFor, { width: `${fPct}%` }]} />
-                    <View style={[dp.voteFillAgainst, { width: `${aPct}%` }]} />
-                  </View>
-                  <Text style={[dp.quorumText, { color: quorumReached ? '#22c55e' : theme.onSurface + '60' }]}>
-                    {quorumReached ? '✓ Quorum atteint' : `Quorum : ${total}/${p.quorumRequired} votes`}
-                  </Text>
-                </View>
+                <ThemedView style={{ gap: 6 }}>
+                  <ThemedView style={dp.voteRow}>
+                    <ThemedText style={[dp.voteLabel, { color:theme.success }]}>{t('dao.voteFor')} {p.votesFor}</ThemedText>
+                    <ThemedText style={[dp.voteLabel, { color: theme.onSurface + '60' }]}>{total} votes</ThemedText>
+                    <ThemedText style={[dp.voteLabel, { color: theme.error }]}>{t('dao.voteAgainst')} {p.votesAgainst}</ThemedText>
+                  </ThemedView>
+                  <ThemedView style={[dp.voteTrack, { backgroundColor: theme.outline + '30' }]}>
+                    <ThemedView style={[dp.voteFillFor, { width: `${fPct}%` }]} />
+                    <ThemedView style={[dp.voteFillAgainst, { width: `${aPct}%` }]} />
+                  </ThemedView>
+                  <ThemedText style={[dp.quorumText, { color: quorumReached ? theme.success : theme.onSurface + '60' }]}>
+                    {quorumReached ? t('dao.quorumReached') : t('dao.quorumProgress').replace('{current}', String(total)).replace('{required}', String(p.quorumRequired))}
+                  </ThemedText>
+                </ThemedView>
 
                 {/* Vote dates */}
-                <Text style={[dp.dates, { color: theme.onSurface + '50' }]}>
-                  Fin du vote : {new Date(p.votingEnd).toLocaleDateString('fr-FR')}
-                </Text>
+                <ThemedText style={[dp.dates, { color: theme.onSurface + '50' }]}>
+                  {t('dao.voteEnd')} {new Date(p.votingEnd).toLocaleDateString()}
+                </ThemedText>
 
                 {/* Vote buttons */}
                 {p.status === 'active' && (
-                  <View style={dp.voteActions}>
+                  <ThemedView style={dp.voteActions}>
                     {(['for', 'against', 'abstain'] as const).map(v => (
                       <TouchableOpacity
                         key={v}
@@ -200,17 +204,17 @@ export default function DAOProposals() {
                       >
                         {voting === p.proposalId
                           ? <ActivityIndicator size="small" color={theme.primary} />
-                          : <Text style={[dp.voteBtnText, {
-                              color: v === 'for' ? '#22c55e' : v === 'against' ? '#ef4444' : theme.onSurface + '70'
+                          : <ThemedText style={[dp.voteBtnText, {
+                              color: v === 'for' ?theme.success : v === 'against' ? theme.error : theme.onSurface + '70'
                             }]}>
-                              {v === 'for' ? 'Pour' : v === 'against' ? 'Contre' : 'Abstention'}
-                            </Text>
+                              {v === 'for' ? t('dao.voteFor') : v === 'against' ? t('dao.voteAgainst') : t('dao.voteAbstain')}
+                            </ThemedText>
                         }
                       </TouchableOpacity>
                     ))}
-                  </View>
+                  </ThemedView>
                 )}
-              </View>
+              </ThemedView>
             );
           })
         )}
@@ -244,7 +248,6 @@ const dp = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, gap: 12 },
   backBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '800' },
-  headerSub: { fontSize: 12 },
   card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 12 },
   propHeader: { flexDirection: 'row', gap: 8 },
   typeBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
@@ -252,17 +255,17 @@ const dp = StyleSheet.create({
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   statusText: { fontSize: 11, fontWeight: '700' },
   title: { fontSize: 15, fontWeight: '800', lineHeight: 22 },
-  desc: { fontSize: 13, lineHeight: 19 },
+  desc: { lineHeight: 19 },
   aiBox: { borderRadius: 10, borderWidth: 1, padding: 12, gap: 8 },
   aiHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  aiTitle: { fontSize: 12, fontWeight: '700' },
-  aiText: { fontSize: 12, lineHeight: 18 },
+  aiTitle: { fontWeight: '700' },
+  aiText: { lineHeight: 18 },
   aiStats: { flexDirection: 'row', gap: 16 },
-  aiStat: { fontSize: 12, fontWeight: '700' },
+  aiStat: { fontWeight: '700' },
   signalsRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   signal: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   voteRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  voteLabel: { fontSize: 12, fontWeight: '600' },
+  voteLabel: { fontWeight: '600' },
   voteTrack: { height: 8, borderRadius: 4, flexDirection: 'row', overflow: 'hidden' },
   voteFillFor: { height: '100%', backgroundColor: '#22c55e' },
   voteFillAgainst: { height: '100%', backgroundColor: '#ef4444' },

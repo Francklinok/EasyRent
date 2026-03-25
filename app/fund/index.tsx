@@ -64,15 +64,15 @@ export default function FundHome() {
           <Ionicons name="arrow-back" size={20} color={theme.text} />
         </TouchableOpacity>
         <ThemedView style={{ flex: 1 }}>
-          <ThemedText type ="subtitle" style={[f.headerTitle, { color: theme.text }]}>AI Fund</ThemedText>
-          <ThemedText style={[f.headerSub, { color: theme.onSurface + '70' }]}>Fonds IA autonome + gouvernance DAO</ThemedText>
+          <ThemedText type ="subtitle" style={[f.headerTitle, { color: theme.text }]}>{t('fund.title')}</ThemedText>
+          <ThemedText style={[f.headerSub, { color: theme.onSurface + '70' }]}>{t('fund.subtitle')}</ThemedText>
         </ThemedView>
         <TouchableOpacity
           onPress={() => router.push('/fund/proposals' as any)}
           style={[f.daoBtn, { backgroundColor: theme.primary + '20', borderColor: theme.primary + '40' }]}
         >
           <MaterialCommunityIcons name="vote" size={16} color={theme.primary} />
-          <ThemedText type="body" style={[f.daoBtnText, { color: theme.primary }]}>DAO</ThemedText>
+          <ThemedText type="body" style={[f.daoBtnText, { color: theme.primary }]}>{t('fund.daoBtn')}</ThemedText>
         </TouchableOpacity>
       </ThemedView>
 
@@ -83,27 +83,27 @@ export default function FundHome() {
         {/* My investment summary */}
         {myShares.length > 0 && (
           <ThemedView style={[f.myCard, { backgroundColor: theme.primary }]}>
-            <ThemedText style={f.myCardTitle}>Mon investissement</ThemedText>
+            <ThemedText style={f.myCardTitle}>{t('fund.myInvestment')}</ThemedText>
             <ThemedView style={f.myRow}>
               <ThemedView style={f.myItem}>
                 <ThemedText style={f.myVal}>${totalInvested.toLocaleString()}</ThemedText>
-                <ThemedText style={f.myLabel}>Investi</ThemedText>
+                <ThemedText style={f.myLabel}>{t('fund.invested')}</ThemedText>
               </ThemedView>
               <ThemedView style={f.myItem}>
                 <ThemedText style={f.myVal}>${totalValue.toLocaleString()}</ThemedText>
-                <ThemedText style={f.myLabel}>Valeur actuelle</ThemedText>
+                <ThemedText style={f.myLabel}>{t('fund.currentValue')}</ThemedText>
               </ThemedView>
               <ThemedView style={f.myItem}>
                 <ThemedText style={[f.myVal, { color: totalPnl >= 0 ? '#86efac' : '#fca5a5' }]}>
                   {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}$
                 </ThemedText>
-                <ThemedText style={f.myLabel}>P&L</ThemedText>
+                <ThemedText style={f.myLabel}>{t('fund.pnl')}</ThemedText>
               </ThemedView>
             </ThemedView>
           </ThemedView>
         )}
 
-        <ThemedText type ="normaltitle" style={[f.sectionTitle, { color: theme.text }]}>Fonds disponibles</ThemedText>
+        <ThemedText type ="normaltitle" style={[f.sectionTitle, { color: theme.text }]}>{t('fund.availableFunds')}</ThemedText>
 
         {loading ? <ActivityIndicator color={theme.primary} /> : (
           funds.map(fund => {
@@ -122,12 +122,12 @@ export default function FundHome() {
                   <ThemedView style={{ flex: 1 }}>
                     <ThemedText style={[f.fundName, { color: theme.text }]}>{fund.fundName}</ThemedText>
                     <ThemedText style={[f.fundStrategy, { color: theme.onSurface + '70' }]}>
-                      Stratégie {fund.strategy} · {fund.investors} investisseurs
+                      {t('fund.strategy')} {fund.strategy} · {fund.investors} {t('fund.investors')}
                     </ThemedText>
                   </ThemedView>
                   {myShare && (
                     <ThemedView style={[f.myBadge, { backgroundColor: theme.primary + '20', borderColor: theme.primary + '40' }]}>
-                      <ThemedText style={[f.myBadgeText, { color: theme.primary }]}>Investi</ThemedText>
+                      <ThemedText style={[f.myBadgeText, { color: theme.primary }]}>{t('fund.invested_badge')}</ThemedText>
                     </ThemedView>
                   )}
                 </ThemedView>
@@ -138,22 +138,22 @@ export default function FundHome() {
                     <ThemedText type ="normal" style={[f.perfVal, { color: fund.performanceYtd >= 0 ? '#22c55e' : '#ef4444' }]}>
                       {fund.performanceYtd >= 0 ? '+' : ''}{fund.performanceYtd.toFixed(1)}%
                     </ThemedText>
-                    <ThemedText style={[f.perfLabel, { color: theme.onSurface + '60' }]}>YTD</ThemedText>
+                    <ThemedText style={[f.perfLabel, { color: theme.onSurface + '60' }]}>{t('fund.ytd')}</ThemedText>
                   </ThemedView>
                   <ThemedView style={[f.perfDiv, { backgroundColor: theme.outline + '30' }]} />
                   <ThemedView style={f.perf}>
                     <ThemedText type ="normal" style={[f.perfVal, { color: theme.text }]}>{fund.sharpeRatio.toFixed(2)}</ThemedText>
-                    <ThemedText style={[f.perfLabel, { color: theme.onSurface + '60' }]}>Sharpe</ThemedText>
+                    <ThemedText style={[f.perfLabel, { color: theme.onSurface + '60' }]}>{t('fund.sharpe')}</ThemedText>
                   </ThemedView>
                   <ThemedView style={[f.perfDiv, { backgroundColor: theme.outline + '30' }]} />
                   <ThemedView style={f.perf}>
                     <ThemedText type ="normal" style={[f.perfVal, { color: theme.text }]}>${(fund.navPerShare).toFixed(2)}</ThemedText>
-                    <ThemedText style={[f.perfLabel, { color: theme.onSurface + '60' }]}>NAV/part</ThemedText>
+                    <ThemedText style={[f.perfLabel, { color: theme.onSurface + '60' }]}>{t('fund.navPerShare')}</ThemedText>
                   </ThemedView>
                   <ThemedView style={[f.perfDiv, { backgroundColor: theme.outline + '30' }]} />
                   <ThemedView style={f.perf}>
                     <ThemedText type ="normal" style={[f.perfVal, { color: theme.text }]}>${(fund.totalAum / 1e6).toFixed(1)}M</ThemedText>
-                    <ThemedText style={[f.perfLabel, { color: theme.onSurface + '60' }]}>AUM</ThemedText>
+                    <ThemedText style={[f.perfLabel, { color: theme.onSurface + '60' }]}>{t('fund.aum')}</ThemedText>
                   </ThemedView>
                 </ThemedView>
 
@@ -161,20 +161,20 @@ export default function FundHome() {
                 <ThemedView style={[f.rebalBox, { backgroundColor: theme.surface, borderColor: theme.outline + '20' }]}>
                   <MaterialCommunityIcons name="robot" size={14} color={theme.primary} />
                   <ThemedText style={ { color: theme.onSurface + '70' }}>
-                    Rebalancement auto · Prochain : {new Date(fund.nextRebalance).toLocaleDateString('fr-FR')}
+                    {t('fund.autoRebalance')} {new Date(fund.nextRebalance).toLocaleDateString()}
                   </ThemedText>
                 </ThemedView>
 
                 {/* Fees */}
                 <ThemedView style={f.feesRow}>
                   <ThemedText style={ { color: theme.onSurface + '60' }}>
-                    Gestion {fund.managementFeeBps / 100}% · Perf {fund.performanceFeeBps / 100}%
+                    {t('fund.managementFee')} {fund.managementFeeBps / 100}% · {t('fund.performanceFee')} {fund.performanceFeeBps / 100}%
                   </ThemedText>
                   <TouchableOpacity
                     style={[f.investBtn, { backgroundColor: theme.primary }]}
                     onPress={() => router.push({ pathname: '/fund/invest', params: { portfolioId: fund.portfolioId } } as any)}
                   >
-                    <ThemedText type ="body" style={f.investBtnText}>Investir</ThemedText>
+                    <ThemedText type ="body" style={f.investBtnText}>{t('fund.investBtn')}</ThemedText>
                   </TouchableOpacity>
                 </ThemedView>
               </TouchableOpacity>
