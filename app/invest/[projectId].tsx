@@ -252,7 +252,7 @@ export default function ProjectDetail() {
             <ThemedView style={[s.card, { backgroundColor: theme.surface }]}>
               {[
                 { label: 'ESG Score', value: `${project.esgScore}/100`, color: '#10B981' },
-                { label: 'AI Risk Score', value: `${project.aiRiskScore}`, color: project?.aiRiskScore < 0.3 ? '#10B981' : '#F59E0B' },
+                { label: 'AI Risk Score', value: `${project.aiRiskScore}`, color: (project.aiRiskScore?? 0) < 0.3 ? '#10B981' : '#F59E0B' },
                 { label: 'AI Recommended Share', value: `${project.aiRecommendedShare}%`, color: theme.primary },
               ].map((row, i) => (
                 <ThemedView key={i} style={[s.metricsRow, { borderBottomColor: theme.outline + '15', borderBottomWidth: i < 2 ? 1 : 0 }]}>
