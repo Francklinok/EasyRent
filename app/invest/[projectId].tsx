@@ -93,7 +93,7 @@ export default function ProjectDetail() {
 
   const progress = Math.min(100, Math.round((project.raisedAmountUsd / project.targetAmountUsd) * 100));
   const TABS: { key: Tab; label: string }[] = [
-    { key: 'overview', label: t('invest.overview') },
+    { key: 'overview', label: t('invest.overview') }, 
     { key: 'distributions', label: t('invest.distributions') },
     { key: 'ai', label: t('invest.aiEsg') },
   ];
