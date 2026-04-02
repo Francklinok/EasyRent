@@ -163,6 +163,8 @@ export default function Info() {
       // Include propertyType and actionType for booking screen compatibility
       propertyType: property.propertyType || 'villa',
       actionType: property.actionType || 'rent',
+      actionCategory: (property as any).actionCategory,
+      investmentModel: (property as any).investmentModel,
       avatar: imageUrl,
       images: property.images || [],
       imageAvif: imageUrl,
@@ -330,7 +332,17 @@ export default function Info() {
           {ActiveComponent ? (
             <ActiveComponent
              itemData={currentItem}
-             onClick = {handleStartConversation}
+             onClick={handleStartConversation}
+             onInvestPress={currentItem?.actionCategory === 'hybrid' ? () => {
+               const model = currentItem.investmentModel || 'rst';
+               router.push({
+                 pathname: model === 'spv' ? '/invest/spv/[spvId]' : '/invest/rst/[projectId]',
+                 params: {
+                   [model === 'spv' ? 'spvId' : 'projectId']: currentItem.id,
+                   propertyData: JSON.stringify(currentItem),
+                 }
+               } as any);
+             } : undefined}
              />
           ) : (
             <ThemedView style={styles.noDataContainer}>
