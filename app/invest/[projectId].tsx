@@ -65,15 +65,15 @@ export default function ProjectDetail() {
 
   const handleInveste = () =>{
     Alert.alert(
-      'Investissement', `Vous allez investir dans le projet`,
+      t('investDetail.alertTitle'), t('investDetail.alertMessage').replace('{projectId}', projectId || ''),
       [
         {
-          text: 'Annuler',
+          text: t('investDetail.alertCancel'),
           onPress: () => console.log('Cancel Pressed'),
           style: 'cancel',
         },
         {
-          text: 'Confirmer',
+          text: t('investDetail.alertConfirm'),
           onPress: () => router.push({ pathname: '/invest/rst/subscribe', params: { projectId } } as any),
           style: 'cancel',
         },
@@ -158,8 +158,8 @@ export default function ProjectDetail() {
               {[
                 { label: t('invest.targetYield'), value: `${project.targetAnnualYield}%` },
                 { label: t('invest.rentShare'), value: `${project.revenueSharePct}%` },
-                { label: t('invest.baseRent'), value: `$${project?.baseMonthlyRent?.toLocaleString()}/mois` },
-                { label: t('invest.duration'), value: `${project.durationMonths} mois` },
+                { label: t('invest.baseRent'), value: `$${project?.baseMonthlyRent?.toLocaleString()}${t('investDetail.perMonth')}` },
+                { label: t('invest.duration'), value: `${project.durationMonths} ${t('investDetail.months')}` },
                 { label: t('invest.maxReturn'), value: `${project.maxReturnPct}%` },
                 { label: t('invest.minInvest'), value: `$${project.minInvestmentUsd.toLocaleString()}` },
                 { label: t('invest.occupancy'), value: `${project.currentOccupancy}%` },
@@ -191,7 +191,7 @@ export default function ProjectDetail() {
               <ThemedText type="normaltitle" style={[s.sectionTitle, { color: theme.text }]}>{t('invest.compliance')}</ThemedText>
               {[
                 { label: t('invest.jurisdiction'), value: project.jurisdiction },
-                { label: t('invest.kycRequired'), value: project.kycRequired ? '✅ Oui' : '❌ Non' },
+                { label: t('invest.kycRequired'), value: project.kycRequired ? t('investDetail.kycYes') : t('investDetail.kycNo') },
               ].map((row, i) => (
                 <ThemedView key={i} style={[s.metricsRow, { borderBottomColor: theme.outline + '15', borderBottomWidth: i < 1 ? 1 : 0 }]}>
                   <ThemedText type="body" style={{ color: theme.onSurface + '70', fontSize: 13 }}>{row.label}</ThemedText>
@@ -204,7 +204,7 @@ export default function ProjectDetail() {
             {project.status === 'active' && (
               <TouchableOpacity 
               style={[s.cta, { backgroundColor: theme.primary }]}
-              onPress={() => Alert.alert('Investissement', `Vous allez investir dans le projet ${project.projectId}`)}
+              onPress={() => Alert.alert(t('investDetail.alertTitle'), t('investDetail.alertMessage').replace('{projectId}', project.projectId))}
               >
                 <ThemedText type="normaltitle" style={{ color: '#fff', fontWeight: '800' }}>{t('invest.investInProject')}</ThemedText>
                 <Ionicons name="arrow-forward" size={18} color="#fff" />
@@ -251,9 +251,9 @@ export default function ProjectDetail() {
             <ThemedText type="normaltitle" style={[s.sectionTitle, { color: theme.text }]}>{t('invest.aiEsgScore')}</ThemedText>
             <ThemedView style={[s.card, { backgroundColor: theme.surface }]}>
               {[
-                { label: 'ESG Score', value: `${project.esgScore}/100`, color: '#10B981' },
-                { label: 'AI Risk Score', value: `${project.aiRiskScore}`, color: (project.aiRiskScore?? 0) < 0.3 ? '#10B981' : '#F59E0B' },
-                { label: 'AI Recommended Share', value: `${project.aiRecommendedShare}%`, color: theme.primary },
+                { label: t('rstDetail.esgScore'), value: `${project.esgScore}/100`, color: '#10B981' },
+                { label: t('rstDetail.aiRiskScore'), value: `${project.aiRiskScore}`, color: (project.aiRiskScore?? 0) < 0.3 ? '#10B981' : '#F59E0B' },
+                { label: t('rstDetail.aiRecommendedShare'), value: `${project.aiRecommendedShare}%`, color: theme.primary },
               ].map((row, i) => (
                 <ThemedView key={i} style={[s.metricsRow, { borderBottomColor: theme.outline + '15', borderBottomWidth: i < 2 ? 1 : 0 }]}>
                   <ThemedText type="body" style={{ color: theme.onSurface + '70', fontSize: 13 }}>{row.label}</ThemedText>
@@ -264,9 +264,10 @@ export default function ProjectDetail() {
             <ThemedView style={[s.card, { backgroundColor: theme.surface }]}>
               <ThemedText type="normaltitle" style={[s.sectionTitle, { color: theme.text }]}>{t('invest.aiAnalysis')}</ThemedText>
               <ThemedText type="body" style={{ color: theme.text, lineHeight: 20, fontSize: 13 }}>
-                Cet actif présente un bon profil risque/rendement avec un ESG score de {project.esgScore}/100.
-                Le taux d'occupation actuel de {project.currentOccupancy}% garantit des distributions stables.
-                Le AI Risk Score de {project.aiRiskScore} indique un risque faible.
+                {t('rstDetail.aiAnalysisParagraph')
+                  .replace('{esgScore}', String(project.esgScore))
+                  .replace('{occupancy}', String(project.currentOccupancy))
+                  .replace('{riskScore}', String(project.aiRiskScore))}
               </ThemedText>
             </ThemedView>
           </>
