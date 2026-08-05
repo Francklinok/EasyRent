@@ -592,6 +592,86 @@ const SettingsScreen = () => {
               iconColor="#22c55e"
               onPress={() => router.push('/kyc' as any)}
             />
+            {((user as any)?.role === 'admin' || (user as any)?.role === 'super_admin') && (
+              <SettingsItem
+                showArrow="on"
+                label="Tableau de bord Admin"
+                description="Vue d'ensemble de la plateforme"
+                icon="view-dashboard"
+                iconColor="#6366f1"
+                onPress={() => router.push('/admin/DashboardScreen' as any)}
+              />
+            )}
+            {((user as any)?.role === 'admin' || (user as any)?.role === 'super_admin') && (
+              <SettingsItem
+                showArrow="on"
+                label="Gestion Utilisateurs"
+                description="Suspendre, activer ou supprimer des comptes"
+                icon="account-group"
+                iconColor="#3b82f6"
+                onPress={() => router.push('/admin/UsersScreen' as any)}
+              />
+            )}
+            {((user as any)?.role === 'admin' || (user as any)?.role === 'super_admin') && (
+              <SettingsItem
+                showArrow="on"
+                label="Dossiers Immobiliers"
+                description="Valider, rejeter et assigner les dossiers"
+                icon="folder-open"
+                iconColor="#f59e0b"
+                onPress={() => router.push('/admin/DossiersScreen' as any)}
+              />
+            )}
+            {((user as any)?.role === 'admin' || (user as any)?.role === 'super_admin') && (
+              <SettingsItem
+                showArrow="on"
+                label="Tickets Support"
+                description="Gérer les demandes d'assistance clients"
+                icon="headset"
+                iconColor="#8b5cf6"
+                onPress={() => router.push('/admin/SupportScreen' as any)}
+              />
+            )}
+            {((user as any)?.role === 'admin' || (user as any)?.role === 'super_admin') && (
+              <SettingsItem
+                showArrow="on"
+                label="Audit & Sécurité"
+                description="Logs d'événements et activités suspectes"
+                icon="shield-search"
+                iconColor="#ef4444"
+                onPress={() => router.push('/admin/AuditScreen' as any)}
+              />
+            )}
+            {((user as any)?.role === 'admin' || (user as any)?.role === 'super_admin') && (
+              <SettingsItem
+                showArrow="on"
+                label="Validation KYC — Admin"
+                description="Approuver ou rejeter les demandes de vérification"
+                icon="shield-crown-outline"
+                iconColor="#8b5cf6"
+                onPress={() => router.push('/kyc/admin' as any)}
+              />
+            )}
+            {((user as any)?.role === 'admin' || (user as any)?.role === 'super_admin') && (
+              <SettingsItem
+                showArrow="on"
+                label="Pipeline Investissement — Admin"
+                description="Réviser RST, SPV et propositions DEV"
+                icon="bank-check"
+                iconColor="#10B981"
+                onPress={() => router.push('/admin/InvestmentPipelineAdminScreen' as any)}
+              />
+            )}
+            {(['partner', 'admin', 'super_admin'] as string[]).includes((user as any)?.role) && (
+              <SettingsItem
+                showArrow="on"
+                label="Mes projets SPV — Partenaire"
+                description="Créer et suivre vos projets de tokenisation"
+                icon="office-building-plus"
+                iconColor="#8B5CF6"
+                onPress={() => router.push('/partner/PartnerProjectsListScreen' as any)}
+              />
+            )}
             <SettingsItem
               showArrow="on"
               label="Investir (RST)"
@@ -602,11 +682,11 @@ const SettingsScreen = () => {
             />
             <SettingsItem
               showArrow="on"
-              label="Mon Portfolio RST"
-              description="Vos tokens & distributions reçues"
+              label="Mes tokens d'investissement"
+              description="Portfolio RST et SPV, dans le Wallet"
               icon="chart-pie"
-              iconColor="#8b5cf6"
-              onPress={() => router.push('/invest/portfolio' as any)}
+              iconColor="#8B5CF6"
+              onPress={() => router.push('/wallet/Wallet?tab=tokens' as any)}
             />
             <SettingsItem
               showArrow="on"

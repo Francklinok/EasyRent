@@ -25,20 +25,12 @@ function ChatListHeader() {
 
     const handleMenuAction = (action: MenuAction) => {
         setShowMenu(false);
-        switch (action) {
-            case 'settings':
-                router.navigate('/chat/settings' as any);
-                break;
-            case 'archive':
+        if (action) {
                 router.navigate('/chat/archived' as any);
-                break;
-            case 'starred':
-                router.navigate('/chat/starred' as any);
-                break;
-            case 'broadcast':
-                router.navigate('/chat/broadcast' as any);
-                break;
         }
+            
+            
+        
     };
 
     return (
@@ -100,7 +92,7 @@ function ChatListHeader() {
                         </TouchableOpacity>
 
                         {/* Menu Button */}
-                        <TouchableOpacity
+                        {/* <TouchableOpacity
                             onPress={() => setShowMenu(!showMenu)}
                             style={{
                                 backgroundColor: theme.surface,
@@ -109,7 +101,7 @@ function ChatListHeader() {
                             }}
                         >
                             <Ionicons name="ellipsis-vertical" size={20} color="white" />
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
                     </ThemedView>
                 </ThemedView>
 
@@ -149,7 +141,7 @@ function ChatListHeader() {
                 )}
 
                 {/* Dropdown Menu */}
-                {showMenu && (
+                {/* {showMenu && (
                     <ThemedView
                         style={{
                             position: 'absolute',
@@ -167,10 +159,7 @@ function ChatListHeader() {
                         }}
                     >
                         {[
-                            { id: 'starred' as MenuAction, icon: 'star-outline', label: 'Favoris' },
                             { id: 'archive' as MenuAction, icon: 'archive-outline', label: 'Archivés' },
-                            { id: 'broadcast' as MenuAction, icon: 'megaphone-outline', label: 'Diffusion' },
-                            { id: 'settings' as MenuAction, icon: 'settings-outline', label: 'Paramètres' },
                         ].map((item, index) => (
                             <TouchableOpacity
                                 key={item.id}
@@ -189,7 +178,7 @@ function ChatListHeader() {
                             </TouchableOpacity>
                         ))}
                     </ThemedView>
-                )}
+                )} */}
             </ThemedView>
 
             {/* Overlay to close menu */}

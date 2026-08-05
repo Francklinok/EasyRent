@@ -1,139 +1,272 @@
-import { Tabs } from 'expo-router';
+import { Tabs, router } from 'expo-router';
 import React from 'react';
-import { Platform, TouchableOpacity, View, StyleSheet } from 'react-native';
+import {
+  TouchableOpacity,
+  View,
+  StyleSheet,
+  Dimensions,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HapticTab } from '@/components/ui/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { AntDesign, MaterialIcons } from "@expo/vector-icons";
-import { router } from 'expo-router';
 import { useTheme } from '@/hooks/themehook';
-import { ThemedView } from '@/components/ui/ThemedView';
-import { ThemedText } from '@/components/ui/ThemedText';
 import { useAuth } from '@/components/contexts/authContext/AuthContext';
+import {
+  MaterialIcons,
+  MaterialCommunityIcons,
+  Ionicons,
+  FontAwesome5,
+} from '@expo/vector-icons';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const IS_WIDE = SCREEN_WIDTH >= 768;
+
+// ─── Individual tab button ───────────────────────────────────────────────────
+function TabBtn({
+  icon,
+  focused,
+  onPress,
+  badge,
+}: {
+  icon: React.ReactNode;
+  focused: boolean;
+  onPress: () => void;
+  badge?: number;
+}) {
+  const { theme } = useTheme();
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.7}
+      style={[styles.tabBtn, IS_WIDE && styles.tabBtnWide]}
+    >
+      <View style={[styles.tabBtnInner, focused && { backgroundColor: theme.text + '12' }]}>
+        {icon}
+        {badge != null && badge > 0 && (
+          <View style={[styles.badge, { backgroundColor: theme.primary }]}>
+          </View>
+        )}
+      </View>
+      {/* Active indicator — thin dot on bottom (mobile) or left bar (wide) */}
+      {focused && !IS_WIDE && (
+        <View style={[styles.activeDot, { backgroundColor: theme.primary }]} />
+      )}
+      {focused && IS_WIDE && (
+        <View style={[styles.activeBarWide, { backgroundColor: theme.primary }]} />
+      )}
+    </TouchableOpacity>
+  );
+}
+
+// ─── Custom tab bar ──────────────────────────────────────────────────────────
+function XTabBar({ state, descriptors, navigation }: any) {
+  const { theme } = useTheme();
+  const { isOwner } = useAuth();
+  const insets = useSafeAreaInsets();
+
+  const iconColor = (focused: boolean) =>
+    focused ? theme.text : theme.text + '55';
+  const iconSize = 26;
+
+  // Icon map keyed by route name
+  const getIcon = (name: string, focused: boolean) => {
+    const color = iconColor(focused);
+    switch (name) {
+      case 'index':
+        return focused
+          ? <MaterialCommunityIcons name="home" size={iconSize} color={color} />
+          : <MaterialCommunityIcons name="home-outline" size={iconSize} color={color} />;
+      case 'Search':
+        return <MaterialIcons name="search" size={iconSize} color={color} />;
+      case 'Wallet':
+        return focused
+          ? <MaterialCommunityIcons name="wallet" size={iconSize} color={color} />
+          : <MaterialCommunityIcons name="wallet-outline" size={iconSize} color={color} />;
+      case 'Invest':
+        return focused
+          ? <MaterialCommunityIcons name="chart-line" size={iconSize} color={color} />
+          : <MaterialCommunityIcons name="chart-line-variant" size={iconSize} color={color} />;
+      case 'OwnerDashboard':
+        return focused
+          ? <MaterialIcons name="dashboard" size={iconSize} color={color} />
+          : <MaterialIcons name="dashboard-customize" size={iconSize} color={color} />;
+      case 'ChatList':
+        return focused
+          ? <MaterialCommunityIcons name="message" size={iconSize} color={color} />
+          : <MaterialCommunityIcons name="message-outline" size={iconSize} color={color} />;
+      case 'Settings':
+        return focused
+          ? <Ionicons name="person" size={iconSize} color={color} />
+          : <Ionicons name="person-outline" size={iconSize} color={color} />;
+      default:
+        return <MaterialIcons name="circle" size={iconSize} color={color} />;
+    }
+  };
+
+  // Search moved to the home header (next to the advanced-filters icon) —
+  // the route itself still exists (Tabs.Screen below), just no longer gets
+  // its own bottom-bar button, same mechanism as hiding OwnerDashboard.
+  const hiddenTabs = ['Search', ...(!isOwner ? ['OwnerDashboard'] : [])];
+  const visibleRoutes = state.routes.filter((r: any) => !hiddenTabs.includes(r.name));
+
+  const getOriginalIndex = (route: any) =>
+    state.routes.findIndex((r: any) => r.name === route.name);
+
+  // Order: Home, Wallet, Invest, [Dashboard], Chat, Profile
+  const order = ['index', 'Wallet', 'Invest', 'OwnerDashboard', 'ChatList', 'Settings'];
+  const sorted = order
+    .map((name) => visibleRoutes.find((r: any) => r.name === name))
+    .filter(Boolean);
+
+  // Split: left-of-FAB and right-of-FAB (for bottom bar symmetry with 6 items)
+  const leftRoutes = sorted.slice(0, 3);   // Home, Wallet, Invest
+  const rightRoutes = sorted.slice(3);      // [Dashboard], Chat, Profile
+
+  const renderTab = (route: any) => {
+    const idx = getOriginalIndex(route);
+    const focused = state.index === idx;
+    return (
+      <TabBtn
+        key={route.key}
+        focused={focused}
+        icon={getIcon(route.name, focused)}
+        onPress={() => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!focused && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        }}
+      />
+    );
+  };
+
+  if (IS_WIDE) {
+    // ── Wide/tablet: vertical sidebar ──────────────────────────────────────
+    return (
+      <View
+        style={[
+          styles.sidebar,
+          {
+            backgroundColor: theme.surface,
+            borderRightColor: theme.outline + '30',
+            paddingTop: insets.top + 8,
+            paddingBottom: insets.bottom + 8,
+          },
+        ]}
+      >
+        {/* Logo mark */}
+        <View style={styles.logoMark}>
+          <FontAwesome5 name="home" size={22} color={theme.primary} />
+        </View>
+
+        {sorted.map(renderTab)}
+
+        {/* FAB */}
+        <TouchableOpacity
+          onPress={() => router.push('/creation')}
+          style={[styles.fabSidebar, { backgroundColor: theme.primary }]}
+          activeOpacity={0.85}
+        >
+          <MaterialIcons name="add" size={26} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // ── Mobile: bottom bar ────────────────────────────────────────────────────
+  return (
+    <View
+      style={[
+        styles.bottomBar,
+        {
+          backgroundColor: theme.surface,
+          borderTopColor: theme.outline + '25',
+          paddingBottom: insets.bottom || 8,
+        },
+      ]}
+    >
+      <View style={styles.bottomInner}>
+        {leftRoutes.map(renderTab)}
+
+        {/* FAB in centre */}
+        <TouchableOpacity
+          onPress={() => router.push('/creation')}
+          style={styles.fabWrap}
+          activeOpacity={0.85}
+        >
+          <View style={[styles.fab, { backgroundColor: theme.primary }]}>
+            <MaterialIcons name="add" size={22} color="#fff" />
+          </View>
+        </TouchableOpacity>
+
+        {rightRoutes.map(renderTab)}
+      </View>
+    </View>
+  );
+}
+
+// ─── Layout ──────────────────────────────────────────────────────────────────
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
   const { theme } = useTheme();
   const { isOwner } = useAuth();
 
+  const screenOpts = {
+    headerShown: false,
+    tabBarButton: HapticTab,
+    tabBarActiveTintColor: theme.text,
+    tabBarInactiveTintColor: theme.text + '55',
+  };
+
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: theme.surface,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarStyle: {
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 70,
-          backgroundColor: theme.surface,
-          borderTopWidth: 1,
-          borderTopColor: theme.outline,
-          paddingBottom: Platform.OS === 'ios' ? 20 : 5,
-          paddingTop: 5,
-        },
-      }}
-      tabBar={(props) => {
-        const { state, descriptors, navigation } = props;
-
-        const renderTab = (route: any, index: number) => {
-          const { options } = descriptors[route.key];
-          const isFocused = state.index === index;
-
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
-            }
-          };
-
-          return (
-            <TouchableOpacity
-              key={route.key}
-              onPress={onPress}
-              style={styles.tabItem}
-            >
-              {options.tabBarIcon?.({
-                focused: isFocused,
-                color: isFocused ? theme.primary: theme.text + "90",
-                size: 28
-              })}
-            </TouchableOpacity>
-          );
-        };
-
-      
-        // Filter out hidden tabs: 'OwnerDashboard' if not owner
-        const hiddenTabs = [...(!isOwner ? ['OwnerDashboard'] : [])];
-        const visibleRoutes = state.routes.filter(r => !hiddenTabs.includes(r.name));
-
-        // Find indices: Home, Search, then after create button: Dashboard(if owner), ChatList, Settings
-        const homeRoute = visibleRoutes.find(r => r.name === 'index');
-        const searchRoute = visibleRoutes.find(r => r.name === 'Search');
-        const dashboardRoute = visibleRoutes.find(r => r.name === 'OwnerDashboard');
-        const chatRoute = visibleRoutes.find(r => r.name === 'ChatList');
-        const settingsRoute = visibleRoutes.find(r => r.name === 'Settings');
-
-        const getOriginalIndex = (route: any) => state.routes.findIndex(r => r.name === route.name);
-
-        return (
-          <ThemedView style={[styles.tabBarContainer, { backgroundColor: theme.surface, borderTopWidth: 1, borderTopColor: theme.outline }]}>
-            <ThemedView style={styles.tabBar}>
-              {/* Home */}
-              {homeRoute && renderTab(homeRoute, getOriginalIndex(homeRoute))}
-
-              {/* Search */}
-              {searchRoute && renderTab(searchRoute, getOriginalIndex(searchRoute))}
-
-              {/* Create Button */}
-              <TouchableOpacity
-                onPress={() => router.push('/creation')}
-                style={styles.createButton}
-              >
-                <ThemedView
-                  style={[
-                    styles.createButtonInner,
-                    { backgroundColor: theme.primary + "90" }
-                  ]}
-                >
-                  <MaterialIcons name="add" size={28} color="white" />
-                </ThemedView>
-              </TouchableOpacity>
-
-              {/* Dashboard (only if owner) */}
-              {dashboardRoute && renderTab(dashboardRoute, getOriginalIndex(dashboardRoute))}
-
-              {/* ChatList */}
-              {chatRoute && renderTab(chatRoute, getOriginalIndex(chatRoute))}
-
-              {/* Settings */}
-              {settingsRoute && renderTab(settingsRoute, getOriginalIndex(settingsRoute))}
-            </ThemedView>
-          </ThemedView>
-        );
-      }}
-    >
-
+    <Tabs screenOptions={screenOpts} tabBar={(props) => <XTabBar {...props} />}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="house.fill" color={color} />,
+          title: 'Accueil',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialIcons
+              name={focused ? 'home' : 'home'}
+              size={26}
+              color={color}
+            />
+          ),
         }}
       />
 
       <Tabs.Screen
         name="Search"
         options={{
-          title: 'Search',
-          tabBarIcon: ({ color }) => <AntDesign name="search" size={26} color={color} />,
+          title: 'Recherche',
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="search" size={26} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="Wallet"
+        options={{
+          title: 'Portefeuille',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'wallet' : 'wallet-outline'}
+              size={26}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="Invest"
+        options={{
+          title: 'Investir',
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="chart-line" size={26} color={color} />
+          ),
         }}
       />
 
@@ -141,7 +274,9 @@ export default function TabLayout() {
         name="OwnerDashboard"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color }) => <MaterialIcons name="dashboard" size={26} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="dashboard" size={26} color={color} />
+          ),
           tabBarButton: isOwner ? HapticTab : () => null,
         }}
       />
@@ -149,23 +284,26 @@ export default function TabLayout() {
       <Tabs.Screen
         name="ChatList"
         options={{
-          title: 'ChatList',
-          tabBarIcon: ({ color }) => <MaterialIcons name="message" size={26} color={color}/>,
+          title: 'Messages',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'message' : 'message-outline'}
+              size={26}
+              color={color}
+            />
+          ),
         }}
       />
 
       <Tabs.Screen
         name="Settings"
         options={{
-          title: 'Settings',
+          title: 'Profil',
           tabBarIcon: ({ color, focused }) => (
-            <MaterialIcons
-              name="settings"
+            <Ionicons
+              name={focused ? 'person' : 'person-outline'}
               size={26}
               color={color}
-              style={{
-                opacity: focused ? 1 : 0.7,
-              }}
             />
           ),
         }}
@@ -174,47 +312,127 @@ export default function TabLayout() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  tabBarContainer: {
+  // ── Bottom bar ──
+  bottomBar: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 20 : 0,
+    bottom: 0,
     left: 0,
     right: 0,
-    height: 90,
-    paddingBottom:40,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  tabBar: {
+  bottomInner: {
     flexDirection: 'row',
-    height: '100%',
     alignItems: 'center',
     justifyContent: 'space-around',
+    paddingTop: 6,
     paddingHorizontal: 4,
+    minHeight: 52,
   },
-  tabItem: {
+
+  // ── Sidebar (wide) ──
+  sidebar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: 72,
+    alignItems: 'center',
+    borderRightWidth: StyleSheet.hairlineWidth,
+    zIndex: 100,
+    gap: 4,
+  },
+  logoMark: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+
+  // ── Tab button ──
+  tabBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    paddingVertical: 4,
+    position: 'relative',
+  },
+  tabBtnWide: {
+    flex: 0,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    marginVertical: 2,
+  },
+  tabBtnInner: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // ── Active indicators ──
+  activeDot: {
+    position: 'absolute',
+    bottom: 0,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  activeBarWide: {
+    position: 'absolute',
+    left: 0,
+    top: '25%',
+    width: 3,
+    height: '50%',
+    borderRadius: 2,
+  },
+
+  // ── Badge ──
+  badge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+
+  // ── FAB (bottom) ──
+  fabWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
   },
-  createButton: {
-    flex: 1,
+  fab: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  createButtonInner: {
-    borderRadius: 28,
-    width:50,
-    height:50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    // shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
     shadowRadius: 6,
-    elevation: 10,
-    marginTop: -10,
+  },
+
+  // ── FAB (sidebar) ──
+  fabSidebar: {
+    marginTop: 12,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
 });
