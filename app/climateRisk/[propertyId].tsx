@@ -5,6 +5,7 @@
  * architecture doc's repeated warning against presenting a prediction as a
  * fact. Estimates always show their confidence/margin note alongside.
  */
+
 import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
