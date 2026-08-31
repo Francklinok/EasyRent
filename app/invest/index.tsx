@@ -25,7 +25,7 @@ const MODELS = (t: ReturnType<typeof useLanguage>['t']) => [
     target: t('invest.spvTarget'),
     ctaLabel: t('invest.buyShares'),
     route: '/invest/spv',
-    pros: ['ERC-3643 Security Token', t('invest.liquidity'), t('invest.legalStructure')],
+    pros: [t('investIndex.spvTokenStandard'), t('invest.liquidity'), t('invest.legalStructure')],
     comparison: { ownership: '✅', revenue: '📈', risk: '⚖️', kyc: '✅' },
   },
   {
@@ -33,7 +33,7 @@ const MODELS = (t: ReturnType<typeof useLanguage>['t']) => [
     badge: t('invest.rstBadge'),
     title: t('invest.rstTitle'),
     subtitle: t('invest.rstSubtitle'),
-    icon: 'home-currency-usd' as const,
+    icon: 'currency-usd' as const,
     color: '#10B981',
     cardTitle: t('invest.rstCardTitle'),
     cardSubtitle: t('invest.rstCardSubtitle'),
@@ -42,48 +42,64 @@ const MODELS = (t: ReturnType<typeof useLanguage>['t']) => [
     target: t('invest.rstTarget'),
     ctaLabel: t('invest.investBtn'),
     route: '/invest/rst',
-    pros: ['RST Token (ERC-20)', t('invest.revenue'), t('invest.returnCap')],
+    pros: [t('investIndex.rstTokenStandard'), t('invest.revenue'), t('invest.returnCap')],
     comparison: { ownership: '❌', revenue: '🏠', risk: '📊', kyc: '✅' },
   },
 ];
 
 const COMPARE_ROWS = (t: ReturnType<typeof useLanguage>['t']) => [
-  { label: t('invest.propertyOwnership'), spv: 'Co-actionnaire', rst: '❌ Non' },
-  { label: t('invest.durationLabel'), spv: 'Illimité', rst: '12-60 mois' },
-  { label: t('invest.revenue'), spv: 'Plus-value + dividendes', rst: 'Loyers mensuels' },
-  { label: t('invest.liquidity'), spv: 'Marché secondaire', rst: 'Faible (lock-up)' },
-  { label: t('invest.risk'), spv: 'Moyen', rst: 'Faible-Moyen' },
-  { label: t('invest.legalStructure'), spv: 'Actions tokenisées', rst: 'Créance loyer' },
-  { label: t('invest.kycLabel'), spv: '✅ Oui', rst: '✅ Oui' },
+  { label: t('invest.propertyOwnership'), spv: t('investIndex.coShareholder'), rst: t('investIndex.no') },
+  { label: t('invest.durationLabel'), spv: t('investIndex.unlimited'), rst: t('investIndex.duration1260') },
+  { label: t('invest.revenue'), spv: t('investIndex.capitalGainDividends'), rst: t('investIndex.monthlyRents') },
+  { label: t('invest.liquidity'), spv: t('investIndex.secondaryMarket'), rst: t('investIndex.lowLockup') },
+  { label: t('invest.risk'), spv: t('investIndex.medium'), rst: t('investIndex.lowMedium') },
+  { label: t('invest.legalStructure'), spv: t('investIndex.tokenizedShares'), rst: t('investIndex.rentClaim') },
+  { label: t('invest.kycLabel'), spv: t('investIndex.yes'), rst: t('investIndex.yes') },
 ];
 
-export default function InvestIndex() {
+interface InvestIndexProps {
+  /**
+   * Rendered inline inside another screen's own SafeAreaView (e.g. the home
+   * header's "Investir" tab, same mechanism as ServiceListScreen/
+   * DormantLandListScreen) — skip this component's own SafeAreaView so the
+   * insets aren't applied twice.
+   */
+  disableSafeArea?: boolean;
+  /** Top padding for the content, e.g. the host header's measured height. */
+  contentTopPadding?: number;
+}
+
+export default function InvestIndex({ disableSafeArea = false, contentTopPadding }: InvestIndexProps = {}) {
   const { theme } = useTheme();
   const router = useRouter();
   const { t, isRTL } = useLanguage();
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-      <ThemedView style={[s.header, { borderBottomColor: theme.outline + '20' }]}>
-        <ThemedText type="normaltitle" style={[s.headerTitle, { color: theme.text }]}>
-          {t('invest.title')}
-        </ThemedText>
-        <TouchableOpacity onPress={() => router.push('/wallet' as any)} style={[s.walletBtn, { backgroundColor: theme.primary + '15' }]}>
-          <MaterialCommunityIcons name="wallet-outline" size={18} color={theme.primary} />
-          <ThemedText type="body" style={{ color: theme.primary, fontWeight: '700', fontSize: 13 }}>
-            {t('invest.wallet')}
-          </ThemedText>
-        </TouchableOpacity>
-      </ThemedView>
+  const Container = disableSafeArea ? ThemedView : SafeAreaView;
 
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 20 }}>
+  return (
+    <Container style={{ flex: 1, backgroundColor: theme.surface }}>
+      {!disableSafeArea && (
+        <ThemedView style={[s.header, { borderBottomColor: theme.outline + '20',backgroundColor: "transparent" }]}>
+          <ThemedText type="normaltitle" style={s.headerTitle}>
+            {t('invest.title')}
+          </ThemedText>
+          <TouchableOpacity onPress={() => router.push('/wallet' as any)} style={[s.walletBtn, { backgroundColor: theme.primary + '15' }]}>
+            <MaterialCommunityIcons name="wallet-outline" size={18} color={theme.primary} />
+            <ThemedText type="normal" style={{ color: theme.primary, fontWeight: '700' }}>
+              {t('invest.wallet')}
+            </ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+      )}
+
+      <ScrollView contentContainerStyle={{ padding: 15, paddingTop: contentTopPadding ?? 0, gap: 8 }}>
         {/* Hero */}
-        <ThemedView style={[s.hero, { backgroundColor: theme.surface, borderColor: theme.outline + '20' }]}>
+        <ThemedView style={[s.hero, { backgroundColor: "transparent", borderColor: theme.outline + '60' }]}>
           <MaterialCommunityIcons name="city" size={36} color={theme.primary} />
-          <ThemedView style={{ flex: 1 }}>
-            <ThemedText type="normaltitle" style={{ color: theme.text }}>
+          <ThemedView style={{ flex: 1, backgroundColor:"transparent" }}>
+            <ThemedText type="normal" >
               {t('invest.twoModels')}{' '}
-              <ThemedText type="normaltitle" style={{ color: theme.primary }}>{t('invest.twoModelsHighlight')}</ThemedText>{' '}
+              <ThemedText type="normal" style={{ color: theme.primary }}>{t('invest.twoModelsHighlight')}</ThemedText>{' '}
               {t('invest.twoModelsDesc')}
             </ThemedText>
           </ThemedView>
@@ -91,45 +107,45 @@ export default function InvestIndex() {
 
         {/* Model Cards */}
         {MODELS(t).map(m => (
-          <ThemedView key={m.id} style={[s.card, { backgroundColor: theme.surface, borderColor: theme.outline + '25' }]}>
+          <ThemedView key={m.id} style={[s.card, { backgroundColor: theme.surface, borderColor: theme.outline + '65' }]}>
             <ThemedView style={[s.badge, { backgroundColor: m.color + '18' }]}>
-              <ThemedText type="body" style={[s.badgeText, { color: m.color }]}>{m.badge}</ThemedText>
+              <ThemedText type="normal" style={[s.badgeText, { color: m.color }]}>{m.badge}</ThemedText>
             </ThemedView>
 
-            <ThemedView style={[s.cardHeader, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+            <ThemedView style={[s.cardHeader, { flexDirection: isRTL ? 'row-reverse' : 'row',backgroundColor: "transparent"}]}>
               <ThemedView style={[s.iconWrap, { backgroundColor: m.color + '15' }]}>
                 <MaterialCommunityIcons name={m.icon} size={28} color={m.color} />
               </ThemedView>
-              <ThemedView style={{ flex: 1 }}>
+              <ThemedView style={{ flex: 1,backgroundColor: "transparent" }}>
                 <ThemedText type="normaltitle" style={[s.cardTitle, { color: theme.text }]}>{m.title}</ThemedText>
-                <ThemedText type="body" style={[s.cardSubtit, { color: theme.onSurface + '70' }]}>{m.subtitle}</ThemedText>
+                <ThemedText type="body" intensity="light">{m.subtitle}</ThemedText>
               </ThemedView>
             </ThemedView>
 
             <ThemedView style={[s.descBox, { backgroundColor: m.color + '0A', borderColor: m.color + '25' }]}>
-              <ThemedText type="body" style={{ color: m.color, fontWeight: '800', marginBottom: 4 }}>{m.modelLabel}</ThemedText>
+              <ThemedText type="normal" style={{ color: m.color, fontWeight: '800', marginBottom: 4 }}>{m.modelLabel}</ThemedText>
               <ThemedText type="body" style={{ color: theme.text, lineHeight: 20 }}>{m.modelDesc}</ThemedText>
             </ThemedView>
 
-            <ThemedView style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+            <ThemedView style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4,backgroundColor: "transparent"}}>
               {m.pros.map((p, i) => (
                 <ThemedView key={i} style={[s.chip, { backgroundColor: theme.outline + '12' }]}>
                   <Ionicons name="checkmark-circle" size={14} color={m.color} />
-                  <ThemedText type="body" style={{ color: theme.text, fontSize: 12 }}>{p}</ThemedText>
+                  <ThemedText type="caption" style={{ color: theme.text }}>{p}</ThemedText>
                 </ThemedView>
               ))}
             </ThemedView>
 
             <ThemedView style={[s.targetRow, { backgroundColor: theme.outline + '08' }]}>
               <Ionicons name="people" size={15} color={theme.onSurface + '60'} />
-              <ThemedText type="body" style={{ color: theme.onSurface + '70', fontSize: 13 }}>{m.target}</ThemedText>
+              <ThemedText type="body" intensity="light">{m.target}</ThemedText>
             </ThemedView>
 
             <TouchableOpacity
               style={[s.cta, { backgroundColor: m.color }]}
               onPress={() => router.push(m.route as any)}
             >
-              <ThemedText type="normaltitle" style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>{m.ctaLabel}</ThemedText>
+              <ThemedText type="normal" style={{ color: '#fff', fontWeight: '800' }}>{m.ctaLabel}</ThemedText>
               <Ionicons name="arrow-forward" size={16} color="#fff" />
             </TouchableOpacity>
           </ThemedView>
@@ -139,20 +155,20 @@ export default function InvestIndex() {
         <ThemedView style={[s.cmpCard, { backgroundColor: theme.surface, borderColor: theme.outline + '20' }]}>
           <ThemedText type="normaltitle" style={[s.cmpTitle, { color: theme.text }]}>{t('invest.quickComparison')}</ThemedText>
           <ThemedView style={[s.cmpHead, { backgroundColor: theme.outline + '10' }]}>
-            <ThemedText type="body" style={[s.cmpHCell, { color: theme.onSurface + '60' }]}>{t('invest.criteria')}</ThemedText>
-            <ThemedText type="body" style={[s.cmpHCell, { color: '#6C63FF', textAlign: 'center' }]}>SPV</ThemedText>
-            <ThemedText type="body" style={[s.cmpHCell, { color: '#10B981', textAlign: 'center' }]}>RST</ThemedText>
+            <ThemedText type="normal" style={[s.cmpHCell, { color: theme.onSurface + '60' }]}>{t('invest.criteria')}</ThemedText>
+            <ThemedText type="normal" style={[s.cmpHCell, { color: theme.secondary, textAlign: 'center' }]}>SPV</ThemedText>
+            <ThemedText type="normal" style={[s.cmpHCell, { color: theme.success, textAlign: 'center' }]}>RST</ThemedText>
           </ThemedView>
           {COMPARE_ROWS(t).map((row, i) => (
             <ThemedView key={i} style={[s.cmpRow, { borderBottomColor: theme.outline + '15', backgroundColor: i % 2 === 0 ? 'transparent' : theme.outline + '05' }]}>
-              <ThemedText type="body" style={[s.cmpCell, { color: theme.onSurface + '70' }]}>{row.label}</ThemedText>
+              <ThemedText type="body" intensity="light" style={[s.cmpCell]}>{row.label}</ThemedText>
               <ThemedText type="body" style={[s.cmpCell, { color: theme.text, textAlign: 'center' }]}>{row.spv}</ThemedText>
               <ThemedText type="body" style={[s.cmpCell, { color: theme.text, textAlign: 'center' }]}>{row.rst}</ThemedText>
             </ThemedView>
           ))}
         </ThemedView>
       </ScrollView>
-    </SafeAreaView>
+    </Container>
   );
 }
 
@@ -163,11 +179,10 @@ const s = StyleSheet.create({
   hero: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 14, borderWidth: 1 },
   card: { borderRadius: 16, borderWidth: 1, padding: 16, gap: 14 },
   badge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  badgeText: { fontSize: 12, fontWeight: '700' },
+  badgeText: { fontWeight: '700' },
   cardHeader: { alignItems: 'center', gap: 12 },
   iconWrap: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
-  cardTitle: { fontWeight: '800', fontSize: 16 },
-  cardSubtit: { fontSize: 13 },
+  cardTitle: { fontWeight: '800' },
   descBox: { borderRadius: 10, padding: 12, borderWidth: 1 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
   targetRow: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: 10, borderRadius: 10 },
@@ -175,7 +190,7 @@ const s = StyleSheet.create({
   cmpCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 0 },
   cmpTitle: { fontWeight: '800', marginBottom: 10 },
   cmpHead: { flexDirection: 'row', paddingVertical: 8, paddingHorizontal: 4, borderRadius: 8, marginBottom: 4 },
-  cmpHCell: { flex: 1, fontSize: 12, fontWeight: '700' },
+  cmpHCell: { flex: 1, fontWeight: '700' },
   cmpRow: { flexDirection: 'row', paddingVertical: 9, paddingHorizontal: 4, borderBottomWidth: 1 },
-  cmpCell: { flex: 1, fontSize: 12 },
+  cmpCell: { flex: 1 },
 });
