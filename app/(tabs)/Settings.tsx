@@ -662,6 +662,16 @@ const SettingsScreen = () => {
                 onPress={() => router.push('/admin/InvestmentPipelineAdminScreen' as any)}
               />
             )}
+            {((user as any)?.role === 'admin' || (user as any)?.role === 'super_admin') && (
+              <SettingsItem
+                showArrow="on"
+                label="Modération Services"
+                description="Approuver ou rejeter les services soumis"
+                icon="store-check"
+                iconColor="#f97316"
+                onPress={() => router.push('/admin/ServiceModerationScreen' as any)}
+              />
+            )}
             {(['partner', 'admin', 'super_admin'] as string[]).includes((user as any)?.role) && (
               <SettingsItem
                 showArrow="on"
