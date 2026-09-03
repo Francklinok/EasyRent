@@ -102,24 +102,27 @@ function XTabBar({ state, descriptors, navigation }: any) {
     }
   };
 
-  // Search moved to the home header (next to the advanced-filters icon) —
-  // the route itself still exists (Tabs.Screen below), just no longer gets
-  // its own bottom-bar button, same mechanism as hiding OwnerDashboard.
-  const hiddenTabs = ['Search', ...(!isOwner ? ['OwnerDashboard'] : [])];
+  // Search moved to the home header (next to the advanced-filters icon),
+  // and Invest moved to the home header's stats strip ("Investir" tile) —
+  // both routes still exist (Tabs.Screen below), just no longer get their
+  // own bottom-bar button, same mechanism as hiding OwnerDashboard.
+  const hiddenTabs = ['Search', 'Invest', ...(!isOwner ? ['OwnerDashboard'] : [])];
   const visibleRoutes = state.routes.filter((r: any) => !hiddenTabs.includes(r.name));
 
   const getOriginalIndex = (route: any) =>
     state.routes.findIndex((r: any) => r.name === route.name);
 
-  // Order: Home, Wallet, Invest, [Dashboard], Chat, Profile
+  // Order: Home, Wallet, Invest, [Dashboard], Chat, Profile — Invest is
+  // filtered out by hiddenTabs above (moved to the home header), so it
+  // never actually reaches `sorted`/the split below.
   const order = ['index', 'Wallet', 'Invest', 'OwnerDashboard', 'ChatList', 'Settings'];
   const sorted = order
     .map((name) => visibleRoutes.find((r: any) => r.name === name))
     .filter(Boolean);
 
-  // Split: left-of-FAB and right-of-FAB (for bottom bar symmetry with 6 items)
-  const leftRoutes = sorted.slice(0, 3);   // Home, Wallet, Invest
-  const rightRoutes = sorted.slice(3);      // [Dashboard], Chat, Profile
+  // Split: left-of-FAB and right-of-FAB, roughly balanced either side.
+  const leftRoutes = sorted.slice(0, Math.ceil(sorted.length / 2));
+  const rightRoutes = sorted.slice(Math.ceil(sorted.length / 2));
 
   const renderTab = (route: any) => {
     const idx = getOriginalIndex(route);
