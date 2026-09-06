@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
@@ -12,8 +11,10 @@ import {
   StyleSheet,
   SafeAreaView,
   StatusBar,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { MotiView } from 'moti';
 import { useAuth } from '@/components/contexts/authContext/AuthContext';
 import { Ionicons, AntDesign, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import { clearAllAuthDataManually } from '@/components/utils/clearAuthManually';
@@ -23,6 +24,9 @@ import * as AuthSession from 'expo-auth-session';
 import * as Google from 'expo-auth-session/providers/google';
 import * as Facebook from 'expo-auth-session/providers/facebook';
 import { useThemeColors } from '@/hooks/themehook';
+import { useLanguage } from '@/components/contexts/language/LanguageContext';
+import { AuthTextField } from '@/components/auth/AuthTextField';
+import { AuthPrimaryButton } from '@/components/auth/AuthPrimaryButton';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -34,11 +38,11 @@ const FACEBOOK_APP_ID          = 'YOUR_FACEBOOK_APP_ID';
 
 const LoginScreen = () => {
   const colors = useThemeColors();
+  const { t } = useLanguage();
 
   const [email, setEmail]                 = useState('');
   const [password, setPassword]           = useState('');
   const [rememberMe, setRememberMe]       = useState(false);
-  const [showPassword, setShowPassword]   = useState(false);
   const [loading, setLoading]             = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | 'facebook' | null>(null);
   const [twoFactorCode, setTwoFactorCode] = useState('');
@@ -109,28 +113,28 @@ const LoginScreen = () => {
   const handleGoogleLogin = async () => {
     setSocialLoading('google');
     try { await promptGoogleAsync(); }
-    catch { Alert.alert('Erreur', 'Connexion Google échouée'); }
+    catch { Alert.alert('Erreur', t('auth.login.errGoogle')); }
     finally { setSocialLoading(null); }
   };
 
   const handleAppleLogin = async () => {
     setSocialLoading('apple');
     try { await promptAppleAsync(); }
-    catch { Alert.alert('Erreur', 'Connexion Apple échouée'); }
+    catch { Alert.alert('Erreur', t('auth.login.errApple')); }
     finally { setSocialLoading(null); }
   };
 
   const handleFacebookLogin = async () => {
     setSocialLoading('facebook');
     try { await promptFacebookAsync(); }
-    catch { Alert.alert('Erreur', 'Connexion Facebook échouée'); }
+    catch { Alert.alert('Erreur', t('auth.login.errFacebook')); }
     finally { setSocialLoading(null); }
   };
 
   // ── Email/password login ───────────────────────────────────────────────────
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      Alert.alert('Erreur', t('auth.login.errEmpty'));
       return;
     }
     setLoading(true);
@@ -139,16 +143,16 @@ const LoginScreen = () => {
       const result = await login(email, password);
       if (result.success) {
         if (result.requireTwoFactor) {
-          Alert.alert('Vérification', 'Veuillez entrer votre code 2FA');
+          Alert.alert('Vérification', t('auth.login.need2fa'));
         } else {
           router.replace('/Auth/AuthHome');
         }
       }
     } catch (error: any) {
       if (error.message?.includes('Trop de requêtes')) {
-        Alert.alert('Trop de tentatives', 'Veuillez patienter avant de réessayer.', [
-          { text: 'Compris' },
-          { text: 'Mot de passe oublié ?', onPress: () => router.push('/Auth/ForgotPassword') },
+        Alert.alert(t('auth.login.errTooMany'), t('auth.login.errTooManyMsg'), [
+          { text: t('auth.login.errTooManyOk') },
+          { text: t('auth.login.errForgot'), onPress: () => router.push('/Auth/ForgotPassword') },
         ]);
       } else {
         Alert.alert('Erreur', error.message || 'Connexion échouée');
@@ -159,7 +163,7 @@ const LoginScreen = () => {
   };
 
   const handleTwoFactorVerify = async () => {
-    if (!twoFactorCode) { Alert.alert('Erreur', 'Entrez le code 2FA'); return; }
+    if (!twoFactorCode) { Alert.alert('Erreur', t('auth.login.errTwoFa')); return; }
     setLoading(true);
     try {
       const result = await verifyTwoFactor(twoFactorCode);
@@ -172,173 +176,209 @@ const LoginScreen = () => {
   };
 
   const handleClearCache = () => {
-    Alert.alert('Nettoyer le cache', 'Supprimer toutes les données d\'authentification ?', [
-      { text: 'Annuler', style: 'cancel' },
+    Alert.alert(t('auth.login.clearCacheTitle'), t('auth.login.clearCacheMsg'), [
+      { text: t('auth.login.clearCacheCancel'), style: 'cancel' },
       {
-        text: 'Nettoyer', style: 'destructive',
+        text: t('auth.login.clearCacheConfirm'), style: 'destructive',
         onPress: async () => {
-          try { await clearAllAuthDataManually(); Alert.alert('Succès', 'Cache nettoyé.'); }
-          catch { Alert.alert('Erreur', 'Impossible de nettoyer le cache'); }
+          try { await clearAllAuthDataManually(); Alert.alert(t('auth.login.clearCacheSuccessTitle'), t('auth.login.clearCacheSuccess')); }
+          catch { Alert.alert('Erreur', t('auth.login.clearCacheError')); }
         },
       },
     ]);
   };
 
-  // Couleurs dérivées du thème
-  const BG         = colors.primary + "15";
-  const BTN        = colors.primary + "80";
   const TEXT       = colors.text;
   const GRAY       = colors.input.placeholder;
-  const INPUT_BG   = colors.surfaceVariant;
   const BORDER     = colors.input.border;
   const LINK_COLOR = colors.primary;
 
   // ── 2FA screen ─────────────────────────────────────────────────────────────
   if (requiresTwoFactor) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: BG }]}>
-        <View style={styles.twoFaWrap}>
-          <Ionicons name="shield-checkmark" size={60} color={BTN} style={{ marginBottom: 16 }} />
-          <Text style={[styles.title, { color: TEXT }]}>Authentification 2FA</Text>
-          <Text style={[styles.subtitle, { color: GRAY }]}>Entrez le code de vérification</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: INPUT_BG, borderColor: BORDER, color: TEXT, textAlign: 'center', letterSpacing: 8, fontSize: 22 }]}
-            placeholder="000000"
-            placeholderTextColor={GRAY}
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.surface }]}>
+        <MotiView
+          from={{ opacity: 0, translateY: 16 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 350 }}
+          style={styles.twoFaWrap}
+        >
+          <View style={[styles.shieldCircle, { backgroundColor: colors.primary + '15' }]}>
+            <Ionicons name="shield-checkmark" size={44} color={colors.primary} />
+          </View>
+          <Text style={[styles.title, { color: TEXT }]}>{t('auth.login.twoFaTitle')}</Text>
+          <Text style={[styles.subtitle, { color: GRAY }]}>{t('auth.login.twoFaSubtitle')}</Text>
+          <AuthTextField
+            label="000000"
+            colors={colors}
             value={twoFactorCode}
             onChangeText={setTwoFactorCode}
             keyboardType="numeric"
             maxLength={6}
+            containerStyle={styles.twoFaInput}
           />
-          <TouchableOpacity style={[styles.loginBtn, { backgroundColor: BTN }, loading && { opacity: 0.7 }]} onPress={handleTwoFactorVerify} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Vérifier</Text>}
-          </TouchableOpacity>
-        </View>
+          <AuthPrimaryButton
+            label={t('auth.login.twoFaVerify')}
+            onPress={handleTwoFactorVerify}
+            loading={loading}
+            colors={colors}
+          />
+        </MotiView>
       </SafeAreaView>
     );
   }
 
   // ── Main screen ────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: BG }]}>
-      <StatusBar barStyle="dark-content" backgroundColor={BG} />
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.surface }]}>
+      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.surface} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Title */}
-          <Text style={[styles.title, { color: TEXT }]}>Login</Text>
-          <Text style={[styles.subtitle, { color: GRAY }]}>Hey, Enter your details to get log in{'\n'}to your account</Text>
-
-          {/* Email */}
-          <View style={[styles.inputWrap, { backgroundColor: INPUT_BG, borderColor: BORDER }]}>
-            <TextInput
-              style={[styles.inputField, { color: TEXT }]}
-              placeholder="demo@gmail.com"
-              placeholderTextColor={GRAY}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-
-          {/* Password */}
-          <View style={[styles.inputWrap, { backgroundColor: INPUT_BG, borderColor: BORDER }]}>
-            <Ionicons name="key-outline" size={18} color={GRAY} style={{ marginRight: 8 }} />
-            <TextInput
-              style={[styles.inputField, { color: TEXT }]}
-              placeholder="Password"
-              placeholderTextColor={GRAY}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(v => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={GRAY} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Remember me + Forget Password */}
-          <View style={styles.rememberRow}>
-            <TouchableOpacity style={styles.checkboxRow} onPress={() => setRememberMe(v => !v)}>
-              <View style={[styles.checkbox, { borderColor: GRAY }, rememberMe && { backgroundColor: BTN, borderColor: BTN }]}>
-                {rememberMe && <Ionicons name="checkmark" size={12} color="#fff" />}
-              </View>
-              <Text style={[styles.rememberText, { color: TEXT }]}>Remember me</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/Auth/ForgotPassword')}>
-              <Text style={[styles.forgotText, { color: TEXT }]}>Forget Password</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Log in button */}
-          <TouchableOpacity
-            style={[styles.loginBtn, { backgroundColor: BTN  }, loading && { opacity: 0.7 }]}
-            onPress={handleLogin}
-            disabled={loading}
-            activeOpacity={0.85}
+          <MotiView
+            from={{ opacity: 0, translateY: 12 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'timing', duration: 400 }}
           >
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Log in</Text>}
-          </TouchableOpacity>
+            {/* Brand mark */}
+            <View style={[styles.brandMark, { backgroundColor: colors.primary + '15' }]}>
+              <MaterialCommunityIcons name="home-city" size={30} color={colors.primary} />
+            </View>
 
-          {/* Or continue with */}
-          <View style={styles.dividerRow}>
-            <View style={[styles.dividerLine, { backgroundColor: BORDER }]} />
-            <Text style={[styles.dividerText, { color: GRAY }]}>Or continue with</Text>
-            <View style={[styles.dividerLine, { backgroundColor: BORDER }]} />
-          </View>
+            {/* Title */}
+            <Text style={[styles.title, { color: TEXT }]}>{t('auth.login.title')}</Text>
+            <Text style={[styles.subtitle, { color: GRAY }]}>{t('auth.login.subtitle')}</Text>
+          </MotiView>
 
-          {/* Social icons row */}
-          <View style={styles.socialRow}>
-            <TouchableOpacity
-              style={[styles.socialCircle, { backgroundColor: INPUT_BG, borderColor: BORDER }]}
-              onPress={handleGoogleLogin}
-              disabled={!!socialLoading}
-              activeOpacity={0.8}
+          <MotiView
+            from={{ opacity: 0, translateY: 16 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'timing', duration: 400, delay: 80 }}
+          >
+            {/* Card grouping every form field — replaces the previous flat,
+                ungrouped stack of pill inputs with a single visually
+                bounded surface, the way most modern auth forms separate
+                "the form" from the page chrome around it. */}
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: colors.surfaceVariant,
+                  borderColor: colors.outline + '20',
+                  shadowColor: colors.shadow?.color || '#000',
+                },
+              ]}
             >
-              {socialLoading === 'google'
-                ? <ActivityIndicator size="small" color={GRAY} />
-                : <AntDesign name="google" size={22} color="#EA4335" />}
-            </TouchableOpacity>
+              <AuthTextField
+                label={t('auth.login.emailLabel') as string}
+                colors={colors}
+                icon="mail-outline"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                containerStyle={{ marginBottom: 14 }}
+              />
 
-            <TouchableOpacity
-              style={[styles.socialCircle, { backgroundColor: INPUT_BG, borderColor: BORDER }]}
-              onPress={handleAppleLogin}
-              disabled={!!socialLoading}
-              activeOpacity={0.8}
-            >
-              {socialLoading === 'apple'
-                ? <ActivityIndicator size="small" color={GRAY} />
-                : <MaterialCommunityIcons name="apple" size={24} color={TEXT} />}
-            </TouchableOpacity>
+              <AuthTextField
+                label={t('auth.login.passwordLabel') as string}
+                colors={colors}
+                icon="lock-closed-outline"
+                isPassword
+                value={password}
+                onChangeText={setPassword}
+                containerStyle={{ marginBottom: 4 }}
+              />
 
-            <TouchableOpacity
-              style={[styles.socialCircle, { backgroundColor: INPUT_BG, borderColor: BORDER }]}
-              onPress={handleFacebookLogin}
-              disabled={!!socialLoading}
-              activeOpacity={0.8}
-            >
-              {socialLoading === 'facebook'
-                ? <ActivityIndicator size="small" color={GRAY} />
-                : <FontAwesome name="facebook" size={22} color="#1877F2" />}
-            </TouchableOpacity>
-          </View>
+              {/* Remember me + Forget Password */}
+              <View style={styles.rememberRow}>
+                <TouchableOpacity style={styles.checkboxRow} onPress={() => setRememberMe(v => !v)} activeOpacity={0.7}>
+                  <View style={[styles.checkbox, { borderColor: BORDER }, rememberMe && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                    {rememberMe && <Ionicons name="checkmark" size={12} color="#fff" />}
+                  </View>
+                  <Text style={[styles.rememberText, { color: TEXT }]}>{t('auth.login.rememberMe')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/Auth/ForgotPassword')}>
+                  <Text style={[styles.forgotText, { color: colors.primary }]}>{t('auth.login.forgotPassword')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </MotiView>
 
-          {/* Sign up link */}
-          <View style={styles.signupRow}>
-            <Text style={[styles.signupText, { color: GRAY }]}>Don't Have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/Auth/Register')}>
-              <Text style={[styles.signupLink, { color: LINK_COLOR }]}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
+          <MotiView
+            from={{ opacity: 0, translateY: 16 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'timing', duration: 400, delay: 140 }}
+          >
+            {/* Log in button */}
+            <View style={{ marginTop: 22 }}>
+              <AuthPrimaryButton
+                label={t('auth.login.loginBtn') as string}
+                onPress={handleLogin}
+                loading={loading}
+                colors={colors}
+              />
+            </View>
 
-          {/* Cache (discret) */}
-          <TouchableOpacity onPress={handleClearCache} style={styles.cacheBtn}>
-            <Text style={[styles.cacheBtnText, { color: GRAY }]}>🧹 Nettoyer le cache</Text>
-          </TouchableOpacity>
+            {/* Or continue with */}
+            <View style={styles.dividerRow}>
+              <View style={[styles.dividerLine, { backgroundColor: BORDER }]} />
+              <Text style={[styles.dividerText, { color: GRAY }]}>{t('auth.login.orContinueWith')}</Text>
+              <View style={[styles.dividerLine, { backgroundColor: BORDER }]} />
+            </View>
+
+            {/* Social icons row */}
+            <View style={styles.socialRow}>
+              <TouchableOpacity
+                style={[styles.socialCircle, { backgroundColor: colors.surfaceVariant, borderColor: BORDER }]}
+                onPress={handleGoogleLogin}
+                disabled={!!socialLoading}
+                activeOpacity={0.8}
+              >
+                {socialLoading === 'google'
+                  ? <ActivityIndicator size="small" color={GRAY} />
+                  : <AntDesign name="google" size={22} color="#EA4335" />}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.socialCircle, { backgroundColor: colors.surfaceVariant, borderColor: BORDER }]}
+                onPress={handleAppleLogin}
+                disabled={!!socialLoading}
+                activeOpacity={0.8}
+              >
+                {socialLoading === 'apple'
+                  ? <ActivityIndicator size="small" color={GRAY} />
+                  : <MaterialCommunityIcons name="apple" size={24} color={TEXT} />}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.socialCircle, { backgroundColor: colors.surfaceVariant, borderColor: BORDER }]}
+                onPress={handleFacebookLogin}
+                disabled={!!socialLoading}
+                activeOpacity={0.8}
+              >
+                {socialLoading === 'facebook'
+                  ? <ActivityIndicator size="small" color={GRAY} />
+                  : <FontAwesome name="facebook" size={22} color="#1877F2" />}
+              </TouchableOpacity>
+            </View>
+
+            {/* Sign up link */}
+            <View style={styles.signupRow}>
+              <Text style={[styles.signupText, { color: GRAY }]}>{t('auth.login.noAccount')}</Text>
+              <TouchableOpacity onPress={() => router.push('/Auth/Register')}>
+                <Text style={[styles.signupLink, { color: LINK_COLOR }]}>{t('auth.login.signUp')}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Cache (discret) */}
+            <TouchableOpacity onPress={handleClearCache} style={styles.cacheBtn}>
+              <Text style={[styles.cacheBtnText, { color: GRAY }]}>{'🧹 ' + t('auth.login.clearCache')}</Text>
+            </TouchableOpacity>
+          </MotiView>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -350,47 +390,46 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    paddingHorizontal: 28,
-    paddingTop: 52,
+    paddingHorizontal: 24,
+    paddingTop: 24,
     paddingBottom: 40,
+  },
+
+  // ── Brand ──────────────────────────────────────────────────────────────────
+  brandMark: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 20,
   },
 
   // ── Typography ─────────────────────────────────────────────────────────────
   title: {
-    fontSize: 30,
+    fontSize: 26,
     fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
+    letterSpacing: 0.2,
   },
   subtitle: {
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 32,
+    marginBottom: 28,
   },
 
-  // ── Inputs ─────────────────────────────────────────────────────────────────
-  inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 54,
-    marginBottom: 14,
+  // ── Card ───────────────────────────────────────────────────────────────────
+  card: {
+    borderRadius: 20,
     borderWidth: 1,
-  },
-  inputField: {
-    flex: 1,
-    fontSize: 15,
-  },
-  input: {
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 54,
-    fontSize: 15,
-    borderWidth: 1,
-    width: '100%',
-    marginBottom: 16,
+    padding: 18,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 2,
   },
 
   // ── Remember / Forgot ──────────────────────────────────────────────────────
@@ -398,7 +437,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginTop: 6,
   },
   checkboxRow: {
     flexDirection: 'row',
@@ -407,7 +446,7 @@ const styles = StyleSheet.create({
   checkbox: {
     width: 18,
     height: 18,
-    borderRadius: 4,
+    borderRadius: 5,
     borderWidth: 1.5,
     marginRight: 8,
     alignItems: 'center',
@@ -415,32 +454,19 @@ const styles = StyleSheet.create({
   },
   rememberText: {
     fontSize: 13,
+    fontWeight: '500',
   },
   forgotText: {
     fontSize: 13,
-    fontWeight: '600',
-  },
-
-  // ── Login button ───────────────────────────────────────────────────────────
-  loginBtn: {
-    borderRadius: 30,
-    height: 54,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 28,
-  },
-  loginBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.3,
+    fontWeight: '700',
   },
 
   // ── Divider ────────────────────────────────────────────────────────────────
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginTop: 24,
+    marginBottom: 20,
   },
   dividerLine: {
     flex: 1,
@@ -448,35 +474,37 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     marginHorizontal: 12,
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '600',
   },
 
   // ── Social ─────────────────────────────────────────────────────────────────
   socialRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 20,
-    marginBottom: 32,
+    gap: 16,
+    marginBottom: 28,
   },
   socialCircle: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 56,
+    height: 56,
+    borderRadius: 18,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 1,
   },
 
   // ── Sign up ────────────────────────────────────────────────────────────────
   signupRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 20,
+    alignItems: 'center',
+    marginBottom: 16,
   },
   signupText: {
     fontSize: 14,
@@ -484,7 +512,7 @@ const styles = StyleSheet.create({
   signupLink: {
     fontSize: 14,
     fontWeight: '800',
-    marginLeft:10
+    marginLeft: 6,
   },
 
   // ── Cache ──────────────────────────────────────────────────────────────────
@@ -493,10 +521,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   cacheBtnText: {
-    fontSize: 12,
+    fontSize: 11,
   },
 
   // ── 2FA ───────────────────────────────────────────────────────────────────
@@ -505,6 +532,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  shieldCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  twoFaInput: {
+    width: '100%',
+    marginTop: 24,
+    marginBottom: 20,
   },
 });
 
