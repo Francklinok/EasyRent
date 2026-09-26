@@ -6,6 +6,7 @@ import type { UpkeepCheckIn, OccupancyConsiderationType } from '../services/api/
 export function useUrbanReuseAgreementV2(agreementId: string | undefined) {
   const repository = useMemo(() => getUrbanReuseRepository(), []);
 
+
   const { data, loading, error, isStale, refetch } = useCachedQuery({
     queryKey: ['investments', 'urbanReuse-agreement', agreementId || ''],
     queryFn: () => repository.getAgreementById(agreementId as string),
