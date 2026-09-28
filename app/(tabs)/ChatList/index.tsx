@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { ThemedView } from '@/components/ui/ThemedView';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { Ionicons } from '@expo/vector-icons';
