@@ -11,21 +11,10 @@ import { SettingsItem } from '@/components/ui/SettingsItems';
 import { ThemedScrollView } from '@/components/ui/ScrolleView';
 import { useTheme } from '@/hooks/themehook';
 import { useAuth } from '@/components/contexts/authContext/AuthContext';
-import { useProfile, useTrustScore } from '@/hooks/useProfile';
+import { useProfileV2 as useProfile, useTrustScoreV2 as useTrustScore } from '@/hooks/useProfileV2';
 import { useLanguage } from '@/components/contexts/language';
 import { StatusBar } from 'react-native';
 interface AppSettings {
-  notifications: {
-    push: boolean;
-    email: boolean;
-    sms: boolean;
-    marketing: boolean;
-  };
-  privacy: {
-    profileVisible: boolean;
-    activityTracking: boolean;
-    dataCollection: boolean;
-  };
   preferences: {
     language: string;
     currency: string;
@@ -37,8 +26,11 @@ interface AppSettings {
 const SettingsScreen = () => {
   const { theme, isDark } = useTheme();
   const { logout, user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const insets = useSafeAreaInsets();
+
+  const isAdmin = (user as any)?.role === 'admin' || (user as any)?.role === 'super_admin';
+  const isPartner = (['partner', 'admin', 'super_admin'] as string[]).includes((user as any)?.role);
 
   const {
     profile,
@@ -143,8 +135,8 @@ const SettingsScreen = () => {
                 </ThemedView>
               )}
             </ThemedView>
-            <ThemedText intensity ='light' style={{ color: theme.text, fontSize: 14, marginTop: 2 }}>
-              {profile?.email || user?.email || 'email@example.com'}
+            <ThemedText type="normal" intensity="light" style={{ color: theme.text, marginTop: 2 }}>
+              {profile?.email || user?.email}
             </ThemedText>
 
             {/* Trust Score */}
@@ -180,17 +172,6 @@ const SettingsScreen = () => {
   );
 
   const [settings, setSettings] = useState<AppSettings>({
-    notifications: {
-      push: true,
-      email: true,
-      sms: false,
-      marketing: false
-    },
-    privacy: {
-      profileVisible: true,
-      activityTracking: true,
-      dataCollection: false
-    },
     preferences: {
       language: 'fr',
       currency: 'EUR',
@@ -426,7 +407,7 @@ const SettingsScreen = () => {
   const renderSettingsSection = (title: string, children: React.ReactNode) => (
     <ThemedView style={{ marginBottom: 24 }}>
       <ThemedView style={{ paddingHorizontal: 20, paddingVertical: 8, marginBottom: 8 }}>
-        <ThemedText type="normaltitle" intensity="strong" style={{ fontWeight: '700'}}>
+        <ThemedText type="normaltitle" intensity="strong">
           {title}
         </ThemedText>
       </ThemedView>
@@ -469,8 +450,7 @@ const SettingsScreen = () => {
       </ThemedView>
 
       <ThemedView style={{ flex: 1, backgroundColor: 'transparent' }}>
-        <ThemedText type = "normal" style={{
-          fontWeight: '600',
+        <ThemedText type="normal" intensity="strong" style={{
           color: theme.text,
           marginBottom: description ? 2 : 0
         }}>
@@ -548,7 +528,7 @@ const SettingsScreen = () => {
                   paddingVertical: 4,
                   borderRadius: 8
                 }}>
-                  <ThemedText style={{ color: '#FFD700', fontSize: 12, fontWeight: 'bold' }}>
+                  <ThemedText type="caption" intensity="strong" style={{ color: '#FFD700' }}>
                     {t('settingsScreen.active')}
                   </ThemedText>
                 </ThemedView>
@@ -578,11 +558,19 @@ const SettingsScreen = () => {
               iconColor={theme.star}
               onPress={() => router.push('/favoris/Favoris')}
             />
+            <SettingsItem
+              showArrow="on"
+              label={t('settingsScreen.myReservations')}
+              description={t('settingsScreen.myReservationsDesc')}
+              icon="calendar"
+              iconColor={theme.primary}
+              onPress={() => router.push('/myReservations/MyReservations' as any)}
+            />
           </>
         ))}
 
         {/* Finance & Investissement */}
-        {renderSettingsSection('Finance & Investissement', (
+        {renderSettingsSection(t('settingsScreen.financeSection'), (
           <>
             <SettingsItem
               showArrow="on"
@@ -592,91 +580,91 @@ const SettingsScreen = () => {
               iconColor="#22c55e"
               onPress={() => router.push('/kyc' as any)}
             />
-            {((user as any)?.role === 'admin' || (user as any)?.role === 'super_admin') && (
+            {isAdmin && (
               <SettingsItem
                 showArrow="on"
-                label="Tableau de bord Admin"
-                description="Vue d'ensemble de la plateforme"
+                label={t('settingsScreen.adminDashboard')}
+                description={t('settingsScreen.adminDashboardDesc')}
                 icon="view-dashboard"
                 iconColor="#6366f1"
                 onPress={() => router.push('/admin/DashboardScreen' as any)}
               />
             )}
-            {((user as any)?.role === 'admin' || (user as any)?.role === 'super_admin') && (
+            {isAdmin && (
               <SettingsItem
                 showArrow="on"
-                label="Gestion Utilisateurs"
-                description="Suspendre, activer ou supprimer des comptes"
+                label={t('settingsScreen.adminUsers')}
+                description={t('settingsScreen.adminUsersDesc')}
                 icon="account-group"
                 iconColor="#3b82f6"
                 onPress={() => router.push('/admin/UsersScreen' as any)}
               />
             )}
-            {((user as any)?.role === 'admin' || (user as any)?.role === 'super_admin') && (
+            {isAdmin && (
               <SettingsItem
                 showArrow="on"
-                label="Dossiers Immobiliers"
-                description="Valider, rejeter et assigner les dossiers"
+                label={t('settingsScreen.adminDossiers')}
+                description={t('settingsScreen.adminDossiersDesc')}
                 icon="folder-open"
                 iconColor="#f59e0b"
                 onPress={() => router.push('/admin/DossiersScreen' as any)}
               />
             )}
-            {((user as any)?.role === 'admin' || (user as any)?.role === 'super_admin') && (
+            {isAdmin && (
               <SettingsItem
                 showArrow="on"
-                label="Tickets Support"
-                description="Gérer les demandes d'assistance clients"
+                label={t('settingsScreen.adminSupport')}
+                description={t('settingsScreen.adminSupportDesc')}
                 icon="headset"
                 iconColor="#8b5cf6"
                 onPress={() => router.push('/admin/SupportScreen' as any)}
               />
             )}
-            {((user as any)?.role === 'admin' || (user as any)?.role === 'super_admin') && (
+            {isAdmin && (
               <SettingsItem
                 showArrow="on"
-                label="Audit & Sécurité"
-                description="Logs d'événements et activités suspectes"
+                label={t('settingsScreen.adminAudit')}
+                description={t('settingsScreen.adminAuditDesc')}
                 icon="shield-search"
                 iconColor="#ef4444"
                 onPress={() => router.push('/admin/AuditScreen' as any)}
               />
             )}
-            {((user as any)?.role === 'admin' || (user as any)?.role === 'super_admin') && (
+            {isAdmin && (
               <SettingsItem
                 showArrow="on"
-                label="Validation KYC — Admin"
-                description="Approuver ou rejeter les demandes de vérification"
+                label={t('settingsScreen.adminKyc')}
+                description={t('settingsScreen.adminKycDesc')}
                 icon="shield-crown-outline"
                 iconColor="#8b5cf6"
                 onPress={() => router.push('/kyc/admin' as any)}
               />
             )}
-            {((user as any)?.role === 'admin' || (user as any)?.role === 'super_admin') && (
+            {isAdmin && (
               <SettingsItem
                 showArrow="on"
-                label="Pipeline Investissement — Admin"
-                description="Réviser RST, SPV et propositions DEV"
+                label={t('settingsScreen.adminInvestmentPipeline')}
+                description={t('settingsScreen.adminInvestmentPipelineDesc')}
                 icon="bank-check"
                 iconColor="#10B981"
                 onPress={() => router.push('/admin/InvestmentPipelineAdminScreen' as any)}
               />
             )}
-            {((user as any)?.role === 'admin' || (user as any)?.role === 'super_admin') && (
+            {isAdmin && (
               <SettingsItem
                 showArrow="on"
-                label="Modération Services"
-                description="Approuver ou rejeter les services soumis"
+                label={t('settingsScreen.adminServiceModeration')}
+                description={t('settingsScreen.adminServiceModerationDesc')}
                 icon="store-check"
                 iconColor="#f97316"
                 onPress={() => router.push('/admin/ServiceModerationScreen' as any)}
               />
             )}
-            {(['partner', 'admin', 'super_admin'] as string[]).includes((user as any)?.role) && (
+            {isPartner && (
               <SettingsItem
                 showArrow="on"
-                label="Mes projets SPV — Partenaire"
-                description="Créer et suivre vos projets de tokenisation"
+                label={t('settingsScreen.partnerSpvProjects')}
+                description={t('settingsScreen.partnerSpvProjectsDesc')}
                 icon="office-building-plus"
                 iconColor="#8B5CF6"
                 onPress={() => router.push('/partner/PartnerProjectsListScreen' as any)}
@@ -684,40 +672,40 @@ const SettingsScreen = () => {
             )}
             <SettingsItem
               showArrow="on"
-              label="Investir (RST)"
-              description="Revenue Share Tokens — percevez des loyers"
+              label={t('settingsScreen.investRst')}
+              description={t('settingsScreen.investRstDesc')}
               icon="trending-up"
               iconColor="#22c55e"
               onPress={() => router.push('/invest' as any)}
             />
             <SettingsItem
               showArrow="on"
-              label="Mes tokens d'investissement"
-              description="Portfolio RST et SPV, dans le Wallet"
+              label={t('settingsScreen.investmentTokens')}
+              description={t('settingsScreen.investmentTokensDesc')}
               icon="chart-pie"
               iconColor="#8B5CF6"
               onPress={() => router.push('/wallet/Wallet?tab=tokens' as any)}
             />
             <SettingsItem
               showArrow="on"
-              label="Trading AMM"
-              description="Échanger des Property Tokens ↔ REC"
+              label={t('settingsScreen.tradingAmm')}
+              description={t('settingsScreen.tradingAmmDesc')}
               icon="swap-horizontal"
               iconColor="#3b82f6"
               onPress={() => router.push('/trade' as any)}
             />
             <SettingsItem
               showArrow="on"
-              label="RealEstateCoin (REC)"
-              description="Stablecoin — minter du REC avec vos tokens"
+              label={t('settingsScreen.realEstateCoin')}
+              description={t('settingsScreen.realEstateCoinDesc')}
               icon="bank"
               iconColor="#f59e0b"
               onPress={() => router.push('/rec' as any)}
             />
             <SettingsItem
               showArrow="on"
-              label="AI Fund"
-              description="Fonds IA autonome + gouvernance DAO"
+              label={t('settingsScreen.aiFund')}
+              description={t('settingsScreen.aiFundDesc')}
               icon="robot"
               iconColor={theme.primary}
               onPress={() => router.push('/fund' as any)}
@@ -739,7 +727,7 @@ const SettingsScreen = () => {
             <SettingsItem
               showArrow="on"
               label={t('settingsScreen.languageRegion')}
-              description={`${settings.preferences.currency}`}
+              description={`${language.toUpperCase()} · ${settings.preferences.currency}`}
               icon="earth"
               iconColor={theme.secondary}
               onPress={() => router.push('/language')}
