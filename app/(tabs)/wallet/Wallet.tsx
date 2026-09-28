@@ -18,7 +18,13 @@ import { SelectPaymentMethod } from '@/components/wallets/payment/SelectPaymentM
 import { MobileMoneyForm } from '@/components/wallets/payment/MobileMoneyForm';
 import { WalletSettings } from '@/components/wallets/WalletSettings';
 import { UserAction, PaymentConfig, PaymentMethodType, MobileMoneyConfig } from '@/types/payment';
-import { useWallet, useTransactions, usePaymentMethods, useOngoingActivities } from '@/hooks/useWallet';
+import {
+  useWalletV2,
+  useTransactionsV2,
+  useCreateTransaction,
+  usePaymentMethodsV2,
+  useOngoingActivitiesV2,
+} from '@/hooks/useWalletV2';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { GraphQLError } from '@/services/api/graphqlService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -28,6 +34,7 @@ import { useWalletHeader, WALLET_SECTION_TITLE_KEYS, WALLET_INVEST_TOKENS_TITLE 
 import { useLanguage } from '@/components/contexts/language';
 import { WalletErrorScreen } from '@/components/wallets/shared/WalletErrorScreen';
 import { onColor } from '@/constants/tokens';
+import { useAuth } from '@/components/contexts/authContext/AuthContext';
 
 type TransactionAction = 'buy' | 'sell' | 'transfer';
 type TransactionType = 'payment' | 'received' | 'crypto';
@@ -57,17 +64,17 @@ const WalletPortfolio = () => {
   const { tab: initialTabParam } = useLocalSearchParams<{ tab?: string }>();
   const { setTitle, setOnBackPress, setShowBackButton } = useWalletHeader();
   const { t } = useLanguage();
+  const { isAuthenticated, initializing: authInitializing } = useAuth();
 
-  const { wallet, loading: walletLoading, error: walletError, refresh: refreshWallet } = useWallet();
+  const { wallet, loading: walletLoading, error: walletError, refresh: refreshWallet } = useWalletV2();
   const {
     transactions,
     loading: transactionsLoading,
     error: transactionsError,
     refresh: refreshTransactions,
-    createTransaction,
-    transferMoney
-  } = useTransactions({}, 50);
-  const { paymentMethods, loading: paymentMethodsLoading, refresh: refreshPaymentMethods } = usePaymentMethods();
+  } = useTransactionsV2({}, { page: 1, limit: 50 });
+  const { mutateAsync: createTransaction } = useCreateTransaction();
+  const { paymentMethods, loading: paymentMethodsLoading, refresh: refreshPaymentMethods } = usePaymentMethodsV2();
 
   //hook for ongoing activities
   const {
@@ -75,7 +82,7 @@ const WalletPortfolio = () => {
     loading: activitiesLoading,
     byType: activitiesByType,
     refresh: refreshActivities
-  } = useOngoingActivities();
+  } = useOngoingActivitiesV2();
 
   //local states
   const [showBalance, setShowBalance] = useState(true);
@@ -112,6 +119,12 @@ const WalletPortfolio = () => {
     if (wallet?.userId) {
       console.log('✅ Wallet loaded, setting userId:', wallet.userId);
       setUserId(wallet.userId);
+    }
+    // Le solde du wallet doit s'afficher dans SA devise réelle (XOF/EUR/USD/GBP,
+    // fixée par le backend — voir toWalletCurrency), pas dans un défaut
+    // arbitraire ('EUR') sans rapport avec le wallet de l'utilisateur.
+    if (wallet?.currency) {
+      setSelectedCurrency(wallet.currency);
     }
   }, [wallet]);
 
@@ -221,11 +234,7 @@ const WalletPortfolio = () => {
       currency: cb.currency,
       amount: cb.amount,
       value: cb.value
-    })) || [
-        { currency: 'BTC', amount: 0, value: 0 },
-        { currency: 'ETH', amount: 0, value: 0 },
-        { currency: 'SOL', amount: 0, value: 0 }
-      ],
+    })) || [],
     paymentMethods: paymentMethods.map(pm => ({
       id: parseInt(pm.id),
       type: pm.type,
@@ -483,6 +492,30 @@ const WalletPortfolio = () => {
       [section]: !prev[section]
     }));
   };
+
+  // Gate proactif : un invité (jamais authentifié, donc aucun token à
+  // envoyer) n'a pas besoin de laisser useWallet/useTransactions/etc.
+  // partir en échec côté réseau avant de savoir qu'il doit se connecter —
+  // contrairement au cas précédent (session déjà active, wall au
+  // démarrage), ce nouveau chemin invité n'était jamais testé contre le
+  // gate réactif ci-dessous, qui dépend d'un texte d'erreur backend précis.
+  if (!authInitializing && !isAuthenticated) {
+    return (
+      <WalletErrorScreen
+        icon={ShieldAlert}
+        tone="error"
+        title={t('walletScreen.authRequired')}
+        messages={[t('walletScreen.authRequiredMsg')]}
+        primaryAction={{
+          label: t('walletScreen.login'),
+          onPress: () => router.push('/Auth/Login'),
+          icon: <LogIn size={20} color={onColor} />,
+        }}
+        onBack={() => router.back()}
+        backLabel={t('common.back')}
+      />
+    );
+  }
 
   if (walletError && !wallet && isAuthenticationError(walletError)) {
     return (
